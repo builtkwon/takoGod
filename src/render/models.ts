@@ -105,7 +105,8 @@ export function doughTint(step: CookStep, gauge: number, judgements: readonly Do
   } else if (step === 'filling') {
     t = [0.92, 0.8, 0.62];
   }
-  return judgements.includes('burnt') ? [t[0] * 0.45, t[1] * 0.45, t[2] * 0.45] : t;
+  // judgements 0~1은 익음 게이지, 2~4는 굴리기(GDD §굽기). 굴리기 실패는 시각 표시하지 않는다.
+  return judgements.slice(0, 2).includes('burnt') ? [t[0] * 0.45, t[1] * 0.45, t[2] * 0.45] : t;
 }
 
 // --- 속재료 ------------------------------------------------------------------

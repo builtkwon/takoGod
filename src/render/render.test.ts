@@ -64,4 +64,14 @@ describe('doughTint', () => {
     expect(doughTint('done', 0, ['burnt'])[0]).toBeLessThan(doughTint('done', 0, [])[0]);
     expect(doughTint('done', 0, ['under'])).toEqual(doughTint('done', 0, []));
   });
+  it('익음 탐(judgements 0~1의 burnt)만 어둡게 한다', () => {
+    const plain = doughTint('done', 0, []);
+    expect(doughTint('done', 0, ['perfect', 'burnt'])[0]).toBeLessThan(plain[0]);
+    expect(doughTint('done', 0, ['burnt', 'perfect', 'perfect', 'perfect', 'perfect'])[0]).toBeLessThan(plain[0]);
+  });
+  it('굴리기 실패(judgements 2~4)는 어둡게 하지 않는다', () => {
+    const plain = doughTint('done', 0, []);
+    expect(doughTint('done', 0, ['perfect', 'perfect', 'burnt'])).toEqual(plain);
+    expect(doughTint('done', 0, ['perfect', 'perfect', 'perfect', 'burnt', 'under'])).toEqual(plain);
+  });
 });
