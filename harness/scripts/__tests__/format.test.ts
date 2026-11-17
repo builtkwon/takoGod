@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classify, checkFormatFile, findCommandStrings } from '../lib/format.ts';
+import { classify, checkFormatFile, findCommandStrings, findToolCallIds, listFormatTargets } from '../lib/format.ts';
 import { runCheck, filePathFromHookInput, type Io } from '../harness-check.ts';
 import { agentMd, makeRepo, skillMd } from './helpers.ts';
 
@@ -22,6 +22,9 @@ describe('대상 경로', () => {
     [SKILL, 'skill'],
     ['harness/meta-skills/harness-design/SKILL.md', 'skill'],
     ['.claude/skills/demo/references/a.md', 'reference'],
+    ['.claude/skills/demo/references/sub/deep/a.md', 'reference'],
+    ['harness/meta-skills/harness-design/references/sub/a.md', 'reference'],
+    ['.claude/skills/demo/references/sub/a.txt', 'other-in-scope'],
     ['.claude/agents/core-dev.md', 'agent'],
   ])('%s → %s', (rel, kind) => expect(classify(rel).kind).toBe(kind));
 
@@ -75,8 +78,25 @@ describe('SKILL.md format', () => {
       expect(findCommandStrings(`실행: ${cmd}`)).toHaveLength(1);
     }
     expect(findCommandStrings('node_modules 경로')).toEqual([]);
+    expect(findCommandStrings('인자는 `pnpm tool <id> -- <인자>` 형식, 예: `pnpm tool sim.balance -- --sessions 10`')).toEqual([]);
     const body = skillMd({ name: 'demo' }).replace('## 단계', '- 금지: pnpm build\n\n## 단계');
     expect(check({ [SKILL]: body }, SKILL).join()).toContain('명령어 문자열 "pnpm"');
+  });
+
+  it('파일 이름은 명령어 문자열이 아니다', () => {
+    for (const ok of ['src/ui/App.tsx를 고친다', 'pnpm-lock.yaml 변경', 'node_modules/', 'foo.node 모듈', '.pnpm-store', '/usr/bin/node', 'tsx-config.json', 'my-node 패키지']) {
+      expect(findCommandStrings(ok)).toEqual([]);
+    }
+    for (const bad of ['`tsx a.ts`', '(node x.js)', '실행은 pnpm.', '"npx foo"', 'node', 'tsx, node']) {
+      expect(findCommandStrings(bad)).toHaveLength(1);
+    }
+  });
+
+  it('본문 도구 호출 ID 추출: 실제 ID만, 중복 제거', () => {
+    expect(findToolCallIds('`pnpm tool <id>`, pnpm tool test.unit, pnpm tool harness.check -- --full, pnpm tool test.unit.')).toEqual([
+      'test.unit',
+      'harness.check',
+    ]);
   });
 
   it('steps와 본문 S 번호 불일치 실패', () => {
@@ -110,6 +130,13 @@ describe('references format', () => {
   });
   it('명령어 문자열 실패', () => {
     expect(check({ [REF]: 'npx foo\n' }, REF)).toHaveLength(1);
+  });
+  it('하위 디렉터리 references도 검사하고 full 대상에 재귀로 포함한다', () => {
+    const deep = '.claude/skills/demo/references/sub/deep/x.md';
+    const meta = 'harness/meta-skills/m/references/a/b.md';
+    expect(check({ [deep]: 'a\n'.repeat(201) }, deep).join()).toContain('201줄 > 200줄');
+    const root = makeRepo({ [SKILL]: skillMd({ name: 'demo' }), [deep]: 'x\n', [meta]: 'x\n', 'harness/meta-skills/m/SKILL.md': skillMd({ name: 'm' }) });
+    expect(listFormatTargets(root)).toEqual(expect.arrayContaining([deep, meta]));
   });
 });
 
@@ -157,9 +184,21 @@ describe('harness-check --format CLI', () => {
     expect(runCheck(root, ['--format', '--file', '.claude/skills/bad/SKILL.md'], io())).toBe(2);
   });
 
+  it('--file: 없는 파일·저장소 밖 경로는 실패(exit 2)', () => {
+    const root = makeRepo({ [SKILL]: skillMd({ name: 'demo' }) });
+    for (const p of ['.claude/skills/ghost/SKILL.md', '/etc/hosts', '../outside.md', '.claude/skills']) {
+      const i = io();
+      expect(runCheck(root, ['--format', '--file', p], i)).toBe(2);
+      expect(i.errs.join()).toMatch(/파일 없음|저장소 밖/);
+    }
+    // 대상 밖이지만 저장소 안의 실제 파일은 통과
+    const r2 = makeRepo({ 'src/a.ts': 'x' });
+    expect(runCheck(r2, ['--format', '--file', 'src/a.ts'], io())).toBe(0);
+  });
+
   it('잘못된 인자 조합 → 사용법 exit 1', () => {
     const root = makeRepo();
-    for (const argv of [[], ['--format'], ['--format', '--file'], ['--full', '--summary'], ['--full', '--x']]) {
+    for (const argv of [[], ['--format'], ['--format', '--file'], ['--full', '--summary'], ['--full', '--x'], ['--summary', '--staged']]) {
       const i = io();
       expect(runCheck(root, argv, i)).toBe(1);
       expect(i.errs.join()).toContain('사용법');

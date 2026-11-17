@@ -1,5 +1,5 @@
 // format 검사(파일 1개). 원본: docs/harness-design.md §6, §7 format
-import { countLines, listDirs, listFiles, readText } from './common.ts';
+import { countLines, listDirs, listFiles, listFilesRecursive, readText } from './common.ts';
 import { AGENTS_DIR, LIMITS, META_SKILLS_DIR, SKILLS_DIR, parseAgent, parseSkill } from './model.ts';
 
 export type Target =
@@ -16,16 +16,22 @@ export function classify(rel: string): Target {
     const rest = rel.startsWith(`${dir}/`) ? rel.slice(dir.length + 1).split('/') : undefined;
     if (rest === undefined) continue;
     if (rest.length === 2 && rest[1] === 'SKILL.md') return { kind: 'skill', name: rest[0] ?? '' };
-    if (rest.length === 3 && rest[1] === 'references' && rest[2]?.endsWith('.md')) return { kind: 'reference' };
+    // references 아래 하위 디렉터리도 대상이다.
+    if (rest.length >= 3 && rest[1] === 'references' && rest.at(-1)?.endsWith('.md')) return { kind: 'reference' };
   }
   const agent = new RegExp(`^${AGENTS_DIR.replace('.', '\\.')}/([^/]+)\\.md$`).exec(rel);
   if (agent !== null) return { kind: 'agent', name: agent[1] ?? '' };
   return { kind: 'other-in-scope' };
 }
 
-const CMD_RE = /\b(pnpm|npx|tsx|node)\b/;
-/** 허용 형식: `pnpm tool <id>`(문자 그대로 또는 실제 ID). 뒤의 `-- 인자`는 명령어 문자열이 아니므로 허용. */
+/**
+ * 명령어 문자열. 앞뒤가 파일 이름·경로 문자이면 명령어가 아니다(App.tsx, pnpm-lock.yaml, node_modules, bin/node).
+ * 문장 끝 마침표(`pnpm.`)는 명령어로 본다.
+ */
+const CMD_RE = /(?<![\w./-])(pnpm|npx|tsx|node)(?![\w-]|\.\w)/;
+/** 허용 형식: `pnpm tool <id>`(문자 그대로 또는 실제 ID). 뒤의 `-- <인자>`는 명령어 문자열이 아니므로 허용. */
 const ALLOWED_TOOL_CALL_RE = /pnpm tool (?:<id>|[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*)/g;
+const TOOL_CALL_ID_RE = /pnpm tool ([a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*)/g;
 
 /** 본문에서 명령어 문자열을 찾는다. 반환: "N행: 내용" 목록. */
 export function findCommandStrings(body: string): string[] {
@@ -36,6 +42,11 @@ export function findCommandStrings(body: string): string[] {
     if (m !== null) hits.push(`본문 ${i + 1}행에 명령어 문자열 "${m[1]}" — 도구는 pnpm tool <id>로만 부른다`);
   });
   return hits;
+}
+
+/** 본문의 `pnpm tool <id>` 호출에서 실제 ID(중복 제거, 등장 순). 문자 그대로의 `<id>`는 제외. */
+export function findToolCallIds(body: string): string[] {
+  return [...new Set([...body.matchAll(TOOL_CALL_ID_RE)].map((m) => m[1] ?? ''))].filter((id) => id !== '');
 }
 
 interface Section {
@@ -116,13 +127,13 @@ export function checkFormatFile(root: string, rel: string): string[] {
   return [...errors, ...checkSkillBody(p.body, p.value.steps.map((s) => s.id))];
 }
 
-/** full 검사에서 쓰는 format 대상 전체. */
+/** full 검사에서 쓰는 format 대상 전체. references는 하위 디렉터리까지 재귀로 모은다. */
 export function listFormatTargets(root: string): string[] {
   const out: string[] = [];
   for (const dir of [SKILLS_DIR, META_SKILLS_DIR]) {
     for (const name of listDirs(root, dir)) {
       if (readText(root, `${dir}/${name}/SKILL.md`) !== undefined) out.push(`${dir}/${name}/SKILL.md`);
-      for (const f of listFiles(root, `${dir}/${name}/references`)) {
+      for (const f of listFilesRecursive(root, `${dir}/${name}/references`)) {
         if (f.endsWith('.md')) out.push(`${dir}/${name}/references/${f}`);
       }
     }

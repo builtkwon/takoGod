@@ -10,12 +10,14 @@
     "preview": "vite preview",
     "test": "vitest run",
     "depcruise": "depcruise --config .dependency-cruiser.cjs src",
-    "tool": "tsx harness/scripts/tool.ts"
+    "tool": "tsx harness/scripts/tool.ts",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@types/node": "^24.19.2",
     "@types/three": "^0.187.0",
     "dependency-cruiser": "^18.8.0",
     "playwright": "^1.65.1",

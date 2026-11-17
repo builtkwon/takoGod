@@ -2,10 +2,11 @@
 // 원본: docs/harness-design.md §3 도구 연결 규약, §5. 계약: src/contracts/tooling.ts (SandboxStates)
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { TOOL_ENTRY_PATHS } from '../../src/contracts/tooling.ts';
 import { PROJECT_ROOT, exists, isMain, isStringArray, missingTarget, readText } from './lib/common.ts';
 
-export const STATES_PATH = 'src/render/sandbox.states.json';
-export const SANDBOX_PAGE = 'src/render/sandbox.html';
+export const STATES_PATH = TOOL_ENTRY_PATHS.sandboxStates;
+export const SANDBOX_PAGE = TOOL_ENTRY_PATHS.sandboxPage;
 export const OUT_DIR = '.artifacts/snapshots';
 /** 모바일 세로 뷰포트(iPhone 13 기준). */
 export const MOBILE_VIEWPORT = { width: 390, height: 844, deviceScaleFactor: 3 } as const;

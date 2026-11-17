@@ -1,16 +1,24 @@
 // dialogue.lint: src/data/dialogues.ts의 DialogueLine[]을 검사한다.
+//   - 문항 수: 성격당 10문항, 총 40문항 (GDD §콘텐츠)
 //   - good/bad 길이 차: |good − bad| ≤ 30% × max(good, bad)  (GDD §콘텐츠 "두 답 길이가 비슷해야 한다")
-//   - 중복: 같은 prompt, 같은 답 문구(문항 간·문항 안 good=bad)
+//   - 중복: 같은 prompt, 문항 안 good=bad → 실패. 서로 다른 문항의 같은 답 → 경고(exit 0)
 //   - 금지어: harness/scripts/dialogue-banned-words.txt
+//       2글자 이하: 공백·문장부호로 나눈 토큰과 완전히 같을 때만("한남동", "한 남자", "애 자랑"은 통과)
+//       3글자 이상: 부분 문자열(공백은 지우지 않는다)
 // 원본: docs/harness-design.md §3, §5. 계약: src/contracts/tooling.ts (DialoguesModule), customer.ts (DialogueLine)
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { DialogueLine, Personality } from '../../src/contracts/customer.ts';
+import { TOOL_ENTRY_PATHS } from '../../src/contracts/tooling.ts';
 import { PROJECT_ROOT, charLength, exists, isMain, isRecord, missingTarget, readText } from './lib/common.ts';
 
-export const DIALOGUES_PATH = 'src/data/dialogues.ts';
+export const DIALOGUES_PATH = TOOL_ENTRY_PATHS.dialogues;
 export const BANNED_PATH = 'harness/scripts/dialogue-banned-words.txt';
 export const MAX_LENGTH_DIFF = 0.3;
+/** GDD §콘텐츠 "각 10문항(총 40)". */
+export const LINES_PER_PERSONALITY = 10;
+/** 이 글자 수 이하 금지어는 토큰 완전 일치로만 잡는다. */
+export const SHORT_BANNED_MAX = 2;
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 const TEXT_FIELDS = ['prompt', 'good', 'bad'] as const;
@@ -50,7 +58,9 @@ export function validateModule(mod: unknown): DialogueLine[] | string[] {
 }
 
 const norm = (s: string): string => s.trim().replace(/\s+/g, ' ');
-const compact = (s: string): string => s.replace(/\s+/g, '').toLowerCase();
+const lower = (s: string): string => norm(s).toLowerCase();
+/** 공백·문장부호·기호로 나눈 토큰. */
+export const tokens = (s: string): string[] => lower(s).split(/[\s\p{P}\p{S}]+/u).filter((t) => t !== '');
 
 export function lengthDiffRatio(a: string, b: string): number {
   const la = charLength(norm(a));
@@ -58,9 +68,29 @@ export function lengthDiffRatio(a: string, b: string): number {
   return Math.abs(la - lb) / Math.max(la, lb);
 }
 
-export function lintDialogues(lines: readonly DialogueLine[], banned: readonly string[]): string[] {
+/** 금지어가 text에 있는지. 짧은 말은 토큰 완전 일치, 긴 말은 부분 문자열. */
+export function containsBanned(text: string, word: string): boolean {
+  const w = lower(word);
+  if (w === '') return false;
+  if (charLength(w) <= SHORT_BANNED_MAX) return tokens(text).includes(w);
+  return lower(text).includes(w);
+}
+
+export interface LintResult {
+  readonly errors: readonly string[];
+  readonly warnings: readonly string[];
+}
+
+export function lintDialogues(lines: readonly DialogueLine[], banned: readonly string[]): LintResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const label = (i: number): string => `#${i}(${lines[i]?.personality ?? '?'})`;
+  for (const p of PERSONALITIES) {
+    const n = lines.filter((l) => l.personality === p).length;
+    if (n !== LINES_PER_PERSONALITY) errors.push(`${p} 문항 ${n}개 ≠ ${LINES_PER_PERSONALITY}개`);
+  }
+  const total = PERSONALITIES.length * LINES_PER_PERSONALITY;
+  if (lines.length !== total) errors.push(`총 문항 ${lines.length}개 ≠ ${total}개`);
   lines.forEach((l, i) => {
     const r = lengthDiffRatio(l.good, l.bad);
     if (r > MAX_LENGTH_DIFF) {
@@ -70,9 +100,9 @@ export function lintDialogues(lines: readonly DialogueLine[], banned: readonly s
   });
   const seen = new Map<string, string>();
   lines.forEach((l, i) => {
-    const p = `prompt:${norm(l.prompt)}`;
+    const p = norm(l.prompt);
     const prev = seen.get(p);
-    if (prev !== undefined) errors.push(`${label(i)} prompt 중복(${prev}): ${norm(l.prompt)}`);
+    if (prev !== undefined) errors.push(`${label(i)} prompt 중복(${prev}): ${p}`);
     else seen.set(p, label(i));
   });
   const answers = new Map<string, string>();
@@ -80,18 +110,16 @@ export function lintDialogues(lines: readonly DialogueLine[], banned: readonly s
     for (const f of ['good', 'bad'] as const) {
       const key = norm(l[f]);
       const prev = answers.get(key);
-      if (prev !== undefined && prev !== label(i)) errors.push(`${label(i)}.${f} 답 중복(${prev}): ${key}`);
-      else answers.set(key, label(i));
+      if (prev === undefined) answers.set(key, `${label(i)}.${f}`);
+      else if (!prev.startsWith(`${label(i)}.`)) warnings.push(`${label(i)}.${f} 다른 문항과 같은 답(${prev}): ${key}`);
     }
   });
-  const bannedCompact = banned.map((w) => [w, compact(w)] as const);
   lines.forEach((l, i) => {
     for (const f of TEXT_FIELDS) {
-      const text = compact(l[f]);
-      for (const [w, c] of bannedCompact) if (c !== '' && text.includes(c)) errors.push(`${label(i)}.${f} 금지어 "${w}"`);
+      for (const w of banned) if (containsBanned(l[f], w)) errors.push(`${label(i)}.${f} 금지어 "${w}"`);
     }
   });
-  return errors;
+  return { errors, warnings };
 }
 
 export type Loader = (absPath: string) => Promise<unknown>;
@@ -117,9 +145,10 @@ export async function runLint(root: string, load: Loader = defaultLoader): Promi
     return 1;
   }
   const lines = v as DialogueLine[];
-  const errors = lintDialogues(lines, parseBannedWords(bannedText));
+  const { errors, warnings } = lintDialogues(lines, parseBannedWords(bannedText));
   const counts = PERSONALITIES.map((p) => `${p} ${lines.filter((l) => l.personality === p).length}`).join(', ');
   console.log(`문항 ${lines.length}개 (${counts})`);
+  if (warnings.length > 0) console.log(`dialogue.lint 경고 ${warnings.length}건:\n  ${warnings.join('\n  ')}`);
   if (errors.length > 0) {
     console.error(`dialogue.lint 실패 ${errors.length}건:\n  ${errors.join('\n  ')}`);
     return 1;

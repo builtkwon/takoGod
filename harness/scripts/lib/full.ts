@@ -1,9 +1,19 @@
 // full 검사(쓰기 없음). 원본: docs/harness-design.md §7 full
-import { listFiles, readText } from './common.ts';
-import { checkFormatFile, listFormatTargets } from './format.ts';
+import { listFiles, listFilesRecursive, readText } from './common.ts';
+import { checkFormatFile, findToolCallIds, listFormatTargets } from './format.ts';
 import { renderIndex } from './index-gen.ts';
-import { INDEX_PATH, PROPOSALS_DIR, loadModel, LIMITS, type HarnessModel, type LoadedSkill } from './model.ts';
+import {
+  INDEX_PATH,
+  META_SKILLS_DIR,
+  PROPOSALS_DIR,
+  loadModel,
+  LIMITS,
+  splitFrontmatter,
+  type HarnessModel,
+  type LoadedSkill,
+} from './model.ts';
 import { loadToolset, type Toolset } from './toolset.ts';
+import { typecheckHarness } from './typecheck.ts';
 
 export type Status = 'ok' | 'fail' | 'warn' | 'skip';
 
@@ -157,10 +167,36 @@ export function parsePlacement(markdown: string): Map<string, string[]> | undefi
   return undefined;
 }
 
+/** 제안표 파일명: NNNN-<kebab>.md */
+export const PROPOSAL_FILE_RE = /^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
+
+/** 숨김 파일(.gitkeep 등)을 뺀 제안표 디렉터리의 파일. */
+function proposalFiles(root: string): string[] {
+  return listFiles(root, PROPOSALS_DIR).filter((f) => !f.startsWith('.'));
+}
+
 export function latestProposal(root: string): string | undefined {
-  const files = listFiles(root, PROPOSALS_DIR).filter((f) => /^\d{4}-.+\.md$/.test(f));
-  const last = files.sort().at(-1);
+  const last = proposalFiles(root)
+    .filter((f) => PROPOSAL_FILE_RE.test(f))
+    .sort()
+    .at(-1);
   return last === undefined ? undefined : `${PROPOSALS_DIR}/${last}`;
+}
+
+export function checkProposalNames(root: string): CheckResult {
+  const out: string[] = [];
+  const byNumber = new Map<string, string>();
+  for (const f of proposalFiles(root)) {
+    const m = PROPOSAL_FILE_RE.exec(f);
+    if (m?.[1] === undefined) {
+      out.push(`${PROPOSALS_DIR}/${f}: 파일명은 NNNN-<kebab>.md (예: 0001-initial-placement.md)`);
+      continue;
+    }
+    const prev = byNumber.get(m[1]);
+    if (prev !== undefined) out.push(`${PROPOSALS_DIR}/${f}: 번호 ${m[1]}이 ${prev}와 중복`);
+    else byNumber.set(m[1], f);
+  }
+  return result('제안표 파일명', out);
 }
 
 export function checkProposalDiff(root: string, model: HarnessModel): CheckResult {
@@ -186,6 +222,49 @@ export function checkProposalDiff(root: string, model: HarnessModel): CheckResul
   return result(name, out.map((m) => `${path} — ${m}`), 'warn');
 }
 
+/** 본문 텍스트(frontmatter 제외). */
+function bodyOf(root: string, rel: string): string {
+  const text = readText(root, rel) ?? '';
+  return splitFrontmatter(text)?.body ?? text;
+}
+
+/**
+ * 본문의 `pnpm tool <id>` 대조: toolset에 있고, 그 본문을 쓰는 에이전트의 allowed_tools에 있어야 한다.
+ * 본문을 쓰는 에이전트: 일반 스킬(references 포함) → skills에 배치한 에이전트, 메타 스킬 → 본문에서
+ * `harness/meta-skills/<name>/` 경로로 안내하는 에이전트, 에이전트 본문 → 자기 자신.
+ */
+export function checkBodyToolCalls(root: string, model: HarnessModel, toolset: Toolset): CheckResult {
+  const ids = new Set(toolset.tools.map((t) => t.id));
+  const agentBodies = model.agents.map((a) => ({ path: a.path, agent: a.agent, body: bodyOf(root, a.path) }));
+  const out: string[] = [];
+  const verify = (rel: string, body: string, users: readonly { name: string; allowed_tools: readonly string[] }[]): void => {
+    for (const id of findToolCallIds(body)) {
+      if (!ids.has(id)) {
+        out.push(`${rel}: pnpm tool ${id} — toolset에 없는 ID`);
+        continue;
+      }
+      for (const a of users) if (!a.allowed_tools.includes(id)) out.push(`${rel}: pnpm tool ${id} — ${a.name}의 allowed_tools에 없다`);
+    }
+  };
+  for (const { path, meta, skill } of [...model.skills, ...model.metaSkills]) {
+    const users = meta
+      ? agentBodies.filter((a) => a.body.includes(`${META_SKILLS_DIR}/${skill.name}/`)).map((a) => a.agent)
+      : model.agents.filter((a) => a.agent.skills.includes(skill.name)).map((a) => a.agent);
+    verify(path, bodyOf(root, path), users);
+    const refDir = path.replace(/SKILL\.md$/, 'references');
+    for (const f of listFilesRecursive(root, refDir)) {
+      if (f.endsWith('.md')) verify(`${refDir}/${f}`, readText(root, `${refDir}/${f}`) ?? '', users);
+    }
+  }
+  for (const { path, agent, body } of agentBodies) verify(path, body, [agent]);
+  return result('본문 도구 호출', out);
+}
+
+export function checkHarnessTypes(root: string): CheckResult {
+  const r = typecheckHarness(root);
+  return { name: 'harness 타입', status: r.status, messages: r.messages };
+}
+
 export function runFull(root: string): CheckResult[] {
   const formatErrors = listFormatTargets(root).flatMap((rel) => checkFormatFile(root, rel).map((e) => `${rel}: ${e}`));
   const model = loadModel(root);
@@ -195,7 +274,7 @@ export function runFull(root: string): CheckResult[] {
   if (!ts.ok) results.push(result('toolset', [...ts.errors]));
   else {
     results.push(result('toolset', []));
-    results.push(checkSkillTools(model, ts.toolset));
+    results.push(checkSkillTools(model, ts.toolset), checkBodyToolCalls(root, model, ts.toolset));
   }
   results.push(
     checkAgentSkills(model),
@@ -204,7 +283,9 @@ export function runFull(root: string): CheckResult[] {
     checkConsumes(model),
     checkIndexFresh(root, model),
     checkOrphans(model),
+    checkProposalNames(root),
     checkProposalDiff(root, model),
+    checkHarnessTypes(root),
   );
   return results;
 }

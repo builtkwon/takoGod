@@ -1,4 +1,5 @@
 // 테스트 픽스처: 임시 저장소와 SKILL.md·에이전트 생성기.
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -126,4 +127,28 @@ export function captureConsole(): { out: () => string; err: () => string } {
   vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => void out.push(a.join(' ')));
   vi.spyOn(console, 'error').mockImplementation((...a: unknown[]) => void err.push(a.join(' ')));
   return { out: () => out.join('\n'), err: () => err.join('\n') };
+}
+
+/** git 환경 변수(훅 안에서 테스트가 돌 때 새는 GIT_DIR 등)를 지운 env. */
+export function cleanGitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(process.env)) if (!k.startsWith('GIT_')) env[k] = v;
+  return { ...env, GIT_CONFIG_NOSYSTEM: '1', HOME: tmpdir(), ...extra };
+}
+
+/** root에서 git 명령. 실패하면 throw. */
+export function git(root: string, args: readonly string[], extraEnv: Record<string, string> = {}): string {
+  const r = spawnSync('git', args, { cwd: root, encoding: 'utf8', env: cleanGitEnv(extraEnv) });
+  if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`);
+  return r.stdout;
+}
+
+/** 임시 git 저장소(초기 커밋 없음). */
+export function makeGitRepo(files: Record<string, string> = {}): string {
+  const root = makeRepo(files);
+  git(root, ['init', '-q', '-b', 'main']);
+  git(root, ['config', 'user.email', 'test@example.invalid']);
+  git(root, ['config', 'user.name', 'test']);
+  git(root, ['config', 'commit.gpgsign', 'false']);
+  return root;
 }

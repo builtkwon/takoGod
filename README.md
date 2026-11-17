@@ -4,7 +4,7 @@
 
 ## 구현 상태
 
-**스캐폴드.** 빌드·테스트·경계 검사 설정과 `src/contracts` 타입만 있다. core·render·ui·data는 빈 진입점이다. 하네스(`harness/`, `.claude/`)는 아직 없다.
+**스캐폴드.** 빌드·테스트·경계 검사 설정과 `src/contracts` 타입만 있다. core·render·ui·data는 빈 진입점이다. 하네스 기반(`harness/`, `.claude/`)이 있다 → [modules/harness.md](docs/rules/architecture/modules/harness.md).
 
 ## 실행
 

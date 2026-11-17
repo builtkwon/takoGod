@@ -4,10 +4,38 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DialogueLine } from '../../../src/contracts/customer.ts';
 import { PROJECT_ROOT } from '../lib/common.ts';
-import { BANNED_PATH, lengthDiffRatio, lintDialogues, parseBannedWords, runLint, validateModule } from '../lint-dialogues.ts';
-import { parseArgs, parseTargets, runSimulate } from '../simulate.ts';
-import { parseStates, runSnapshot, stateUrl, type SnapshotDeps } from '../snapshot.ts';
+import { TOOL_ENTRY_PATHS } from '../../../src/contracts/tooling.ts';
+import {
+  BANNED_PATH,
+  DIALOGUES_PATH,
+  containsBanned,
+  lengthDiffRatio,
+  lintDialogues,
+  parseBannedWords,
+  runLint,
+  validateModule,
+} from '../lint-dialogues.ts';
+import { PERFECT_EPSILON, SIM_PATH, parseArgs, parseTargets, runSimulate } from '../simulate.ts';
+import { SANDBOX_PAGE, STATES_PATH, parseStates, runSnapshot, stateUrl, type SnapshotDeps } from '../snapshot.ts';
 import { captureConsole, makeRepo } from './helpers.ts';
+
+describe('대상 경로 단일 출처', () => {
+  it('세 스크립트의 경로는 contracts TOOL_ENTRY_PATHS와 같다', () => {
+    expect([SIM_PATH, SANDBOX_PAGE, STATES_PATH, DIALOGUES_PATH]).toEqual([
+      TOOL_ENTRY_PATHS.sim,
+      TOOL_ENTRY_PATHS.sandboxPage,
+      TOOL_ENTRY_PATHS.sandboxStates,
+      TOOL_ENTRY_PATHS.dialogues,
+    ]);
+  });
+
+  it('스크립트 소스에 대상 경로 문자열을 복제하지 않는다', () => {
+    for (const f of ['simulate.ts', 'snapshot.ts', 'lint-dialogues.ts']) {
+      const src = readFileSync(join(PROJECT_ROOT, 'harness/scripts', f), 'utf8');
+      for (const p of Object.values(TOOL_ENTRY_PATHS)) expect(src).not.toContain(`'${p}'`);
+    }
+  });
+});
 
 const GDD = '## 밸런스 목표\n\n- 전정답 + 완벽 굽기: 평균 5.0\n- 무작위 플레이: 평균 2~3점대\n';
 
@@ -92,19 +120,22 @@ describe('simulate', () => {
     expect(parseTargets('## 다른 절\n')).toBeUndefined();
   });
 
-  it('목표 충족 → exit 0, 경계값(2.0, 3.99, 4.995)', async () => {
-    captureConsole();
+  it('평균 5.0 허용 오차는 1e-9: 경계 안 통과, 밖 미달', async () => {
+    const c = captureConsole();
+    expect(PERFECT_EPSILON).toBe(1e-9);
     expect(await runSimulate(repo(), [], sim(5, 2.5))).toBe(0);
-    expect(await runSimulate(repo(), [], sim(4.996, 2))).toBe(0);
-    expect(await runSimulate(repo(), [], sim(5, 3.99))).toBe(0);
+    expect(await runSimulate(repo(), [], sim(5 - 1e-10, 2))).toBe(0);
+    expect(await runSimulate(repo(), [], sim(0.1 * 3 * (5 / 0.3), 2))).toBe(0); // 부동소수 누적 오차
+    expect(await runSimulate(repo(), [], sim(5 - 1e-8, 2.5))).toBe(1);
+    expect(await runSimulate(repo(), [], sim(5 + 1e-8, 2.5))).toBe(1);
+    expect(await runSimulate(repo(), [], sim(4.996, 2.5))).toBe(1);
+    expect(c.out()).toContain('미달(실제값 4.996)');
   });
 
-  it('목표 미달 → exit 1', async () => {
-    const c = captureConsole();
-    expect(await runSimulate(repo(), [], sim(4.9, 2.5))).toBe(1);
-    expect(await runSimulate(repo(), [], sim(5, 4))).toBe(1);
-    expect(await runSimulate(repo(), [], sim(5, 1.99))).toBe(1);
-    expect(c.out()).toContain('미달');
+  it('무작위 경계값(2.0 통과, 3.99 통과)', async () => {
+    captureConsole();
+    expect(await runSimulate(repo(), [], sim(5, 2))).toBe(0);
+    expect(await runSimulate(repo(), [], sim(5, 3.99))).toBe(0);
   });
 
   it('잘못된 export·반환값·GDD → exit 1', async () => {
@@ -136,6 +167,7 @@ describe('simulate', () => {
 });
 
 describe('lint-dialogues', () => {
+  const PERS = ['salaryman', 'grandma', 'gourmet', 'tourist'] as const;
   const line = (over: Partial<DialogueLine> = {}): DialogueLine => ({
     personality: 'grandma',
     prompt: '젊은이, 오늘 날씨 참 좋지?',
@@ -143,6 +175,12 @@ describe('lint-dialogues', () => {
     bad: '날씨요? 전 실내파라서요.',
     ...over,
   });
+  /** 성격당 10문항, 총 40문항의 정상 대사. 모두 서로 다른 문구. */
+  const full = (): DialogueLine[] =>
+    PERS.flatMap((p) =>
+      Array.from({ length: 10 }, (_, i) => ({ personality: p, prompt: `${p} 질문 ${i}`, good: `${p} 좋은 답 ${i}`, bad: `${p} 나쁜 답 ${i}` })),
+    );
+  const errs = (lines: readonly DialogueLine[], banned: readonly string[] = []): string => lintDialogues(lines, banned).errors.join('\n');
   const repo = (): string =>
     makeRepo({ 'src/data/dialogues.ts': '// fixture', [BANNED_PATH]: '# 주석\n틀딱\n\n바보 멍청이\n' });
 
@@ -152,35 +190,83 @@ describe('lint-dialogues', () => {
     expect(c.err()).toBe('대상 없음: src/data/dialogues.ts');
   });
 
-  it('정상 대사 → exit 0', async () => {
-    captureConsole();
-    const lines = [line(), line({ personality: 'tourist', prompt: 'Takoyaki, hot?', good: '조심해서 드세요!', bad: '용암 맛이에요!' })];
-    expect(await runLint(repo(), async () => ({ dialogues: lines }))).toBe(0);
+  it('정상 대사(성격당 10, 총 40) → exit 0', async () => {
+    const c = captureConsole();
+    expect(lintDialogues(full(), [])).toEqual({ errors: [], warnings: [] });
+    expect(await runLint(repo(), async () => ({ dialogues: full() }))).toBe(0);
+    expect(c.out()).toContain('문항 40개 (salaryman 10, grandma 10, gourmet 10, tourist 10)');
+  });
+
+  it('문항 수: 성격당 10개가 아니거나 총 40개가 아니면 실패', () => {
+    const lines = full();
+    expect(errs(lines.slice(1))).toContain('salaryman 문항 9개 ≠ 10개');
+    expect(errs(lines.slice(1))).toContain('총 문항 39개 ≠ 40개');
+    const extra = [...lines, line({ prompt: '추가 질문', good: '추가 좋은 답', bad: '추가 나쁜 답' })];
+    expect(errs(extra)).toContain('grandma 문항 11개 ≠ 10개');
+    expect(errs(extra)).toContain('총 문항 41개 ≠ 40개');
   });
 
   it('길이 차 30% 경계: 30% 통과, 31% 이상 실패', () => {
     expect(lengthDiffRatio('가'.repeat(10), '가'.repeat(7))).toBeCloseTo(0.3);
-    expect(lintDialogues([line({ good: '가'.repeat(10), bad: '나'.repeat(7) })], [])).toEqual([]);
-    expect(lintDialogues([line({ good: '가'.repeat(10), bad: '나'.repeat(6) })], []).join()).toContain('길이 차 40%');
+    const with0 = (l: DialogueLine): DialogueLine[] => [l, ...full().slice(1)];
+    expect(errs(with0(line({ personality: 'salaryman', good: '가'.repeat(10), bad: '나'.repeat(7) })))).toBe('');
+    expect(errs(with0(line({ personality: 'salaryman', good: '가'.repeat(10), bad: '나'.repeat(6) })))).toContain('길이 차 40%');
   });
 
-  it('중복: prompt, 문항 간 답, good=bad', () => {
-    const errors = lintDialogues(
-      [line(), line({ good: '다른 좋은 답입니다', bad: '다른 나쁜 답입니다' }), line({ prompt: '새 질문', good: '같다', bad: '같다' })],
-      [],
-    ).join('\n');
-    expect(errors).toContain('prompt 중복');
-    expect(errors).toContain('good과 bad가 같다');
-    const answerDup = lintDialogues([line(), line({ prompt: '다른 질문' })], []).join('\n');
-    expect(answerDup).toContain('답 중복');
+  it('중복: prompt·good=bad는 실패, 다른 문항의 같은 답은 경고(exit 0)', async () => {
+    const lines = full();
+    lines[1] = { ...lines[1]!, prompt: lines[0]!.prompt };
+    lines[2] = { ...lines[2]!, good: '같다', bad: '같다' };
+    expect(errs(lines)).toContain('prompt 중복');
+    expect(errs(lines)).toContain('good과 bad가 같다');
+
+    const dupAnswer = full();
+    dupAnswer[5] = { ...dupAnswer[5]!, good: dupAnswer[0]!.good };
+    const r = lintDialogues(dupAnswer, []);
+    expect(r.errors).toEqual([]);
+    expect(r.warnings.join()).toContain('#5(salaryman).good 다른 문항과 같은 답(#0(salaryman).good)');
+    const c = captureConsole();
+    expect(await runLint(repo(), async () => ({ dialogues: dupAnswer }))).toBe(0);
+    expect(c.out()).toContain('dialogue.lint 경고 1건');
   });
 
-  it('금지어: 공백 무시 부분 일치, 주석·빈 줄 제외', () => {
+  it('금지어 2글자 이하: 토큰 완전 일치만 잡는다', () => {
+    for (const ok of ['한남동 맛집이에요', '한 남자가 왔어요', '애 자랑 좀 할게요', '애자랑 놀았다', '틀딱이란 말은 안 써요']) {
+      expect(containsBanned(ok, ok.startsWith('한') ? '한남' : ok.startsWith('틀') ? '틀딱' : '애자')).toBe(false);
+    }
+    expect(containsBanned('그건 한남 같은 말이죠', '한남')).toBe(true);
+    expect(containsBanned('애자?', '애자')).toBe(true);
+    expect(containsBanned('"애자"라니', '애자')).toBe(true);
+    expect(containsBanned('ㅅㅂ…진짜', 'ㅅㅂ')).toBe(true);
+    expect(containsBanned('BAD word', 'ba')).toBe(false);
+  });
+
+  it('금지어 3글자 이상: 부분 문자열(공백은 지우지 않음), 대소문자 무시', () => {
+    expect(containsBanned('이 노인네가 참', '노인네')).toBe(true);
+    expect(containsBanned('노인네들', '노인네')).toBe(true);
+    expect(containsBanned('노 인 네', '노인네')).toBe(false);
+    expect(containsBanned('바보  멍청이야', '바보 멍청이')).toBe(true);
+    expect(containsBanned('바보멍청이야', '바보 멍청이')).toBe(false);
+    expect(containsBanned('Yankee go', 'yankee')).toBe(true);
+  });
+
+  it('저장소 금지어 목록으로 "한남동", "한 남자", "애 자랑"은 통과', () => {
+    const banned = parseBannedWords(readFileSync(join(PROJECT_ROOT, BANNED_PATH), 'utf8'));
+    const lines = full();
+    lines[0] = { ...lines[0]!, prompt: '한남동에서 왔어요', good: '한 남자가 추천했죠', bad: '애 자랑 좀 할게요' };
+    expect(errs(lines, banned)).toBe('');
+    lines[1] = { ...lines[1]!, bad: '한남 같은 소리' };
+    expect(errs(lines, banned)).toContain('#1(salaryman).bad 금지어 "한남"');
+  });
+
+  it('금지어 목록: 주석·빈 줄 제외, 필드별로 보고', () => {
     const banned = parseBannedWords('# 주석\n틀딱\n\n바보 멍청이\n');
     expect(banned).toEqual(['틀딱', '바보 멍청이']);
-    const errors = lintDialogues([line({ bad: '틀 딱이 뭘 알아요?' }), line({ prompt: '질문', good: '바보멍청이야 좋은 답', bad: '그럭저럭 나쁜 답임' })], banned);
-    expect(errors.join('\n')).toContain('#0(grandma).bad 금지어 "틀딱"');
-    expect(errors.join('\n')).toContain('#1(grandma).good 금지어 "바보 멍청이"');
+    const lines = full();
+    lines[0] = { ...lines[0]!, bad: '틀딱 소리 마요' };
+    lines[1] = { ...lines[1]!, good: '바보 멍청이야 좋은 답' };
+    expect(errs(lines, banned)).toContain('#0(salaryman).bad 금지어 "틀딱"');
+    expect(errs(lines, banned)).toContain('#1(salaryman).good 금지어 "바보 멍청이"');
   });
 
   it('모듈 형식 오류 → exit 1', async () => {

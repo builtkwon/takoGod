@@ -9,6 +9,7 @@
 | | [architecture/modules/render.md](architecture/modules/render.md) | src/render |
 | | [architecture/modules/ui.md](architecture/modules/ui.md) | src/ui, src/data |
 | | [architecture/modules/contracts.md](architecture/modules/contracts.md) | src/contracts, src/main.ts |
+| | [architecture/modules/harness.md](architecture/modules/harness.md) | harness/, .claude/ (소유, 도구 호출, 검사) |
 | 개발 | [development/typescript.md](development/typescript.md) | TypeScript 설정·작성 기준 |
 | | [development/testing.md](development/testing.md) | 테스트 위치·범위 |
 | 협업 | [collaboration/implementation.md](collaboration/implementation.md) | 합의 범위, 작업 루프, 리뷰, 완료 보고 |

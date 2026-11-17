@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'n
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** takoyaki-truck/ (harness/scripts/lib 기준 세 단계 위). */
+/** 저장소 루트(harness/scripts/lib 기준 세 단계 위). */
 export const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** 이 모듈이 CLI로 직접 실행됐는지. */
@@ -44,6 +44,20 @@ export function listFiles(root: string, rel: string): string[] {
     .filter((d) => d.isFile())
     .map((d) => d.name)
     .sort();
+}
+
+/** 하위 디렉터리까지 포함한 파일 상대 경로(rel 기준, POSIX, 정렬). 없으면 빈 배열. */
+export function listFilesRecursive(root: string, rel: string): string[] {
+  const out: string[] = [];
+  const walk = (sub: string): void => {
+    for (const d of readdirSync(join(root, rel, sub), { withFileTypes: true })) {
+      const p = sub === '' ? d.name : `${sub}/${d.name}`;
+      if (d.isDirectory()) walk(p);
+      else if (d.isFile()) out.push(p);
+    }
+  };
+  if (existsSync(join(root, rel)) && statSync(join(root, rel)).isDirectory()) walk('');
+  return out.sort();
 }
 
 /** 마지막 개행은 줄로 세지 않는다. */

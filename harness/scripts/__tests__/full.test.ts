@@ -2,12 +2,14 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runCheck, type Io } from '../harness-check.ts';
-import { runFull, parsePlacement, type CheckResult } from '../lib/full.ts';
+import { runFull, parsePlacement, latestProposal, type CheckResult } from '../lib/full.ts';
+import { PROJECT_ROOT } from '../lib/common.ts';
+import { typecheckHarness } from '../lib/typecheck.ts';
 import { renderIndex } from '../lib/index-gen.ts';
 import { INDEX_PATH, loadModel } from '../lib/model.ts';
 import { collectSummary, formatSummary } from '../lib/summary.ts';
 import { genIndex } from '../gen-index.ts';
-import { TOOLSET, agentMd, captureConsole, makeRepo, skillMd, writeFiles, type SkillSpec, type AgentSpec } from './helpers.ts';
+import { TOOLSET, agentMd, captureConsole, git, makeGitRepo, makeRepo, skillMd, writeFiles, type SkillSpec, type AgentSpec } from './helpers.ts';
 
 const skill = (spec: SkillSpec): Record<string, string> => ({ [`.claude/skills/${spec.name}/SKILL.md`]: skillMd(spec) });
 const agent = (spec: AgentSpec): Record<string, string> => ({ [`.claude/agents/${spec.name}.md`]: agentMd(spec) });
@@ -26,6 +28,11 @@ function repo(over: Record<string, string> = {}, withIndex = true): string {
   const root = makeRepo({ ...baseFiles(), ...over });
   if (withIndex) writeFiles(root, { [INDEX_PATH]: renderIndex(loadModel(root)) });
   return root;
+}
+
+/** MUST + 단계 본문에 text를 넣는다. */
+function bodyWith(text: string, steps: readonly string[] = ['S1']): string {
+  return ['## MUST', '', '- 규칙', '', '## 단계', '', ...steps.map((st) => `- ${st} ${text}`)].join('\n');
 }
 
 const get = (results: readonly CheckResult[], name: string): CheckResult => {
@@ -183,6 +190,55 @@ describe('full: 검사 항목별 실패', () => {
     expect(status(repo({ 'harness/proposals/0001-x.md': '# 표 없음\n' }), '승인안 diff')[0]).toBe('warn');
   });
 
+  it('제안표 파일명: NNNN-<kebab>.md 아니면 실패, 번호 중복 실패, 숨김 파일 무시', () => {
+    const ok = repo({ 'harness/proposals/0001-initial-placement.md': '# x\n', 'harness/proposals/.gitkeep': '' });
+    expect(status(ok, '제안표 파일명')[0]).toBe('ok');
+    for (const bad of ['0001-주제.md', '1-init.md', '0001_init.md', '0001-Init.md', '0001-init.txt', '0001-.md', 'notes.md', '0001-a--b.md']) {
+      const [s, m] = status(repo({ [`harness/proposals/${bad}`]: '# x\n' }), '제안표 파일명');
+      expect([bad, s]).toEqual([bad, 'fail']);
+      expect(m).toContain('NNNN-<kebab>.md');
+    }
+    const dup = repo({ 'harness/proposals/0002-a.md': '# x\n', 'harness/proposals/0002-b.md': '# y\n' });
+    expect(status(dup, '제안표 파일명')).toEqual(['fail', expect.stringContaining('번호 0002')]);
+  });
+
+  it('승인안 diff는 형식에 맞는 최신 제안표만 읽는다', () => {
+    const root = repo({ 'harness/proposals/0001-init.md': '# x\n', 'harness/proposals/9999-주제.md': '# y\n' });
+    expect(latestProposal(root)).toBe('harness/proposals/0001-init.md');
+  });
+
+  it('본문 도구 호출: toolset에 없는 ID 실패', () => {
+    const root = repo(skill({ name: 'alpha', steps: { S1: ['test.unit'] }, produces: ['TODO-CONTRACT.md'], body: bodyWith('pnpm tool ghost.tool') }));
+    const [s, m] = status(root, '본문 도구 호출');
+    expect(s).toBe('fail');
+    expect(m).toContain('.claude/skills/alpha/SKILL.md: pnpm tool ghost.tool — toolset에 없는 ID');
+  });
+
+  it('본문 도구 호출: 배치 에이전트 allowed_tools에 없으면 실패(스킬·references·에이전트 본문)', () => {
+    const root = repo({
+      ...skill({ name: 'alpha', steps: { S1: ['test.unit'] }, produces: ['TODO-CONTRACT.md'], body: bodyWith('`pnpm tool test.e2e -- --x`') }),
+      '.claude/skills/beta/references/sub/r.md': '조건 → pnpm tool test.e2e\n',
+      ...agent({ name: 'core-dev', skills: ['alpha', 'beta'], allowed_tools: ['test.unit', 'build'], body: '검증은 `pnpm tool test.e2e`, `pnpm tool <id>`' }),
+    });
+    const [s, m] = status(root, '본문 도구 호출');
+    expect(s).toBe('fail');
+    expect(m).toContain('.claude/skills/alpha/SKILL.md: pnpm tool test.e2e — core-dev의 allowed_tools에 없다');
+    expect(m).toContain('.claude/skills/beta/references/sub/r.md: pnpm tool test.e2e — core-dev의 allowed_tools에 없다');
+    expect(m).toContain('.claude/agents/core-dev.md: pnpm tool test.e2e — core-dev의 allowed_tools에 없다');
+    expect(m).not.toContain('<id>');
+  });
+
+  it('본문 도구 호출: 메타 스킬은 본문에서 경로로 안내하는 에이전트와 대조', () => {
+    const meta = { 'harness/meta-skills/m/SKILL.md': skillMd({ name: 'm', steps: { S1: [], S2: [] }, body: bodyWith('pnpm tool build', ['S1', 'S2']) }) };
+    const gardener = (tools: string[]): Record<string, string> =>
+      agent({ name: 'g', allowed_tools: tools, body: '열 파일: `harness/meta-skills/m/SKILL.md`' });
+    expect(status(repo({ ...meta, ...gardener(['build']) }), '본문 도구 호출')[0]).toBe('ok');
+    expect(status(repo({ ...meta, ...gardener(['test.unit']) }), '본문 도구 호출')).toEqual([
+      'fail',
+      'harness/meta-skills/m/SKILL.md: pnpm tool build — g의 allowed_tools에 없다',
+    ]);
+  });
+
   it('parsePlacement: 백틱·(meta)·- 처리', () => {
     const md = '| 에이전트 | skills |\n|---|---|\n| `a` | `x`, y |\n| b | - |\n| c | (meta) z |\n';
     expect(Object.fromEntries(parsePlacement(md) ?? [])).toEqual({ a: ['x', 'y'], b: [], c: [] });
@@ -208,6 +264,72 @@ describe('harness-check --full CLI', () => {
     const root = repo({}, false);
     runCheck(root, ['--full', '--no-write'], io());
     expect(existsSync(join(root, INDEX_PATH))).toBe(false);
+  });
+});
+
+describe('full: harness 타입 검사', () => {
+  const TSCONFIG = JSON.stringify({
+    compilerOptions: { strict: true, noEmit: true, types: [], lib: ['ES2022'], module: 'ESNext', moduleResolution: 'bundler' },
+    include: ['scripts/**/*.ts'],
+  });
+
+  it('타입 오류 픽스처 → 실패, 정상 → 통과, tsconfig 없음 → skip', () => {
+    const bad = repo({ 'harness/tsconfig.json': TSCONFIG, 'harness/scripts/bad.ts': 'export const n: number = "문자열";\n' });
+    const [s, m] = status(bad, 'harness 타입');
+    expect(s).toBe('fail');
+    expect(m).toMatch(/bad\.ts.*TS2322/);
+    const io = { readStdin: () => '', out: () => {}, err: () => {} };
+    expect(runCheck(bad, ['--full', '--no-write'], io)).toBe(1);
+
+    const good = repo({ 'harness/tsconfig.json': TSCONFIG, 'harness/scripts/ok.ts': 'export const n: number = 1;\n' });
+    expect(status(good, 'harness 타입')[0]).toBe('ok');
+    expect(status(repo(), 'harness 타입')[0]).toBe('skip');
+  });
+
+  it('저장소의 harness 스크립트는 타입 검사를 통과한다', () => {
+    expect(typecheckHarness(PROJECT_ROOT)).toEqual({ status: 'ok', messages: [] });
+  });
+});
+
+describe('harness-check --full --staged (pre-commit)', () => {
+  const io = (): Io & { outs: string[]; errs: string[] } => {
+    const outs: string[] = [];
+    const errs: string[] = [];
+    return { readStdin: () => '', out: (s) => void outs.push(s), err: (s) => void errs.push(s), outs, errs };
+  };
+
+  it('작업 트리가 아니라 스테이지된 내용을 검사한다(INDEX 최신성)', () => {
+    const root = makeGitRepo(baseFiles());
+    writeFiles(root, { [INDEX_PATH]: renderIndex(loadModel(root)) });
+    git(root, ['add', '-A']);
+    // 스테이지: 최신 INDEX. 작업 트리: 스킬 version만 올려 INDEX를 낡게 만든다(스테이지 안 함).
+    writeFiles(root, skill({ name: 'alpha', version: 2, steps: { S1: ['test.unit'] }, produces: ['TODO-CONTRACT.md'] }));
+    expect(get(runFull(root), 'INDEX 최신성').status).toBe('fail');
+    const ok = io();
+    expect(runCheck(root, ['--full', '--no-write', '--staged'], ok)).toBe(0);
+    expect(ok.outs.join('\n')).toContain('스테이지된 내용 기준');
+
+    // 반대로: 스킬 변경은 스테이지, INDEX 재생성은 작업 트리에만 → 커밋될 내용은 낡았다.
+    git(root, ['add', '-A']);
+    writeFiles(root, { [INDEX_PATH]: renderIndex(loadModel(root)) });
+    expect(get(runFull(root), 'INDEX 최신성').status).toBe('ok');
+    const bad = io();
+    expect(runCheck(root, ['--full', '--no-write', '--staged'], bad)).toBe(1);
+    expect(bad.outs.join('\n')).toContain('[FAIL] INDEX 최신성');
+  });
+
+  it('임시 디렉터리를 지우고 작업 트리를 건드리지 않는다', () => {
+    const root = makeGitRepo(baseFiles());
+    git(root, ['add', '-A']);
+    const before = snapshotTree(root);
+    runCheck(root, ['--full', '--no-write', '--staged'], io());
+    expect(snapshotTree(root)).toEqual(before);
+  });
+
+  it('git 저장소가 아니면 exit 1', () => {
+    const e = io();
+    expect(runCheck(makeRepo(baseFiles()), ['--full', '--staged'], e)).toBe(1);
+    expect(e.errs.join()).toContain('git checkout-index 실패');
   });
 });
 

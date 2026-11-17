@@ -3,12 +3,22 @@
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
-        "hooks": [{ "type": "command", "command": "pnpm -s tsx harness/scripts/harness-check.ts --format --from-hook-stdin" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && pnpm -s tsx harness/scripts/harness-check.ts --format --from-hook-stdin; c=$?; if [ \"$c\" -ne 0 ] && [ \"$c\" -ne 2 ]; then echo \"harness format 훅 실행 실패(exit $c): 검사가 돌지 않았다. 훅 명령과 의존성을 확인하라.\" >&2; exit 2; fi; exit \"$c\""
+          }
+        ]
       }
     ],
     "SessionStart": [
       {
-        "hooks": [{ "type": "command", "command": "pnpm -s tsx harness/scripts/harness-check.ts --summary --read-only" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && pnpm -s tsx harness/scripts/harness-check.ts --summary --read-only"
+          }
+        ]
       }
     ]
   }

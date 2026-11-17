@@ -1,5 +1,6 @@
 #!/bin/sh
 # 하네스 full 검사(쓰기 없음). 원본: docs/harness-design.md §8
-# git 저장소 루트가 takoyaki-truck의 상위 디렉터리라 core.hooksPath=takoyaki-truck/.githooks 로 설정한다.
-cd "$(dirname "$0")/.." || exit 1
-exec pnpm -s tool harness.check -- --full --no-write
+# 작업 트리가 아니라 스테이지된 내용(git 인덱스)을 검사한다(--staged).
+# 설치: pnpm install 시 package.json의 prepare가 core.hooksPath=.githooks 로 설정한다.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+exec pnpm -s tool harness.check -- --full --no-write --staged

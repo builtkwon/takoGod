@@ -18,7 +18,9 @@
 | 기술 결정 기록 | [docs/adr/template.md](docs/adr/template.md) |
 | 규칙 표현(필수·기본·허용·예시·미정) | [docs/rules/README.md](docs/rules/README.md) |
 
-하네스: 도구 원본은 [harness/toolset.yaml](harness/toolset.yaml)이고 `pnpm tool <id>`로 실행한다. 스킬 목록은 `.claude/skills/INDEX.md`(생성물). 설계 원본은 [docs/harness-design.md](docs/harness-design.md)이며 수정하지 않는다.
+하네스: 도구 원본은 [harness/toolset.yaml](harness/toolset.yaml)이고 `pnpm tool <id>`로 실행한다. 스킬 목록은 `.claude/skills/INDEX.md`(생성물). 설계 원본은 [docs/harness-design.md](docs/harness-design.md)이며 수정하지 않는다. 확정 규칙은 [modules/harness.md](docs/rules/architecture/modules/harness.md).
+
+pre-commit 훅: `pnpm install`이 `prepare`로 `git config core.hooksPath .githooks`를 설정한다(새 클론도 동일). 커밋 시 스테이지된 내용으로 하네스 full 검사를 돌린다.
 
 ## 핵심 기준
 

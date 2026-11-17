@@ -3,14 +3,14 @@
 // 목표 수치는 docs/GDD.md §밸런스 목표에서 읽는다(여기에 복제하지 않는다).
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { BalanceScenario, BalanceSimulator } from '../../src/contracts/tooling.ts';
+import { TOOL_ENTRY_PATHS, type BalanceScenario, type BalanceSimulator } from '../../src/contracts/tooling.ts';
 import { PROJECT_ROOT, exists, isMain, isRecord, missingTarget, readText } from './lib/common.ts';
 
-export const SIM_PATH = 'src/core/sim.ts';
+export const SIM_PATH = TOOL_ENTRY_PATHS.sim;
 export const GDD_PATH = 'docs/GDD.md';
 export const DEFAULTS = { sessions: 1000, seed: 1 } as const;
-/** "평균 5.0" 비교 허용 오차(소수 둘째 자리 반올림 기준). */
-export const PERFECT_EPSILON = 0.005;
+/** "평균 5.0" 비교 허용 오차. 부동소수 누적 오차만 허용한다(합의 결정). */
+export const PERFECT_EPSILON = 1e-9;
 
 export interface BalanceTargets {
   /** 전정답 + 완벽 굽기 평균. */
@@ -98,15 +98,19 @@ export async function runSimulate(root: string, argv: readonly string[], load: L
     return 1;
   }
   for (const [k, v] of [['perfect', perfect], ['random', random]] as const) {
-    if (typeof v !== 'number' || !Number.isFinite(v) || v < 1 || v > 5) {
+    // 범위 경계에도 같은 오차를 허용한다(5.000000000000001 같은 누적 오차를 범위 밖으로 보지 않게).
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 1 - PERFECT_EPSILON || v > 5 + PERFECT_EPSILON) {
       console.error(`${k}: 평균 별점은 1~5 사이 유한수여야 한다(${String(v)})`);
       return 1;
     }
   }
-  const perfectOk = Math.abs(perfect - targets.perfect) < PERFECT_EPSILON;
+  const perfectOk = Math.abs(perfect - targets.perfect) <= PERFECT_EPSILON;
   const randomOk = random >= targets.random.min && random < targets.random.maxExclusive;
   console.log(`시나리오: sessions=${opts.sessions}, seed=${opts.seed}`);
-  console.log(`전정답+완벽 굽기: ${fmt(perfect)} (목표 ${fmt(targets.perfect)}) ${perfectOk ? 'OK' : '미달'}`);
+  // 허용 오차가 1e-9라 소수 둘째 자리 표시로는 미달 사유가 안 보일 수 있다 → 미달이면 원값을 함께 쓴다.
+  console.log(
+    `전정답+완벽 굽기: ${fmt(perfect)} (목표 ${fmt(targets.perfect)}) ${perfectOk ? 'OK' : `미달(실제값 ${String(perfect)})`}`,
+  );
   console.log(
     `무작위 플레이: ${fmt(random)} (목표 ${targets.random.min}~${targets.random.maxExclusive - 1}점대) ${randomOk ? 'OK' : '미달'}`,
   );
