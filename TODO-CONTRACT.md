@@ -27,4 +27,10 @@
 
 ## ui-dev
 
+### 리뷰 코멘트·튜토리얼 데이터 모듈 모양
+
+- 제안: `src/contracts/tooling.ts`에 `src/data/review-comments.ts`의 모양을 추가한다. `ReviewCommentsModule { reviewComments: Readonly<Record<Personality, Readonly<Record<1 | 2 | 3 | 4 | 5, readonly string[]>>>>; tutorialReviewComment: string }`. 현재 data 구현은 구간당 `readonly [string, string, string]` 튜플이라 이 타입에 대입된다. `TOOL_ENTRY_PATHS`에 `reviewComments: 'src/data/review-comments.ts'` 추가 여부도 함께 결정한다.
+- 이유: core는 data를 import할 수 없어 `ReviewResult.comment`를 만들려면 main이 코멘트를 주입해야 한다. 그 주입 타입이 contracts에 없다. data는 임시 타입 없이 구조만 맞춰 export했다.
+- 영향 모듈: core / data / main
+
 <!-- end:ui-dev -->

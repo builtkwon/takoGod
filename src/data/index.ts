@@ -1,2 +1,4 @@
-// data 모듈 진입점. 구현 전이라 비어 있다. 경계: docs/rules/architecture/modules/ui.md
-export {};
+// data 모듈 진입점. 경계: docs/rules/architecture/modules/ui.md
+export { dialogues } from './dialogues';
+export { reviewComments, tutorialReviewComment } from './review-comments';
+export { tutorialSteps } from './tutorial';
