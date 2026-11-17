@@ -1,2 +1,5 @@
-// core 모듈 진입점. 구현 전이라 비어 있다. 경계: docs/rules/architecture/modules/core.md
-export {};
+// core 모듈 진입점. 경계: docs/rules/architecture/modules/core.md
+export { Game, type GameData, type GameOptions } from './game';
+export { createEventBus } from './event-bus';
+export { createMemorySessionStore } from './session';
+export { createRng } from './rng';
