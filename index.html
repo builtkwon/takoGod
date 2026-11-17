@@ -4,8 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>타코야끼트럭</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0d0a12; overflow: hidden; }
+      #app { position: relative; width: 100vw; height: 100dvh; }
+      #stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    </style>
   </head>
   <body>
+    <div id="app"><div id="stage"></div></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
