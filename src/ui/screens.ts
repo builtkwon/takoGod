@@ -1,6 +1,6 @@
 import type { ReviewResult } from '../contracts';
 import { el } from './dom';
-import { averageText, PERSONALITY_LABEL, starsText } from './format';
+import { PERSONALITY_LABEL, sessionAverageText, starsText } from './format';
 
 const TOAST_MS = 3000;
 
@@ -45,13 +45,11 @@ export function showReviewCard(layer: HTMLElement, review: ReviewResult): void {
   setTimeout(() => card.remove(), TOAST_MS);
 }
 
-/** 결과 화면. average는 core가 계산해 넘긴다. */
-export function showResult(layer: HTMLElement, result: { readonly average: number; readonly reviews: readonly ReviewResult[] }): void {
+/** 결과 화면. average는 GameState.sessionAverage(core 계산)이고 null이면 점수를 표시하지 않는다. */
+export function showResult(layer: HTMLElement, result: { readonly average: number | null; readonly reviews: readonly ReviewResult[] }): void {
   const o = overlay(layer, 'ui-result');
-  o.append(
-    el('h2', '', '오늘의 결과'),
-    el('div', 'ui-score', `${averageText(result.average)}점`),
-    el('div', 'ui-stars', starsText(result.average)),
-    el('p', '', `받은 리뷰 ${result.reviews.length}개`),
-  );
+  o.append(el('h2', '', '오늘의 결과'));
+  const text = sessionAverageText(result.average);
+  if (result.average !== null && text !== null) o.append(el('div', 'ui-score', `${text}점`), el('div', 'ui-stars', starsText(result.average)));
+  o.append(el('p', '', `받은 리뷰 ${result.reviews.length}개`));
 }

@@ -6,8 +6,11 @@ export const CSS = `
 .ui-layer [hidden]{display:none!important}
 .ui-hud{position:absolute;top:0;left:0;right:0;padding:8px 12px;background:#000a;font-size:14px}
 .ui-hud-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
-.ui-gauge{flex:1;height:10px;background:#555;border-radius:5px;overflow:hidden}
-.ui-gauge-fill{height:100%;background:#ffb300}
+.ui-gauge{flex:1;height:14px;display:flex;position:relative;background:#555}
+.ui-band{height:100%}
+.z-under{background:#4fc3f7}.z-perfect,.z-success{background:#66bb6a}.z-burnt,.z-fail{background:#e53935}
+.ui-marker{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1px;background:#fff}
+.ui-judged{min-width:72px;text-align:right;font-weight:700}.ui-judged.good{color:#a5d6a7}.ui-judged.bad{color:#ef9a9a}
 .ui-guide{position:absolute;top:84px;left:12px;right:12px;padding:8px;background:#fff;color:#222;border-radius:8px;text-align:center;font-weight:700}
 .ui-warning{position:absolute;top:130px;left:12px;right:12px;padding:8px;background:#c62828;border-radius:8px;text-align:center;font-weight:700}
 .ui-toolbar{position:absolute;left:0;right:0;bottom:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:#000b}

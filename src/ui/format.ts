@@ -26,6 +26,11 @@ export function phaseLabel(phase: PhaseId): string {
   return phase === 'tutorial' ? '튜토리얼' : `${phase.slice(1)}단계`;
 }
 
+/** 세션 평균 표시 문구. 리뷰가 없어 null이면 표시하지 않는다(null 반환). 계산은 core가 한다. */
+export function sessionAverageText(average: number | null): string | null {
+  return average === null ? null : averageText(average);
+}
+
 /** 표시용 평균. 계산은 core가 하고 ui는 소수 첫째 자리로 보여 주기만 한다. */
 export function averageText(average: number): string {
   return Number.isFinite(average) ? average.toFixed(1) : '-'; // 리뷰 0개면 core가 NaN을 줄 수 있다
