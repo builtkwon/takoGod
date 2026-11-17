@@ -13,7 +13,7 @@
 | 모듈 경계·의존 | [architecture/overview.md](docs/rules/architecture/overview.md) |
 | TS 설정·타입 작성 | [development/typescript.md](docs/rules/development/typescript.md) |
 | 테스트 작성 | [development/testing.md](docs/rules/development/testing.md) |
-| 작업 진행·리뷰·완료 보고 | [collaboration/implementation.md](docs/rules/collaboration/implementation.md), [ai-execution.md](docs/rules/collaboration/ai-execution.md) |
+| 작업 진행·리뷰·완료 보고 | [collaboration/implementation.md](docs/rules/collaboration/implementation.md), [review.md](docs/rules/collaboration/review.md), [ai-execution.md](docs/rules/collaboration/ai-execution.md) |
 | 커밋 | [collaboration/commits.md](docs/rules/collaboration/commits.md) |
 | 기술 결정 기록 | [docs/adr/template.md](docs/adr/template.md) |
 | 규칙 표현(필수·기본·허용·예시·미정) | [docs/rules/README.md](docs/rules/README.md) |

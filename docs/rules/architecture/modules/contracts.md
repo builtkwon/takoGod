@@ -18,7 +18,7 @@
 
 - 필수: 모듈 간 타입·이벤트는 여기에만 정의한다.
 - 금지: 구현 코드. 허용: 경로 같은 상수.
-- 변경 절차: 구현 세션이 [TODO-CONTRACT.md](../../../../TODO-CONTRACT.md)에 제안 → integrator가 사용자 합의 후 반영. contracts 변경은 독립 리뷰 대상이다([ai-execution.md](../../collaboration/ai-execution.md#독립-리뷰)).
+- 변경 절차: 구현 세션이 [TODO-CONTRACT.md](../../../../TODO-CONTRACT.md)에 제안 → integrator가 사용자 합의 후 반영. contracts 변경은 독립 리뷰 대상이다([review.md](../../collaboration/review.md#언제)).
 
 ## bootstrap
 
