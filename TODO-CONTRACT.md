@@ -12,6 +12,14 @@
 - 영향 모듈: <core / render / ui / data / main 중 해당>
 ```
 
-## 제안
+## core-dev
 
-(없음)
+<!-- end:core-dev -->
+
+## render-dev
+
+<!-- end:render-dev -->
+
+## ui-dev
+
+<!-- end:ui-dev -->
