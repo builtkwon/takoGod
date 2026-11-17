@@ -44,7 +44,7 @@
 | ui-dev | src/ui, src/data | test.unit, dialogue.lint, build | verify-and-report, dialogue-authoring, contract-proposal |
 | integrator | src/main.ts, src/contracts, docs/rules, docs/GDD.md, harness/toolset.yaml | 전체 | verify-and-report, merge-checklist, contract-apply |
 | reviewer | 읽기 전용 | test.unit, test.e2e, lint.boundary | independent-review |
-| harness-gardener | .claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/** | harness.check, harness.index | (meta) harness-design, harness-compaction |
+| harness-gardener | .claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/** | harness.check, harness.index, harness.receipts | (meta) harness-design, harness-compaction |
 
 - integrator의 "전체"는 생성 시점 toolset의 ID를 모두 나열한다(와일드카드 없음).
 - reviewer의 test.e2e는 planned다. 배치는 해도 되지만 실행은 거부된다.

@@ -1,13 +1,13 @@
 ---
 name: harness-compaction
-version: 1
+version: 2
 description: 스킬·references가 상한에 근접·초과했거나, 오래 쓰지 않은 단계·중복 단계를 정리할 때 쓴다. 제안표 승인 후 반영하고 INDEX 재생성·전체 검사까지 마친다.
 requires: []
 consumes: []
 produces: [harness/proposals/]
 steps:
   S1: { tools: [harness.check] }
-  S2: { tools: [] }
+  S2: { tools: [harness.receipts] }
   S3: { tools: [] }
   S4: { tools: [] }
   S5: { tools: [harness.index] }
@@ -25,7 +25,7 @@ steps:
 ## 단계
 
 - S1 현황: `pnpm tool harness.check -- --summary --read-only`로 상한 80% 근접 파일과 스킬 수를 본다.
-- S2 후보 수집: 네 종류로 분류한다.
+- S2 후보 수집: `pnpm tool harness.receipts`로 6주 영수증(커밋 트레일러)을 집계하고 네 종류로 분류한다.
   - 상한 근접·초과 → references/criteria.md#분할
   - 단계 안의 상세·예외·예시 → references/criteria.md#references-이동
   - 6주 이상 영수증에 없는 단계·스킬 → references/criteria.md#미사용-삭제-후보

@@ -1,6 +1,7 @@
 # 제안표 형식
 
-- 파일: `harness/proposals/NNNN-주제.md`. NNNN은 4자리 일련번호(0001부터). 가장 큰 번호가 "최신"이다.
+- 파일: `harness/proposals/NNNN-<kebab>.md`(예: `0001-initial-placement.md`). NNNN은 4자리 일련번호(0001부터), 주제는 영문 소문자 kebab-case. 가장 큰 번호가 "최신"이다.
+- full 검사는 이 형식이 아닌 파일명과 번호 중복을 실패로 본다.
 - 승인된 것만 저장한다. 저장 후에는 고치지 않고 다음 번호로 새로 낸다.
 - full 검사의 "승인안 diff"가 최신 제안표의 배치표를 읽어 생성물과 비교한다(다르면 경고).
 
@@ -31,7 +32,7 @@
 | 에이전트 | owns | allowed_tools | skills |
 | --- | --- | --- | --- |
 | core-dev | src/core/** | test.unit, lint.boundary, sim.balance | verify-and-report, tdd-game-rule |
-| harness-gardener | .claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/** | harness.check, harness.index | (meta) harness-design, harness-compaction |
+| harness-gardener | .claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/** | harness.check, harness.index, harness.receipts | (meta) harness-design, harness-compaction |
 ```
 
 ## 승인

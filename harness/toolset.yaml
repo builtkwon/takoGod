@@ -49,3 +49,8 @@ tools:
     purpose: 스킬·에이전트 frontmatter로 .claude/skills/INDEX.md 재생성
     side_effect: .claude/skills/INDEX.md 덮어씀
     status: active
+  - id: harness.receipts
+    run: tsx harness/scripts/receipts.ts
+    purpose: 커밋 트레일러 Skill-Receipt를 집계해 스킬·단계별 사용 횟수와 미사용 후보 출력(기본 6주)
+    side_effect: none
+    status: active

@@ -9,4 +9,4 @@
 
 | 에이전트 | 스킬 | allowed_tools |
 | --- | --- | --- |
-| harness-gardener | - | harness.check, harness.index |
+| harness-gardener | - | harness.check, harness.index, harness.receipts |

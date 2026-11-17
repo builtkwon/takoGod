@@ -57,10 +57,13 @@ owns: [ src/core/** ]
 
 ## 영수증
 
-완료 보고 필수 줄:
+영수증은 커밋 트레일러다. 형식 원본: docs/rules/collaboration/commits.md#스킬-영수증
 
 ```
-적용 스킬: <name>@v<version> — S1·S2 완료 / S3 생략(사유)
+Skill-Receipt: <name>@v<version> S1,S2,S4 skip=S3(사유)
 ```
 
-- reviewer는 영수증의 도구 단계와 실제 도구 로그를 대조한다. 로그 없는 "완료"는 필수 수정.
+- 적용 스킬마다 한 줄. 완료 보고에 같은 줄을 쓰고, 커밋 메시지 트레일러 블록에 그대로 옮긴다.
+- 생성할 verify-and-report 스킬은 완료 보고 단계에 이 트레일러 줄을 포함한다. 다른 스킬도 완료 보고를 안내하면 같다.
+- reviewer는 영수증의 도구 단계와 실제 도구 로그를 대조한다. 로그 없는 완료 단계는 필수 수정.
+- 집계: `pnpm tool harness.receipts`(git log 트레일러 기준).

@@ -36,7 +36,7 @@ describe('toolset 스키마', () => {
     expect(!r.ok && r.errors.join()).toContain('중복');
   });
 
-  it('저장소의 harness/toolset.yaml은 §5 초기 등록을 포함한다', () => {
+  it('저장소의 harness/toolset.yaml은 §5 초기 등록 + 합의 추가(harness.index, harness.receipts)를 포함한다', () => {
     const r = loadToolset(PROJECT_ROOT);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -50,6 +50,8 @@ describe('toolset 스키마', () => {
       'sim.balance': 'active',
       'dialogue.lint': 'active',
       'harness.check': 'active',
+      'harness.index': 'active',
+      'harness.receipts': 'active',
     });
   });
 });

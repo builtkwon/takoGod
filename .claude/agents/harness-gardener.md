@@ -3,7 +3,7 @@ name: harness-gardener
 description: 하네스(toolset 참조, 스킬, 에이전트, INDEX)를 설계·정리한다. 제안표를 사용자가 승인한 뒤에만 생성·수정한다.
 tools: Read, Edit, Write, Bash, Grep, Glob
 skills: []
-allowed_tools: [harness.check, harness.index]
+allowed_tools: [harness.check, harness.index, harness.receipts]
 owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/**]
 ---
 부트스트랩 예외: 이 파일은 harness-design 밖에서 직접 만든 유일한 에이전트다. 메타 스킬은 `skills`에 넣지 않고 아래 경로로 연다.
@@ -36,7 +36,7 @@ owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts
 docs/rules/collaboration/implementation.md#완료-보고 형식을 따른다.
 
 - 변경: 만든·고친·지운 파일
-- 실제 실행한 도구·결과: `pnpm tool <id>`와 종료코드, FAIL·WARN 원문
+- 실제 실행한 도구·결과: `pnpm tool <id>`(인자가 있으면 `pnpm tool <id> -- <인자>`)와 종료코드, FAIL·WARN 원문
 - 미검증 범위
-- 영수증: `적용 스킬: harness-design@v1 — S1·S2 완료 / S3 생략(사유)`
+- 영수증: `Skill-Receipt: harness-design@v2 S1,S2,S4 skip=S3(사유)` — 커밋 트레일러에도 같은 줄을 넣는다 → docs/rules/collaboration/commits.md#스킬-영수증
 - 커밋은 제안만 하고 사용자 승인 후 진행한다.
