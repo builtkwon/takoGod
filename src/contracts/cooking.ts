@@ -31,7 +31,8 @@ export type Doneness = 'under' | 'perfect' | 'burnt';
 
 /**
  * 익음 게이지와 굴리기 타이밍을 판정한다.
- * gauge는 해당 단계 진입 후 0에서 시작해 증가하는 정규화 값(0..1)이다.
+ * gauge는 정규화 값(0..1)이다. 익음 단계(cook-1, cook-2)는 진입 후 0에서 시작해 증가하는 게이지이고,
+ * 굴리기 단계(roll-1~3)는 1.2초 주기로 왕복하는 타이밍 바 위치다(GDD §굽기).
  * 적정 구간 폭과 탐 판정 여부는 PhaseConfig.isTutorial에 따라 구현이 정한다.
  */
 export interface DonenessJudge {
@@ -44,7 +45,7 @@ export interface HoleState {
   readonly index: number;
   /** 다음에 수행할 단계. 아직 시작 전이면 'margarine'. */
   readonly step: CookStep;
-  /** 현재 단계의 게이지(0..1). 게이지가 없는 단계는 0. */
+  /** 현재 단계의 값(0..1). 익음 단계는 증가하는 게이지, 굴리기 단계는 왕복하는 타이밍 바 위치, 그 외 단계는 0. */
   readonly gauge: number;
   readonly filling: IngredientId | null;
   /** 이 구멍에서 지금까지 나온 판정 결과. */
