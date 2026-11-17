@@ -1,11 +1,11 @@
 // 점수 규칙. 원본: docs/GDD.md §점수, §굽기
 import type { ReviewResult } from '../contracts';
 
-export const START_SATISFACTION = 60;
+export const START_SATISFACTION = 80;
 export const GOOD_ANSWER = 10;
 export const BAD_ANSWER = -10;
 export const TIMEOUT = -10;
-const PERFECT_PLATE = 10;
+const PERFECT_PLATE = 20;
 const BAD_DONENESS = -10;
 const TRAP = -20;
 

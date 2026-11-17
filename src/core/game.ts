@@ -380,7 +380,7 @@ export class Game {
     this.bus.emit('dialogue/started', { customerId: g.id, line });
   }
 
-  /** 성격 내 문항은 세션 동안 반복하지 않는다. shortcut: 10문항을 다 쓰면 그 성격 풀을 초기화한다, GDD가 정하면 교체. */
+  /** GDD §손님 대화: 성격 내 문항은 가능한 한 반복하지 않고, 모두 쓰면 사용 기록을 초기화한다. 기록은 저장하지 않는다. */
   private pickLine(personality: Personality): DialogueLine {
     const pool = this.data.dialogues.filter((l) => l.personality === personality);
     const used = this.usedLines.get(personality) ?? new Set<DialogueLine>();

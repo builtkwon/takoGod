@@ -294,48 +294,48 @@ describe('점수 (접시 단위, GDD §굽기·§점수)', () => {
     return h;
   }
 
-  it('완벽 굽기: 만족도 60+10 → 3.5★', () => {
+  it('완벽 굽기: 만족도 80+20 → 5★', () => {
     const h = toP2();
     plate(h);
-    expect(lastReview(h)).toMatchObject({ source: 'customer', stars: 3.5 });
+    expect(lastReview(h)).toMatchObject({ source: 'customer', stars: 5 });
   });
 
-  it('덜익음이 있으면 -10 (접시당 1회): 50 → 2.5★', () => {
+  it('덜익음이 있으면 -10 (접시당 1회): 70 → 3.5★', () => {
     const h = toP2();
     plate(h, { cook: 0 });
-    expect(lastReview(h).stars).toBe(2.5);
+    expect(lastReview(h).stars).toBe(3.5);
   });
 
-  it('탐도 -10: 50 → 2.5★', () => {
+  it('탐도 -10: 70 → 3.5★', () => {
     const h = toP2();
     plate(h, { cook: 5 });
+    expect(lastReview(h).stars).toBe(3.5);
+  });
+
+  it('함정 재료가 한 구멍이라도 있으면 -20 (완벽 +20 없음): 60 → 3★', () => {
+    const h = toP2();
+    plate(h, { trap: 'chili' });
+    expect(lastReview(h).stars).toBe(3);
+  });
+
+  it('덜익음 + 함정: -10 -20 → 50 → 2.5★', () => {
+    const h = toP2();
+    plate(h, { cook: 0, trap: 'eraser' });
     expect(lastReview(h).stars).toBe(2.5);
   });
 
-  it('함정 재료가 한 구멍이라도 있으면 -20 (완벽 +10 없음): 40 → 2★', () => {
-    const h = toP2();
-    plate(h, { trap: 'chili' });
-    expect(lastReview(h).stars).toBe(2);
-  });
-
-  it('덜익음 + 함정: -10 -20 → 30 → 1.5★', () => {
-    const h = toP2();
-    plate(h, { cook: 0, trap: 'eraser' });
-    expect(lastReview(h).stars).toBe(1.5);
-  });
-
-  it('굴리기 실패는 감점 없이 완벽만 무효: 60 → 3★', () => {
+  it('굴리기 실패는 감점 없이 완벽만 무효: 80 → 4★', () => {
     const h = toP2();
     plate(h, { roll: 0 });
-    expect(lastReview(h).stars).toBe(3);
+    expect(lastReview(h).stars).toBe(4);
   });
 
   it('세션 점수는 튜토리얼 5★ 포함 모든 리뷰의 평균', () => {
     const h = toP2();
-    plate(h); // 3.5
-    plate(h); // 3.5
-    expect(h.game.state.reviews.map((r) => r.stars)).toEqual([5, 3.5, 3.5]);
-    expect(h.game.state.sessionAverage).toBeCloseTo(12 / 3, 12);
+    plate(h); // 5
+    plate(h, { roll: 0 }); // 4
+    expect(h.game.state.reviews.map((r) => r.stars)).toEqual([5, 5, 4]);
+    expect(h.game.state.sessionAverage).toBeCloseTo(14 / 3, 12);
   });
 });
 
@@ -345,7 +345,7 @@ describe('손님 흐름 (GDD §손님 대화·§진행)', () => {
     plates(h, 2);
     expect(h.game.state.customers).toHaveLength(1);
     const first = h.game.state.customers[0];
-    expect(first).toMatchObject({ satisfaction: 60, dialogueIntervalSec: 12 });
+    expect(first).toMatchObject({ satisfaction: 80, dialogueIntervalSec: 12 });
     plate(h);
     expect(h.game.state.customers).toHaveLength(0);
     expect(h.of('customer/left')).toEqual([{ customerId: first?.id }]);
@@ -459,20 +459,20 @@ describe('대화 (GDD §손님 대화)', () => {
     h.game.tick(0.1);
     expect(h.game.state.activeDialogues).toHaveLength(0);
     expect(h.of('dialogue/resolved')).toEqual([{ customerId: d?.customerId, outcome: 'timeout' }]);
-    expect(h.game.state.customers[0]?.satisfaction).toBe(50);
+    expect(h.game.state.customers[0]?.satisfaction).toBe(70);
   });
 
   it('좋은 답 +10, 나쁜 답 -10, 답한 뒤 다시 간격을 센다', () => {
     const h = toP2();
     h.game.tick(12);
     h.answer('good');
-    expect(h.game.state.customers[0]?.satisfaction).toBe(70);
+    expect(h.game.state.customers[0]?.satisfaction).toBe(90);
     expect(h.game.state.activeDialogues).toHaveLength(0);
     h.game.tick(11.9);
     expect(h.game.state.activeDialogues).toHaveLength(0);
     h.game.tick(0.1);
     h.answer('bad');
-    expect(h.game.state.customers[0]?.satisfaction).toBe(60);
+    expect(h.game.state.customers[0]?.satisfaction).toBe(80);
     expect(h.of('dialogue/resolved').map((p) => (p as { outcome: string }).outcome)).toEqual(['good', 'bad']);
   });
 
@@ -494,22 +494,21 @@ describe('대화 (GDD §손님 대화)', () => {
     expect(h.game.state.customers[0]?.satisfaction).toBe(100);
   });
 
-  it('성격 내 문항은 세션 동안 반복하지 않는다', () => {
-    const lines = syntheticData.dialogues.filter((l) => l.personality === 'grandma');
-    const h = setup({ data: { ...syntheticData, dialogues: syntheticData.dialogues } });
+  it('성격 내 문항은 가능한 한 반복하지 않고, 모두 쓰면 사용 기록을 초기화한다', () => {
+    const h = setup();
     plates(h, 2);
     const c = h.game.state.customers[0];
     const seen: string[] = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       h.game.tick(12);
       const d = h.game.state.activeDialogues[0];
-      if (d) seen.push(`${d.line.personality}|${d.line.prompt}`);
+      if (d) seen.push(d.line.prompt);
       h.answer('good');
     }
-    expect(c).toBeDefined();
-    expect(lines.length).toBe(10);
-    expect(new Set(seen).size).toBe(seen.length);
-    expect(seen.every((s) => s.startsWith(`${c?.personality}|`))).toBe(true);
+    expect(seen).toHaveLength(20);
+    expect(new Set(seen.slice(0, 10)).size).toBe(10); // 10문항 소진 전에는 반복 없음
+    expect(new Set(seen.slice(10)).size).toBe(10); // 소진 후 초기화되어 다시 10문항
+    expect(seen.every((s) => s.startsWith(`${c?.personality} `))).toBe(true);
   });
 
   it('같은 시드면 같은 손님·문항, 알 수 없는 손님·대화 없음 답은 무시한다', () => {
@@ -552,10 +551,8 @@ describe('리뷰 코멘트', () => {
     const h = setup({ data });
     plates(h, 2);
     h.game.tick(12);
-    h.answer('good'); // 70
-    h.game.tick(12);
-    h.answer('good'); // 80
-    plate(h, { cook: 3 }); // 80 + 10 = 90 → 4.5★
+    h.answer('bad'); // 70
+    plate(h, { cook: 3 }); // 70 + 20 = 90 → 4.5★
     expect(lastReview(h).stars).toBe(4.5);
     expect(asked.at(-1)?.[1]).toBe(4);
     expect(['a', 'b', 'c']).toContain(lastReview(h).comment);
