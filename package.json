@@ -9,7 +9,8 @@
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.core.json && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "depcruise": "depcruise --config .dependency-cruiser.cjs src"
+    "depcruise": "depcruise --config .dependency-cruiser.cjs src",
+    "tool": "tsx harness/scripts/tool.ts"
   },
   "dependencies": {
     "three": "^0.187.0"
@@ -17,8 +18,11 @@
   "devDependencies": {
     "@types/three": "^0.187.0",
     "dependency-cruiser": "^18.8.0",
+    "playwright": "^1.65.1",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "yaml": "^2.9.1"
   }
 }

@@ -1,7 +1,7 @@
 # 테스트
 
 - 도구: Vitest. 실행 `pnpm vitest run`.
-- 기본: 테스트는 대상 옆에 `*.test.ts`로 둔다(`vite.config.ts`의 `test.include`).
+- 기본: 테스트는 대상 옆에 `*.test.ts`로 둔다(`vite.config.ts`의 `test.include`). 예외: 하네스 스크립트 테스트는 `harness/scripts/__tests__/`.
 - 필수: 정상·실패·경계값을 함께 다룬다. 리뷰 체크 항목이다([implementation.md](../collaboration/implementation.md#리뷰)).
 - 필수: 게임 규칙 테스트의 기대값은 [GDD](../../GDD.md) 수치에서 온다.
 - 필수: 기능과 테스트는 같은 커밋([commits.md](../collaboration/commits.md)).

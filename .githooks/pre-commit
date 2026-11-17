@@ -1,0 +1,5 @@
+#!/bin/sh
+# 하네스 full 검사(쓰기 없음). 원본: docs/harness-design.md §8
+# git 저장소 루트가 takoyaki-truck의 상위 디렉터리라 core.hooksPath=takoyaki-truck/.githooks 로 설정한다.
+cd "$(dirname "$0")/.." || exit 1
+exec pnpm -s tool harness.check -- --full --no-write

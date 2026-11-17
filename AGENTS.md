@@ -18,7 +18,7 @@
 | 기술 결정 기록 | [docs/adr/template.md](docs/adr/template.md) |
 | 규칙 표현(필수·기본·허용·예시·미정) | [docs/rules/README.md](docs/rules/README.md) |
 
-하네스(`harness/`, `.claude/`)는 아직 없다. 설계 원본은 [docs/harness-design.md](docs/harness-design.md)이며 수정하지 않는다.
+하네스: 도구 원본은 [harness/toolset.yaml](harness/toolset.yaml)이고 `pnpm tool <id>`로 실행한다. 스킬 목록은 `.claude/skills/INDEX.md`(생성물). 설계 원본은 [docs/harness-design.md](docs/harness-design.md)이며 수정하지 않는다.
 
 ## 핵심 기준
 

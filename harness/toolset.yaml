@@ -1,0 +1,51 @@
+# 도구 원본. 스키마: docs/harness-design.md §5
+# - id는 고정. 바꾸려면 제거 후 신규 등록한다.
+# - status: planned 는 tool.ts가 실행을 거부한다.
+# - 실행: pnpm tool <id> [-- 추가 인자]
+version: 1
+tools:
+  - id: test.unit
+    run: pnpm vitest run
+    purpose: Vitest 단위 테스트(src, harness/scripts/__tests__) 실행
+    side_effect: none
+    status: active
+  - id: test.e2e
+    run: pnpm playwright test --project=mobile
+    purpose: Playwright 모바일 E2E. integrator가 E2E 작성 후 active로 전환
+    side_effect: none
+    status: planned
+  - id: build
+    run: pnpm build
+    purpose: 타입 검사(tsconfig.json, tsconfig.core.json) + Vite 빌드
+    side_effect: dist/ 재생성
+    status: active
+  - id: lint.boundary
+    run: pnpm depcruise src --config .dependency-cruiser.cjs
+    purpose: dependency-cruiser 모듈 경계 검사
+    side_effect: none
+    status: active
+  - id: render.snapshot
+    run: tsx harness/scripts/snapshot.ts
+    purpose: sandbox.html 상태별 모바일 뷰포트 캡처
+    side_effect: .artifacts/snapshots/*.png 생성
+    status: active
+  - id: sim.balance
+    run: tsx harness/scripts/simulate.ts
+    purpose: BalanceSimulator 평균 별점을 GDD 밸런스 목표와 비교
+    side_effect: none
+    status: active
+  - id: dialogue.lint
+    run: tsx harness/scripts/lint-dialogues.ts
+    purpose: 대사 good/bad 길이 차, 중복, 금지어 검사
+    side_effect: none
+    status: active
+  - id: harness.check
+    run: tsx harness/scripts/harness-check.ts
+    purpose: 하네스 검사(--format / --full / --summary)
+    side_effect: none
+    status: active
+  - id: harness.index
+    run: tsx harness/scripts/gen-index.ts
+    purpose: 스킬·에이전트 frontmatter로 .claude/skills/INDEX.md 재생성
+    side_effect: .claude/skills/INDEX.md 덮어씀
+    status: active

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [{ "type": "command", "command": "pnpm -s tsx harness/scripts/harness-check.ts --format --from-hook-stdin" }]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": "pnpm -s tsx harness/scripts/harness-check.ts --summary --read-only" }]
+      }
+    ]
+  }
+}
