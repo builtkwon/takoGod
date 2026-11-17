@@ -8,7 +8,8 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PROJECT_ROOT, isMain, isRecord, toRel } from './lib/common.ts';
 import { checkFormatFile } from './lib/format.ts';
-import { formatResults, runFull } from './lib/full.ts';
+import { formatResults, runFull, type FullOptions } from './lib/full.ts';
+import { readHeadToolset } from './lib/toolset.ts';
 import { exportStaged } from './lib/staged.ts';
 import { collectSummary, formatSummary } from './lib/summary.ts';
 
@@ -103,6 +104,7 @@ export function runCheck(root: string, argv: readonly string[], io: Io = default
   }
   if (mode === '--full') {
     let target = root;
+    let opts: FullOptions = {};
     let cleanup = (): void => {};
     if (has('--staged')) {
       const staged = exportStaged(root);
@@ -111,12 +113,14 @@ export function runCheck(root: string, argv: readonly string[], io: Io = default
         return 1;
       }
       target = staged.dir;
+      // 임시 디렉터리에는 .git이 없다 → 비교 기준은 원래 저장소 HEAD에서 읽는다.
+      opts = { baseToolset: readHeadToolset(root) };
       cleanup = staged.cleanup;
       io.out('harness full: 스테이지된 내용 기준');
     }
     let results;
     try {
-      results = runFull(target);
+      results = runFull(target, opts);
     } finally {
       cleanup();
     }

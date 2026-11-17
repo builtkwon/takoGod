@@ -4,7 +4,7 @@ import { checkFormatFile, findToolCallIds, listFormatTargets } from './format.ts
 import { renderIndex } from './index-gen.ts';
 import {
   INDEX_PATH,
-  META_SKILLS_DIR,
+  META_SKILL_OWNER,
   PROPOSALS_DIR,
   loadModel,
   LIMITS,
@@ -12,7 +12,7 @@ import {
   type HarnessModel,
   type LoadedSkill,
 } from './model.ts';
-import { loadToolset, type Toolset } from './toolset.ts';
+import { loadToolset, parseToolset, readHeadToolset, type Toolset } from './toolset.ts';
 import { typecheckHarness } from './typecheck.ts';
 
 export type Status = 'ok' | 'fail' | 'warn' | 'skip';
@@ -61,9 +61,15 @@ export function checkSkillTools(model: HarnessModel, toolset: Toolset): CheckRes
 export function checkToolPermission(model: HarnessModel): CheckResult {
   const byName = new Map(model.skills.map((s) => [s.skill.name, s.skill]));
   const out: string[] = [];
+  const owner = model.agents.find((a) => a.agent.name === META_SKILL_OWNER);
+  if (model.metaSkills.length > 0 && owner === undefined) {
+    out.push(`메타 스킬 ${model.metaSkills.map((m) => m.skill.name).join(', ')}의 소속 에이전트 ${META_SKILL_OWNER}가 없다`);
+  }
   for (const { agent } of model.agents) {
     const used = new Set<string>();
     for (const name of agent.skills) for (const step of byName.get(name)?.steps ?? []) step.tools.forEach((t) => used.add(t));
+    // 메타 스킬은 harness-gardener 소속이다(skills에는 넣지 않는다).
+    if (agent.name === META_SKILL_OWNER) for (const m of model.metaSkills) for (const step of m.skill.steps) step.tools.forEach((t) => used.add(t));
     const missing = [...used].filter((t) => !agent.allowed_tools.includes(t)).sort();
     if (missing.length > 0) out.push(`${agent.name}: 스킬이 쓰는 도구 ${missing.join(', ')} ⊄ allowed_tools`);
   }
@@ -230,8 +236,8 @@ function bodyOf(root: string, rel: string): string {
 
 /**
  * 본문의 `pnpm tool <id>` 대조: toolset에 있고, 그 본문을 쓰는 에이전트의 allowed_tools에 있어야 한다.
- * 본문을 쓰는 에이전트: 일반 스킬(references 포함) → skills에 배치한 에이전트, 메타 스킬 → 본문에서
- * `harness/meta-skills/<name>/` 경로로 안내하는 에이전트, 에이전트 본문 → 자기 자신.
+ * 본문을 쓰는 에이전트: 일반 스킬(references 포함) → skills에 배치한 에이전트,
+ * 메타 스킬 → harness-gardener(소속 고정), 에이전트 본문 → 자기 자신.
  */
 export function checkBodyToolCalls(root: string, model: HarnessModel, toolset: Toolset): CheckResult {
   const ids = new Set(toolset.tools.map((t) => t.id));
@@ -248,7 +254,7 @@ export function checkBodyToolCalls(root: string, model: HarnessModel, toolset: T
   };
   for (const { path, meta, skill } of [...model.skills, ...model.metaSkills]) {
     const users = meta
-      ? agentBodies.filter((a) => a.body.includes(`${META_SKILLS_DIR}/${skill.name}/`)).map((a) => a.agent)
+      ? model.agents.filter((a) => a.agent.name === META_SKILL_OWNER).map((a) => a.agent)
       : model.agents.filter((a) => a.agent.skills.includes(skill.name)).map((a) => a.agent);
     verify(path, bodyOf(root, path), users);
     const refDir = path.replace(/SKILL\.md$/, 'references');
@@ -260,12 +266,41 @@ export function checkBodyToolCalls(root: string, model: HarnessModel, toolset: T
   return result('본문 도구 호출', out);
 }
 
+/**
+ * toolset version: 도구를 추가·제거하면(ID 집합이 기준과 다르면) version이 기준보다 커야 한다. 줄어들면 항상 실패.
+ * 기준은 HEAD의 toolset.yaml. 기준이 없으면(첫 커밋, git 아님) skip.
+ */
+export function checkToolsetVersion(current: Toolset, baseText: string | undefined): CheckResult {
+  const name = 'toolset version';
+  if (baseText === undefined) return { name, status: 'skip', messages: ['비교 기준(HEAD의 toolset.yaml) 없음'] };
+  const base = parseToolset(baseText);
+  if (!base.ok) return { name, status: 'skip', messages: ['HEAD의 toolset.yaml을 읽지 못함'] };
+  const before = new Set(base.toolset.tools.map((t) => t.id));
+  const after = new Set(current.tools.map((t) => t.id));
+  const added = [...after].filter((id) => !before.has(id));
+  const removed = [...before].filter((id) => !after.has(id));
+  const v0 = base.toolset.version;
+  const v1 = current.version;
+  const out: string[] = [];
+  if (v1 < v0) out.push(`version ${v1} < HEAD ${v0}: 줄일 수 없다`);
+  else if ((added.length > 0 || removed.length > 0) && v1 <= v0) {
+    const diff = [...added.map((id) => `+${id}`), ...removed.map((id) => `-${id}`)].join(', ');
+    out.push(`도구 추가·제거(${diff})가 있는데 version이 ${v1} 그대로다(HEAD ${v0}) — ${v0 + 1} 이상으로 올린다`);
+  }
+  return result(name, out);
+}
+
 export function checkHarnessTypes(root: string): CheckResult {
   const r = typecheckHarness(root);
   return { name: 'harness 타입', status: r.status, messages: r.messages };
 }
 
-export function runFull(root: string): CheckResult[] {
+export interface FullOptions {
+  /** toolset version 비교 기준. 생략하면 root 저장소 HEAD에서 읽는다(--staged는 원래 저장소에서 읽어 넘긴다). */
+  readonly baseToolset?: string | undefined;
+}
+
+export function runFull(root: string, opts: FullOptions = {}): CheckResult[] {
   const formatErrors = listFormatTargets(root).flatMap((rel) => checkFormatFile(root, rel).map((e) => `${rel}: ${e}`));
   const model = loadModel(root);
   const loadOnly = model.loadErrors.filter((e) => e.includes('SKILL.md 없음'));
@@ -274,7 +309,8 @@ export function runFull(root: string): CheckResult[] {
   if (!ts.ok) results.push(result('toolset', [...ts.errors]));
   else {
     results.push(result('toolset', []));
-    results.push(checkSkillTools(model, ts.toolset), checkBodyToolCalls(root, model, ts.toolset));
+    const base = 'baseToolset' in opts ? opts.baseToolset : readHeadToolset(root);
+    results.push(checkToolsetVersion(ts.toolset, base), checkSkillTools(model, ts.toolset), checkBodyToolCalls(root, model, ts.toolset));
   }
   results.push(
     checkAgentSkills(model),

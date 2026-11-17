@@ -109,10 +109,25 @@ describe('git log 트레일러 집계', () => {
     expect(runReceipts(root, ['--', '--weeks', '1'], new Date(NOW.getTime() + 30 * 86_400_000))).toBe(0);
   });
 
-  it('커밋 없는 저장소는 빈 결과, git 저장소 아님은 exit 1', () => {
+  it('커밋 없는 저장소는 빈 결과(exit 0), git 저장소 아님은 exit 1 — 종료코드로 판정', () => {
     const c = captureConsole();
     expect(readTrailers(makeGitRepo(), NOW)).toEqual([]);
+    expect(runReceipts(makeGitRepo(), [], NOW)).toBe(0);
     expect(runReceipts(makeRepo(), [], NOW)).toBe(1);
-    expect(c.err()).toContain('git log 실패');
+    expect(c.err()).toContain('git 저장소가 아니다');
+  });
+
+  it('git 메시지가 현지화돼도 판정이 같다(LC_ALL·LANG 무관)', () => {
+    const prev = { LC_ALL: process.env['LC_ALL'], LANG: process.env['LANG'], LANGUAGE: process.env['LANGUAGE'] };
+    try {
+      Object.assign(process.env, { LC_ALL: 'ko_KR.UTF-8', LANG: 'ko_KR.UTF-8', LANGUAGE: 'ko' });
+      expect(readTrailers(makeGitRepo(), NOW)).toEqual([]);
+      expect(typeof readTrailers(makeRepo(), NOW)).toBe('string');
+    } finally {
+      for (const [k, v] of Object.entries(prev)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
   });
 });

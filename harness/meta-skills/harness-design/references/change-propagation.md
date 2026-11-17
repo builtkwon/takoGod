@@ -6,6 +6,9 @@
 toolset.yaml → 영향 스킬 → 영향 에이전트 → INDEX 재생성 → 전체 검사
 ```
 
+- 도구를 추가·제거하면 toolset `version`을 올린다(integrator). 전체 검사의 "toolset version"이 HEAD와 비교해 확인한다.
+- 메타 스킬의 도구는 harness-gardener 소속으로 대조한다. 메타 스킬에 도구를 쓰면 gardener allowed_tools에도 있어야 한다.
+
 ## 도구 추가
 
 - 새 ID를 쓸 스킬 후보가 있는지 S2에서 본다. 단일 도구 실행이면 스킬로 만들지 않고 allowed_tools에만 추가한다.

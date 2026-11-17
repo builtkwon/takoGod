@@ -3,7 +3,8 @@
 //   - good/bad 길이 차: |good − bad| ≤ 30% × max(good, bad)  (GDD §콘텐츠 "두 답 길이가 비슷해야 한다")
 //   - 중복: 같은 prompt, 문항 안 good=bad → 실패. 서로 다른 문항의 같은 답 → 경고(exit 0)
 //   - 금지어: harness/scripts/dialogue-banned-words.txt
-//       2글자 이하: 공백·문장부호로 나눈 토큰과 완전히 같을 때만("한남동", "한 남자", "애 자랑"은 통과)
+//       2글자 이하: 공백·문장부호로 나눈 토큰이 이 말로 시작하면 검출("꼰대가", "틀딱은")
+//                   단, `!<토큰>` 예외 토큰과 완전히 같은 토큰은 통과("!한남동" → "한남동" 통과)
 //       3글자 이상: 부분 문자열(공백은 지우지 않는다)
 // 원본: docs/harness-design.md §3, §5. 계약: src/contracts/tooling.ts (DialoguesModule), customer.ts (DialogueLine)
 import { join } from 'node:path';
@@ -17,17 +18,30 @@ export const BANNED_PATH = 'harness/scripts/dialogue-banned-words.txt';
 export const MAX_LENGTH_DIFF = 0.3;
 /** GDD §콘텐츠 "각 10문항(총 40)". */
 export const LINES_PER_PERSONALITY = 10;
-/** 이 글자 수 이하 금지어는 토큰 완전 일치로만 잡는다. */
+/** 이 글자 수 이하 금지어는 토큰 앞부분 일치로 잡는다(부분 문자열로 잡으면 오검출이 많다). */
 export const SHORT_BANNED_MAX = 2;
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 const TEXT_FIELDS = ['prompt', 'good', 'bad'] as const;
 
-export function parseBannedWords(text: string): string[] {
-  return text
+export interface BannedList {
+  readonly words: readonly string[];
+  /** `!<토큰>`: 이 토큰과 완전히 같으면 짧은 금지어 검사를 통과한다. */
+  readonly exceptions: readonly string[];
+}
+
+export function parseBannedWords(text: string): BannedList {
+  const lines = text
     .split('\n')
     .map((l) => l.trim())
     .filter((l) => l !== '' && !l.startsWith('#'));
+  return {
+    words: lines.filter((l) => !l.startsWith('!')),
+    exceptions: lines
+      .filter((l) => l.startsWith('!'))
+      .map((l) => l.slice(1).trim().toLowerCase())
+      .filter((l) => l !== ''),
+  };
 }
 
 /** 모듈 모양 검증. 실패 사유 목록 또는 DialogueLine[]. */
@@ -68,11 +82,14 @@ export function lengthDiffRatio(a: string, b: string): number {
   return Math.abs(la - lb) / Math.max(la, lb);
 }
 
-/** 금지어가 text에 있는지. 짧은 말은 토큰 완전 일치, 긴 말은 부분 문자열. */
-export function containsBanned(text: string, word: string): boolean {
+/**
+ * 금지어가 text에 있는지. 짧은 말은 토큰 앞부분 일치(예외 토큰은 제외), 긴 말은 부분 문자열.
+ * 예외 토큰은 짧은 말의 토큰 검사에만 적용한다.
+ */
+export function containsBanned(text: string, word: string, exceptions: readonly string[] = []): boolean {
   const w = lower(word);
   if (w === '') return false;
-  if (charLength(w) <= SHORT_BANNED_MAX) return tokens(text).includes(w);
+  if (charLength(w) <= SHORT_BANNED_MAX) return tokens(text).some((t) => t.startsWith(w) && !exceptions.includes(t));
   return lower(text).includes(w);
 }
 
@@ -81,7 +98,7 @@ export interface LintResult {
   readonly warnings: readonly string[];
 }
 
-export function lintDialogues(lines: readonly DialogueLine[], banned: readonly string[]): LintResult {
+export function lintDialogues(lines: readonly DialogueLine[], banned: BannedList): LintResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const label = (i: number): string => `#${i}(${lines[i]?.personality ?? '?'})`;
@@ -116,7 +133,7 @@ export function lintDialogues(lines: readonly DialogueLine[], banned: readonly s
   });
   lines.forEach((l, i) => {
     for (const f of TEXT_FIELDS) {
-      for (const w of banned) if (containsBanned(l[f], w)) errors.push(`${label(i)}.${f} 금지어 "${w}"`);
+      for (const w of banned.words) if (containsBanned(l[f], w, banned.exceptions)) errors.push(`${label(i)}.${f} 금지어 "${w}"`);
     }
   });
   return { errors, warnings };

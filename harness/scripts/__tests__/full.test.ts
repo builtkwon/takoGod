@@ -2,7 +2,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runCheck, type Io } from '../harness-check.ts';
-import { runFull, parsePlacement, latestProposal, type CheckResult } from '../lib/full.ts';
+import { checkToolsetVersion, runFull, parsePlacement, latestProposal, type CheckResult } from '../lib/full.ts';
+import { parseToolset } from '../lib/toolset.ts';
 import { PROJECT_ROOT } from '../lib/common.ts';
 import { typecheckHarness } from '../lib/typecheck.ts';
 import { renderIndex } from '../lib/index-gen.ts';
@@ -228,15 +229,23 @@ describe('full: 검사 항목별 실패', () => {
     expect(m).not.toContain('<id>');
   });
 
-  it('본문 도구 호출: 메타 스킬은 본문에서 경로로 안내하는 에이전트와 대조', () => {
-    const meta = { 'harness/meta-skills/m/SKILL.md': skillMd({ name: 'm', steps: { S1: [], S2: [] }, body: bodyWith('pnpm tool build', ['S1', 'S2']) }) };
-    const gardener = (tools: string[]): Record<string, string> =>
-      agent({ name: 'g', allowed_tools: tools, body: '열 파일: `harness/meta-skills/m/SKILL.md`' });
-    expect(status(repo({ ...meta, ...gardener(['build']) }), '본문 도구 호출')[0]).toBe('ok');
-    expect(status(repo({ ...meta, ...gardener(['test.unit']) }), '본문 도구 호출')).toEqual([
-      'fail',
-      'harness/meta-skills/m/SKILL.md: pnpm tool build — g의 allowed_tools에 없다',
-    ]);
+  it('메타 스킬은 harness-gardener 소속: 본문 도구 호출·steps 도구를 gardener allowed_tools와 대조', () => {
+    const meta = { 'harness/meta-skills/m/SKILL.md': skillMd({ name: 'm', steps: { S1: ['test.unit'], S2: [] }, body: bodyWith('pnpm tool build', ['S1', 'S2']) }) };
+    const gardener = (tools: string[]): Record<string, string> => agent({ name: 'harness-gardener', allowed_tools: tools, body: '본문에 경로 안내 없음' });
+    const ok = repo({ ...meta, ...gardener(['build', 'test.unit']) });
+    expect(status(ok, '본문 도구 호출')[0]).toBe('ok');
+    expect(status(ok, '도구 허용')[0]).toBe('ok');
+    const bad = repo({ ...meta, ...gardener(['test.e2e']) });
+    expect(status(bad, '본문 도구 호출')).toEqual(['fail', 'harness/meta-skills/m/SKILL.md: pnpm tool build — harness-gardener의 allowed_tools에 없다']);
+    expect(status(bad, '도구 허용')).toEqual(['fail', 'harness-gardener: 스킬이 쓰는 도구 test.unit ⊄ allowed_tools']);
+    // 다른 에이전트가 경로를 안내해도 대조 대상은 gardener뿐
+    const other = repo({ ...meta, ...gardener(['build', 'test.unit']), ...agent({ name: 'x', body: '`harness/meta-skills/m/SKILL.md`' }) });
+    expect(status(other, '본문 도구 호출')[0]).toBe('ok');
+  });
+
+  it('메타 스킬이 있는데 harness-gardener가 없으면 도구 허용 실패', () => {
+    const root = repo({ 'harness/meta-skills/m/SKILL.md': skillMd({ name: 'm' }) });
+    expect(status(root, '도구 허용')).toEqual(['fail', expect.stringContaining('소속 에이전트 harness-gardener가 없다')]);
   });
 
   it('parsePlacement: 백틱·(meta)·- 처리', () => {
@@ -267,13 +276,64 @@ describe('harness-check --full CLI', () => {
   });
 });
 
+describe('full: toolset version', () => {
+  const ts = (version: number, ids: readonly string[]): string =>
+    `version: ${version}\ntools:\n${ids.map((id) => `  - { id: ${id}, run: echo, purpose: p, side_effect: none, status: active }\n`).join('')}`;
+  const cur = (version: number, ids: readonly string[]) => {
+    const r = parseToolset(ts(version, ids));
+    if (!r.ok) throw new Error('fixture');
+    return r.toolset;
+  };
+
+  it.each([
+    ['변화 없음', 1, ['a'], 1, ['a'], 'ok'],
+    ['변화 없이 증가', 1, ['a'], 2, ['a'], 'ok'],
+    ['추가+증가', 1, ['a'], 2, ['a', 'b'], 'ok'],
+    ['제거+증가', 2, ['a', 'b'], 3, ['a'], 'ok'],
+    ['추가, 그대로', 1, ['a'], 1, ['a', 'b'], 'fail'],
+    ['제거, 그대로', 2, ['a', 'b'], 2, ['a'], 'fail'],
+    ['교체(같은 개수), 그대로', 1, ['a'], 1, ['b'], 'fail'],
+    ['감소', 3, ['a'], 2, ['a'], 'fail'],
+  ] as const)('%s → %s', (_n, v0, ids0, v1, ids1, want) => {
+    expect(checkToolsetVersion(cur(v1, ids1), ts(v0, ids0)).status).toBe(want);
+  });
+
+  it('메시지에 추가·제거 ID와 올릴 값을 적는다, 기준 없으면 skip', () => {
+    expect(checkToolsetVersion(cur(1, ['a', 'b']), ts(1, ['a', 'c'])).messages.join()).toContain('+b, -c');
+    expect(checkToolsetVersion(cur(1, ['a', 'b']), ts(1, ['a'])).messages.join()).toContain('2 이상으로 올린다');
+    expect(checkToolsetVersion(cur(1, ['a']), undefined).status).toBe('skip');
+    expect(status(repo(), 'toolset version')[0]).toBe('skip'); // git 아님
+  });
+
+  it('git 저장소: HEAD 대비 작업 트리·스테이지 모두 검사', () => {
+    const root = makeGitRepo({ ...baseFiles(), 'harness/toolset.yaml': ts(1, ['test.unit', 'build']) });
+    writeFiles(root, { [INDEX_PATH]: renderIndex(loadModel(root)) });
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '-m', 'init']);
+    writeFiles(root, { 'harness/toolset.yaml': ts(1, ['test.unit', 'build', 'new.tool']) });
+    expect(status(root, 'toolset version')[0]).toBe('fail');
+    git(root, ['add', '-A']);
+    const outs: string[] = [];
+    const io = { readStdin: () => '', out: (x: string) => void outs.push(x), err: () => {} };
+    expect(runCheck(root, ['--full', '--no-write', '--staged'], io)).toBe(1);
+    expect(outs.join('\n')).toContain('[FAIL] toolset version');
+    writeFiles(root, { 'harness/toolset.yaml': ts(2, ['test.unit', 'build', 'new.tool']) });
+    git(root, ['add', '-A']);
+    expect(runCheck(root, ['--full', '--no-write', '--staged'], io)).toBe(0);
+  });
+
+  it('저장소 toolset은 HEAD 대비 규칙을 지킨다', () => {
+    expect(get(runFull(PROJECT_ROOT), 'toolset version').status).not.toBe('fail');
+  });
+});
+
 describe('full: harness 타입 검사', () => {
   const TSCONFIG = JSON.stringify({
     compilerOptions: { strict: true, noEmit: true, types: [], lib: ['ES2022'], module: 'ESNext', moduleResolution: 'bundler' },
     include: ['scripts/**/*.ts'],
   });
 
-  it('타입 오류 픽스처 → 실패, 정상 → 통과, tsconfig 없음 → skip', () => {
+  it('타입 오류 픽스처 → 실패, 정상 → 통과, tsconfig 없음: 스크립트 있으면 실패·없으면 skip', () => {
     const bad = repo({ 'harness/tsconfig.json': TSCONFIG, 'harness/scripts/bad.ts': 'export const n: number = "문자열";\n' });
     const [s, m] = status(bad, 'harness 타입');
     expect(s).toBe('fail');
@@ -284,6 +344,8 @@ describe('full: harness 타입 검사', () => {
     const good = repo({ 'harness/tsconfig.json': TSCONFIG, 'harness/scripts/ok.ts': 'export const n: number = 1;\n' });
     expect(status(good, 'harness 타입')[0]).toBe('ok');
     expect(status(repo(), 'harness 타입')[0]).toBe('skip');
+    const noConfig = repo({ 'harness/scripts/lib/x.ts': 'export const n = 1;\n' });
+    expect(status(noConfig, 'harness 타입')).toEqual(['fail', expect.stringContaining('harness/tsconfig.json 없음 — harness/scripts에 .ts 1개')]);
   });
 
   it('저장소의 harness 스크립트는 타입 검사를 통과한다', () => {

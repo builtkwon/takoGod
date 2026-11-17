@@ -1,11 +1,15 @@
 // 테스트 픽스처: 임시 저장소와 SKILL.md·에이전트 생성기.
+import { ISOLATED_HOME } from './git-isolation.ts'; // 가장 먼저: git 환경 격리
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterEach, vi } from 'vitest';
+import { afterAll, afterEach, vi } from 'vitest';
 
 const created: string[] = [];
+
+// vitest 워커는 exit 이벤트 없이 끝나므로 격리용 HOME은 파일마다 afterAll에서 지운다.
+afterAll(() => rmSync(ISOLATED_HOME, { recursive: true, force: true }));
 
 afterEach(() => {
   while (created.length > 0) rmSync(created.pop() as string, { recursive: true, force: true });
@@ -129,16 +133,9 @@ export function captureConsole(): { out: () => string; err: () => string } {
   return { out: () => out.join('\n'), err: () => err.join('\n') };
 }
 
-/** git 환경 변수(훅 안에서 테스트가 돌 때 새는 GIT_DIR 등)를 지운 env. */
-export function cleanGitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {};
-  for (const [k, v] of Object.entries(process.env)) if (!k.startsWith('GIT_')) env[k] = v;
-  return { ...env, GIT_CONFIG_NOSYSTEM: '1', HOME: tmpdir(), ...extra };
-}
-
 /** root에서 git 명령. 실패하면 throw. */
 export function git(root: string, args: readonly string[], extraEnv: Record<string, string> = {}): string {
-  const r = spawnSync('git', args, { cwd: root, encoding: 'utf8', env: cleanGitEnv(extraEnv) });
+  const r = spawnSync('git', args, { cwd: root, encoding: 'utf8', env: { ...process.env, ...extraEnv } });
   if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`);
   return r.stdout;
 }

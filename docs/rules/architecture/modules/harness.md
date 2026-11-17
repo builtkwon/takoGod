@@ -23,10 +23,12 @@
 | 검사 | 언제 | 기준 |
 | --- | --- | --- |
 | format | Write·Edit 훅(PostToolUse) | 실패 또는 훅 실행 실패 → exit 2로 차단 |
-| full | 메타 스킬 마지막 단계, pre-commit | pre-commit은 스테이지된 내용 기준. harness 타입 검사(`harness/tsconfig.json`) 포함 |
+| full | 메타 스킬 마지막 단계, pre-commit | pre-commit은 스테이지된 내용 기준. harness 타입 검사(`harness/tsconfig.json`) 포함. 스크립트가 있는데 tsconfig가 없으면 실패 |
 | summary | SessionStart | 읽기 전용 |
 
 - 필수: 제안표 파일명은 `harness/proposals/NNNN-<kebab>.md`.
+- 필수: `harness/toolset.yaml`에 도구를 추가·제거하면 `version`을 올린다. 줄이지 않는다. full 검사가 HEAD의 toolset과 비교한다(`--staged`는 스테이지 대 HEAD).
+- 필수: 메타 스킬(`harness/meta-skills/**`)은 harness-gardener 소속이다. 메타 스킬의 도구는 gardener `allowed_tools`와 대조한다.
 - pre-commit은 `pnpm install`의 `prepare`가 `core.hooksPath=.githooks`로 설치한다.
 
 ## 대상 경로

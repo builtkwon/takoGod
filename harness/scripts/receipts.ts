@@ -50,8 +50,14 @@ export interface CommitReceipts {
 const FIELD = '\x1f';
 const RECORD = '\x1e';
 
-/** since 이후 커밋의 트레일러 값. git이 없거나 커밋이 없으면 빈 배열. */
+/** since 이후 커밋의 트레일러 값. 커밋이 없는 저장소는 빈 배열, git 저장소가 아니면 오류 문자열. */
 export function readTrailers(root: string, since: Date): CommitReceipts[] | string {
+  // 판정은 종료코드로만 한다(오류 문구는 git 버전·언어마다 다르다).
+  const git = (args: readonly string[]) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  const repo = git(['rev-parse', '--git-dir']);
+  if (repo.error !== undefined) return `git 실행 실패: ${repo.error.message}`;
+  if (repo.status !== 0) return `git 저장소가 아니다: ${root}`;
+  if (git(['rev-parse', '--verify', '--quiet', 'HEAD']).status !== 0) return []; // 커밋 없음
   const res = spawnSync(
     'git',
     [
@@ -62,11 +68,7 @@ export function readTrailers(root: string, since: Date): CommitReceipts[] | stri
     { cwd: root, encoding: 'utf8' },
   );
   if (res.error !== undefined) return `git 실행 실패: ${res.error.message}`;
-  if (res.status !== 0) {
-    // 커밋이 하나도 없는 저장소
-    if (/does not have any commits/.test(res.stderr)) return [];
-    return `git log 실패: ${res.stderr.trim()}`;
-  }
+  if (res.status !== 0) return `git log 실패(exit ${String(res.status)}): ${res.stderr.trim()}`;
   return res.stdout
     .split(RECORD)
     .map((r) => r.trim())

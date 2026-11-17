@@ -1,4 +1,5 @@
 // harness/toolset.yaml 로더. 스키마 원본: docs/harness-design.md §5
+import { spawnSync } from 'node:child_process';
 import { parse } from 'yaml';
 import { isRecord, readText } from './common.ts';
 
@@ -90,4 +91,10 @@ export function loadToolset(root: string): ToolsetResult {
   const text = readText(root, TOOLSET_PATH);
   if (text === undefined) return { ok: false, errors: [`없음: ${TOOLSET_PATH}`] };
   return parseToolset(text);
+}
+
+/** 비교 기준: root 저장소 HEAD의 toolset.yaml 내용. git 저장소가 아니거나 HEAD·파일이 없으면 undefined. */
+export function readHeadToolset(root: string): string | undefined {
+  const r = spawnSync('git', ['show', `HEAD:${TOOLSET_PATH}`], { cwd: root, encoding: 'utf8' });
+  return r.error === undefined && r.status === 0 ? r.stdout : undefined;
 }

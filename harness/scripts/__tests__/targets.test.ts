@@ -14,6 +14,7 @@ import {
   parseBannedWords,
   runLint,
   validateModule,
+  type BannedList,
 } from '../lint-dialogues.ts';
 import { PERFECT_EPSILON, SIM_PATH, parseArgs, parseTargets, runSimulate } from '../simulate.ts';
 import { SANDBOX_PAGE, STATES_PATH, parseStates, runSnapshot, stateUrl, type SnapshotDeps } from '../snapshot.ts';
@@ -180,7 +181,8 @@ describe('lint-dialogues', () => {
     PERS.flatMap((p) =>
       Array.from({ length: 10 }, (_, i) => ({ personality: p, prompt: `${p} 질문 ${i}`, good: `${p} 좋은 답 ${i}`, bad: `${p} 나쁜 답 ${i}` })),
     );
-  const errs = (lines: readonly DialogueLine[], banned: readonly string[] = []): string => lintDialogues(lines, banned).errors.join('\n');
+  const NONE = { words: [], exceptions: [] };
+  const errs = (lines: readonly DialogueLine[], banned: BannedList = NONE): string => lintDialogues(lines, banned).errors.join('\n');
   const repo = (): string =>
     makeRepo({ 'src/data/dialogues.ts': '// fixture', [BANNED_PATH]: '# 주석\n틀딱\n\n바보 멍청이\n' });
 
@@ -192,7 +194,7 @@ describe('lint-dialogues', () => {
 
   it('정상 대사(성격당 10, 총 40) → exit 0', async () => {
     const c = captureConsole();
-    expect(lintDialogues(full(), [])).toEqual({ errors: [], warnings: [] });
+    expect(lintDialogues(full(), NONE)).toEqual({ errors: [], warnings: [] });
     expect(await runLint(repo(), async () => ({ dialogues: full() }))).toBe(0);
     expect(c.out()).toContain('문항 40개 (salaryman 10, grandma 10, gourmet 10, tourist 10)');
   });
@@ -222,7 +224,7 @@ describe('lint-dialogues', () => {
 
     const dupAnswer = full();
     dupAnswer[5] = { ...dupAnswer[5]!, good: dupAnswer[0]!.good };
-    const r = lintDialogues(dupAnswer, []);
+    const r = lintDialogues(dupAnswer, NONE);
     expect(r.errors).toEqual([]);
     expect(r.warnings.join()).toContain('#5(salaryman).good 다른 문항과 같은 답(#0(salaryman).good)');
     const c = captureConsole();
@@ -230,15 +232,35 @@ describe('lint-dialogues', () => {
     expect(c.out()).toContain('dialogue.lint 경고 1건');
   });
 
-  it('금지어 2글자 이하: 토큰 완전 일치만 잡는다', () => {
-    for (const ok of ['한남동 맛집이에요', '한 남자가 왔어요', '애 자랑 좀 할게요', '애자랑 놀았다', '틀딱이란 말은 안 써요']) {
-      expect(containsBanned(ok, ok.startsWith('한') ? '한남' : ok.startsWith('틀') ? '틀딱' : '애자')).toBe(false);
+  it('금지어 2글자 이하: 토큰이 이 말로 시작하면 검출', () => {
+    for (const [text, w] of [
+      ['한남은 몰라요', '한남'],
+      ['꼰대가 왔네', '꼰대'],
+      ['지랄하네 진짜', '지랄'],
+      ['틀딱은 빠져요', '틀딱'],
+      ['애자?', '애자'],
+      ['"애자"라니', '애자'],
+      ['ㅅㅂ…진짜', 'ㅅㅂ'],
+    ] as const) {
+      expect([text, containsBanned(text, w)]).toEqual([text, true]);
     }
-    expect(containsBanned('그건 한남 같은 말이죠', '한남')).toBe(true);
-    expect(containsBanned('애자?', '애자')).toBe(true);
-    expect(containsBanned('"애자"라니', '애자')).toBe(true);
-    expect(containsBanned('ㅅㅂ…진짜', 'ㅅㅂ')).toBe(true);
-    expect(containsBanned('BAD word', 'ba')).toBe(false);
+    for (const [text, w] of [
+      ['한 남자가 왔어요', '한남'],
+      ['애 자랑 좀 할게요', '애자'],
+      ['우리 남한남부', '한남'], // 토큰 중간은 검출하지 않는다
+      ['abba 노래', 'ba'],
+    ] as const) {
+      expect([text, containsBanned(text, w)]).toEqual([text, false]);
+    }
+  });
+
+  it('예외 토큰(!<토큰>)은 완전 일치일 때만 통과', () => {
+    const ex = ['한남동', '한남대교'];
+    expect(containsBanned('한남동 맛집이에요', '한남', ex)).toBe(false);
+    expect(containsBanned('한남대교 건너서', '한남', ex)).toBe(false);
+    expect(containsBanned('한남동에서 왔어요', '한남', ex)).toBe(true); // 조사가 붙으면 예외 아님(완전 일치 규칙)
+    expect(containsBanned('한남동 한남은', '한남', ex)).toBe(true); // 다른 토큰이 걸리면 검출
+    expect(containsBanned('한남동', '한남')).toBe(true); // 예외 없으면 앞부분 일치로 검출
   });
 
   it('금지어 3글자 이상: 부분 문자열(공백은 지우지 않음), 대소문자 무시', () => {
@@ -250,23 +272,30 @@ describe('lint-dialogues', () => {
     expect(containsBanned('Yankee go', 'yankee')).toBe(true);
   });
 
-  it('저장소 금지어 목록으로 "한남동", "한 남자", "애 자랑"은 통과', () => {
+  it('저장소 금지어 목록: "한남동", "한 남자", "애 자랑" 통과, "한남은"·"꼰대가"·"지랄하네"·"틀딱은" 검출', () => {
     const banned = parseBannedWords(readFileSync(join(PROJECT_ROOT, BANNED_PATH), 'utf8'));
+    expect(banned.exceptions).toEqual(expect.arrayContaining(['한남동', '한남대교']));
     const lines = full();
-    lines[0] = { ...lines[0]!, prompt: '한남동에서 왔어요', good: '한 남자가 추천했죠', bad: '애 자랑 좀 할게요' };
+    lines[0] = { ...lines[0]!, prompt: '한남동 맛집 아세요?', good: '한 남자가 추천했죠', bad: '애 자랑 좀 할게요' };
     expect(errs(lines, banned)).toBe('');
-    lines[1] = { ...lines[1]!, bad: '한남 같은 소리' };
-    expect(errs(lines, banned)).toContain('#1(salaryman).bad 금지어 "한남"');
+    const bad = ['한남은 몰라요', '꼰대가 왔네', '지랄하네 진짜', '틀딱은 빠져요'];
+    bad.forEach((b, i) => (lines[i + 1] = { ...lines[i + 1]!, bad: b }));
+    const e = errs(lines, banned);
+    for (const [i, w] of [[1, '한남'], [2, '꼰대'], [3, '지랄'], [4, '틀딱']] as const) {
+      expect(e).toContain(`#${i}(salaryman).bad 금지어 "${w}"`);
+    }
   });
 
-  it('금지어 목록: 주석·빈 줄 제외, 필드별로 보고', () => {
-    const banned = parseBannedWords('# 주석\n틀딱\n\n바보 멍청이\n');
-    expect(banned).toEqual(['틀딱', '바보 멍청이']);
+  it('금지어 목록: 주석·빈 줄 제외, !예외 분리, 필드별로 보고', () => {
+    const banned = parseBannedWords('# 주석\n틀딱\n\n바보 멍청이\n!틀딱이\n!\n');
+    expect(banned).toEqual({ words: ['틀딱', '바보 멍청이'], exceptions: ['틀딱이'] });
     const lines = full();
     lines[0] = { ...lines[0]!, bad: '틀딱 소리 마요' };
     lines[1] = { ...lines[1]!, good: '바보 멍청이야 좋은 답' };
+    lines[2] = { ...lines[2]!, good: '틀딱이 좋은 답' };
     expect(errs(lines, banned)).toContain('#0(salaryman).bad 금지어 "틀딱"');
     expect(errs(lines, banned)).toContain('#1(salaryman).good 금지어 "바보 멍청이"');
+    expect(errs(lines, banned)).not.toContain('#2(salaryman).good 금지어');
   });
 
   it('모듈 형식 오류 → exit 1', async () => {
@@ -286,6 +315,6 @@ describe('lint-dialogues', () => {
   });
 
   it('저장소 금지어 목록은 비어 있지 않다', () => {
-    expect(parseBannedWords(readFileSync(join(PROJECT_ROOT, BANNED_PATH), 'utf8')).length).toBeGreaterThan(0);
+    expect(parseBannedWords(readFileSync(join(PROJECT_ROOT, BANNED_PATH), 'utf8')).words.length).toBeGreaterThan(0);
   });
 });

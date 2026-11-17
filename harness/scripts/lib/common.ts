@@ -71,9 +71,24 @@ export function charLength(text: string): number {
   return [...text].length;
 }
 
-/** root 기준 POSIX 상대 경로. root 밖이면 undefined. */
+/** 심볼릭 링크를 푼 절대 경로. 없는 경로는 가장 가까운 존재하는 상위까지만 풀고 나머지를 붙인다. */
+export function realPathLoose(path: string): string {
+  const abs = resolve(path);
+  let head = abs;
+  const tail: string[] = [];
+  while (!existsSync(head)) {
+    const parent = dirname(head);
+    if (parent === head) return abs;
+    tail.unshift(head.slice(parent.length + (parent.endsWith(sep) ? 0 : 1)));
+    head = parent;
+  }
+  return join(realpathSync(head), ...tail);
+}
+
+/** root 기준 POSIX 상대 경로. root 밖이면 undefined. 심볼릭 링크(/var → /private/var 등)를 풀어 비교한다. */
 export function toRel(root: string, path: string): string | undefined {
-  const rel = relative(root, resolve(root, path));
+  const realRoot = realPathLoose(root);
+  const rel = relative(realRoot, realPathLoose(resolve(root, path)));
   if (rel === '' || rel.startsWith('..') || resolve(rel) === rel) return undefined;
   return rel.split(sep).join('/');
 }

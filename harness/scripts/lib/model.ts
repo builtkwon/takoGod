@@ -8,6 +8,8 @@ export const META_SKILLS_DIR = 'harness/meta-skills';
 export const AGENTS_DIR = '.claude/agents';
 export const INDEX_PATH = '.claude/skills/INDEX.md';
 export const PROPOSALS_DIR = 'harness/proposals';
+/** 메타 스킬의 소속 에이전트(도구 허용·본문 도구 호출 대조 기준). */
+export const META_SKILL_OWNER = 'harness-gardener';
 
 export const LIMITS = {
   skillLines: 120,

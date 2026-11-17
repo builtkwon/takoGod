@@ -1,8 +1,9 @@
 # 도구 원본. 스키마: docs/harness-design.md §5
 # - id는 고정. 바꾸려면 제거 후 신규 등록한다.
 # - status: planned 는 tool.ts가 실행을 거부한다.
+# - 도구를 추가·제거하면 version을 올린다(full 검사가 HEAD와 비교해 확인). 줄이지 않는다.
 # - 실행: pnpm tool <id> [-- 추가 인자]
-version: 1
+version: 2
 tools:
   - id: test.unit
     run: pnpm vitest run

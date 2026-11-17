@@ -11,7 +11,7 @@
     "test": "vitest run",
     "depcruise": "depcruise --config .dependency-cruiser.cjs src",
     "tool": "tsx harness/scripts/tool.ts",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "p=$(git rev-parse --show-prefix 2>/dev/null) && [ -z \"$p\" ] && git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "three": "^0.187.0"

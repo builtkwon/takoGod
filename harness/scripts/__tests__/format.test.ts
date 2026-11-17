@@ -83,11 +83,11 @@ describe('SKILL.md format', () => {
     expect(check({ [SKILL]: body }, SKILL).join()).toContain('명령어 문자열 "pnpm"');
   });
 
-  it('파일 이름은 명령어 문자열이 아니다', () => {
-    for (const ok of ['src/ui/App.tsx를 고친다', 'pnpm-lock.yaml 변경', 'node_modules/', 'foo.node 모듈', '.pnpm-store', '/usr/bin/node', 'tsx-config.json', 'my-node 패키지']) {
-      expect(findCommandStrings(ok)).toEqual([]);
+  it('파일 이름·모듈 지정자는 명령어가 아니고, 경로 실행은 명령어다', () => {
+    for (const ok of ['src/ui/App.tsx를 고친다', 'pnpm-lock.yaml 변경', 'node_modules/', 'foo.node 모듈', '.pnpm-store', 'tsx-config.json', 'my-node 패키지', "import 'node:fs'", '`node:child_process`']) {
+      expect([ok, findCommandStrings(ok)]).toEqual([ok, []]);
     }
-    for (const bad of ['`tsx a.ts`', '(node x.js)', '실행은 pnpm.', '"npx foo"', 'node', 'tsx, node']) {
+    for (const bad of ['`tsx a.ts`', '(node x.js)', '실행은 pnpm.', '"npx foo"', 'node', 'tsx, node', '/usr/bin/node a.js', 'node_modules/.bin/tsx x.ts', './node_modules/.bin/pnpm i']) {
       expect(findCommandStrings(bad)).toHaveLength(1);
     }
   });
