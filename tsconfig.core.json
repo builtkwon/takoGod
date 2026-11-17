@@ -1,0 +1,10 @@
+{
+  "//": "core·contracts 전용 검사. DOM lib와 전역 타입을 빼서 브라우저 API 사용을 컴파일 오류로 만든다. 테스트 파일은 tsconfig.json에서 검사한다.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/core", "src/contracts"],
+  "exclude": ["src/**/*.test.ts"]
+}
