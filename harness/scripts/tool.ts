@@ -57,11 +57,11 @@ export function runTool(root: string, argv: readonly string[]): number {
   const command = buildCommand(r.tool, normalizeArgs(rest));
   const env = { ...process.env, PATH: [join(root, 'node_modules', '.bin'), process.env['PATH'] ?? ''].join(delimiter) };
   const res = spawnSync(command, { cwd: root, env, shell: true, stdio: 'inherit' });
-  if (res.error !== undefined) {
-    console.error(`실행 실패: ${res.error.message}`);
-    return 1;
-  }
-  return res.status ?? 1;
+  if (res.error !== undefined) console.error(`실행 실패: ${res.error.message}`);
+  const code = res.error === undefined ? (res.status ?? 1) : 1;
+  // 파이프·$? 없이 종료코드를 읽도록 마지막 줄에 남긴다.
+  console.log(`[tool] ${id} exit=${code}`);
+  return code;
 }
 
 if (isMain(import.meta.url)) {

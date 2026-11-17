@@ -11,7 +11,7 @@
 
 ## 독립 리뷰 요청
 
-조건은 docs/rules/collaboration/ai-execution.md#독립-리뷰가 원본이다. 해당할 때만 reviewer에 요청하고 다음을 넘긴다.
+조건은 docs/rules/collaboration/review.md#언제가 원본이다. 해당할 때만 reviewer에 요청하고 다음을 넘긴다.
 
 - 요청 원문과 승인된 범위(제안표·TODO-CONTRACT 항목 등)
 - 변경 diff

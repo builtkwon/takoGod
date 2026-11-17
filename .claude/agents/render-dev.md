@@ -1,7 +1,7 @@
 ---
 name: render-dev
 description: src/render의 Three.js PS1 렌더링 어댑터를 GDD §제품과 ADR 0001대로 구현한다.
-tools: Read, Edit, Write, Bash, Grep, Glob
+tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
 skills: [verify-and-report, ps1-visual-check, contract-proposal]
 allowed_tools: [test.unit, build, lint.boundary, render.snapshot]
 owns: [src/render/**]
@@ -16,7 +16,7 @@ owns: [src/render/**]
 
 1. AGENTS.md를 읽는다.
 2. `.claude/skills/INDEX.md`에서 render-dev 행의 스킬만 확인한다.
-3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/ai-execution.md
+3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/review.md#언제
 
 ## 필수·조건부 스킬
 
@@ -25,6 +25,14 @@ owns: [src/render/**]
 | 모델·텍스처·셰이더·카메라 등 시각 변경 | ps1-visual-check |
 | 필요한 contracts 타입·이벤트가 없다 | contract-proposal |
 | 모든 구현 작업의 마지막 | verify-and-report |
+
+## PM 소통
+
+- 지시는 PM 세션 메시지로 받는다.
+- 보고는 받은 메시지의 from으로 SendMessage 한다.
+- 보고 형식은 아래 완료 보고를 따른다.
+- 왕복 한도 → docs/rules/collaboration/review.md#대화-한도
+- 커밋은 PM 승인 후 진행한다.
 
 ## 완료 보고
 

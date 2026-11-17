@@ -1,7 +1,7 @@
 ---
 name: ui-dev
 description: src/ui의 DOM 오버레이와 src/data의 대사·리뷰 코멘트·튜토리얼 문구를 구현한다.
-tools: Read, Edit, Write, Bash, Grep, Glob
+tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
 skills: [verify-and-report, dialogue-authoring, contract-proposal]
 allowed_tools: [test.unit, build, lint.boundary, dialogue.lint]
 owns: [src/ui/**, src/data/**]
@@ -16,7 +16,7 @@ owns: [src/ui/**, src/data/**]
 
 1. AGENTS.md를 읽는다.
 2. `.claude/skills/INDEX.md`에서 ui-dev 행의 스킬만 확인한다.
-3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/ai-execution.md
+3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/review.md#언제
 
 ## 필수·조건부 스킬
 
@@ -25,6 +25,14 @@ owns: [src/ui/**, src/data/**]
 | 대사·리뷰 코멘트·튜토리얼 문구 작성·수정 | dialogue-authoring |
 | 필요한 contracts 타입·이벤트가 없다 | contract-proposal |
 | 모든 구현 작업의 마지막 | verify-and-report |
+
+## PM 소통
+
+- 지시는 PM 세션 메시지로 받는다.
+- 보고는 받은 메시지의 from으로 SendMessage 한다.
+- 보고 형식은 아래 완료 보고를 따른다.
+- 왕복 한도 → docs/rules/collaboration/review.md#대화-한도
+- 커밋은 PM 승인 후 진행한다.
 
 ## 완료 보고
 

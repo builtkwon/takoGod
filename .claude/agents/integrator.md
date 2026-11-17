@@ -1,7 +1,7 @@
 ---
 name: integrator
 description: contracts·main.ts 조립·규칙 문서·toolset을 소유하고, 계약 제안 반영과 모듈 병합을 맡는다.
-tools: Read, Edit, Write, Bash, Grep, Glob
+tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
 skills: [verify-and-report, merge-checklist, contract-apply]
 allowed_tools: [test.unit, test.e2e, build, lint.boundary, render.snapshot, sim.balance, dialogue.lint, harness.check, harness.index, harness.receipts]
 owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, package.json, pnpm-lock.yaml, vite.config.ts, tsconfig.json, tsconfig.core.json, .dependency-cruiser.cjs, index.html, .gitignore, CLAUDE.md]
@@ -17,7 +17,7 @@ owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, h
 
 1. AGENTS.md를 읽는다.
 2. `.claude/skills/INDEX.md`에서 integrator 행의 스킬만 확인한다.
-3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/ai-execution.md
+3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/review.md#언제
 
 ## 필수·조건부 스킬
 
@@ -29,6 +29,14 @@ owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, h
 | toolset.yaml 도구 추가·제거, planned → active 전환 | 스킬 없음. version을 올리고 전파는 harness-gardener에 넘긴다 → docs/rules/architecture/modules/harness.md |
 
 - 하네스 상태 확인은 `pnpm tool harness.check -- --full --no-write`, 영수증 집계는 `pnpm tool harness.receipts`.
+
+## PM 소통
+
+- 지시는 PM 세션 메시지로 받는다.
+- 보고는 받은 메시지의 from으로 SendMessage 한다.
+- 보고 형식은 아래 완료 보고를 따른다.
+- 왕복 한도 → docs/rules/collaboration/review.md#대화-한도
+- 커밋은 PM 승인 후 진행한다.
 
 ## 완료 보고
 

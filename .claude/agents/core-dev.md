@@ -1,7 +1,7 @@
 ---
 name: core-dev
 description: src/core의 순수 TS 게임 로직(굽기·판정·손님·점수·진행)을 GDD 수치대로 구현한다.
-tools: Read, Edit, Write, Bash, Grep, Glob
+tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
 skills: [verify-and-report, tdd-game-rule, contract-proposal]
 allowed_tools: [test.unit, build, lint.boundary, sim.balance]
 owns: [src/core/**]
@@ -16,7 +16,7 @@ owns: [src/core/**]
 
 1. AGENTS.md를 읽는다.
 2. `.claude/skills/INDEX.md`에서 core-dev 행의 스킬만 확인한다.
-3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/ai-execution.md
+3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/review.md#언제
 
 ## 필수·조건부 스킬
 
@@ -25,6 +25,14 @@ owns: [src/core/**]
 | 게임 규칙·수치 구현·수정 | tdd-game-rule |
 | 필요한 contracts 타입·이벤트가 없다 | contract-proposal |
 | 모든 구현 작업의 마지막 | verify-and-report |
+
+## PM 소통
+
+- 지시는 PM 세션 메시지로 받는다.
+- 보고는 받은 메시지의 from으로 SendMessage 한다.
+- 보고 형식은 아래 완료 보고를 따른다.
+- 왕복 한도 → docs/rules/collaboration/review.md#대화-한도
+- 커밋은 PM 승인 후 진행한다.
 
 ## 완료 보고
 

@@ -1,6 +1,6 @@
 # 독립 리뷰 상세
 
-원본: docs/rules/collaboration/implementation.md#리뷰, docs/rules/collaboration/ai-execution.md
+원본: docs/rules/collaboration/implementation.md#리뷰, docs/rules/collaboration/review.md
 
 ## 영수증 대조
 
@@ -8,6 +8,7 @@
 - 해당 스킬 SKILL.md의 frontmatter steps에서 도구가 있는 단계를 뽑는다.
 - 그 단계가 완료로 적혀 있으면 전달받은 출력에 같은 도구 실행과 종료코드가 있어야 한다. 없으면 필수 수정.
 - `skip=` 단계는 사유가 있는지, 사유가 사실과 맞는지 본다(예: "대상 없음" 출력 원문).
+- 보고된 도구 중 allowed_tools에 있는 것은 재실행해 종료코드를 확인한다.
 - 스킬 version이 현재 SKILL.md version과 다르면 합의 필요로 올린다.
 
 ## 체크 항목
@@ -32,4 +33,4 @@
 - 지적이 없으면 "지적 없음"과 확인한 범위를 쓴다.
 - 실행한 도구: `pnpm tool <id>`와 종료코드, FAIL 원문.
 - 미검증 범위: 실행하지 못한 도구, 보지 않은 파일.
-- 영수증: `Skill-Receipt: independent-review@v1 ...`
+- 영수증: `Skill-Receipt: independent-review@v2 ...`

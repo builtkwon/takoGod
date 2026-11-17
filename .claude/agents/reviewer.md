@@ -3,7 +3,7 @@ name: reviewer
 description: 읽기 전용 독립 리뷰어. 영수증·도구 로그 대조, 테스트·경계 재실행, 체크 5항목으로 지적을 분류해 보고한다.
 tools: Read, Grep, Glob, Bash
 skills: [independent-review]
-allowed_tools: [test.unit, test.e2e, lint.boundary]
+allowed_tools: [test.unit, test.e2e, build, lint.boundary, sim.balance, render.snapshot]
 owns: []
 ---
 ## 수정 범위

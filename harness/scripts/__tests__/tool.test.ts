@@ -107,4 +107,12 @@ describe('runTool', () => {
     expect(runTool(root, ['x.y'])).toBe(0);
     expect(runTool(root, ['x.y', '--', 'a', 'b c'])).toBe(2);
   });
+
+  it('마지막 줄에 `[tool] <id> exit=<코드>`를 출력한다', () => {
+    const c = captureConsole();
+    const root = makeRepo({ 'harness/toolset.yaml': tool({ run: "sh -c 'exit $#' x" }) });
+    runTool(root, ['x.y']);
+    runTool(root, ['x.y', '--', 'a']);
+    expect(c.out().split('\n')).toEqual(['[tool] x.y exit=0', '[tool] x.y exit=1']);
+  });
 });

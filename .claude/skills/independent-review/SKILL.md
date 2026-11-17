@@ -1,6 +1,6 @@
 ---
 name: independent-review
-version: 1
+version: 2
 description: 독립 리뷰를 요청받았을 때 쓴다. 파일을 고치지 않고 영수증·도구 로그 대조, 테스트·경계 재실행, 체크 5항목 검토 후 지적을 분류해 보고한다.
 requires: []
 consumes: []
