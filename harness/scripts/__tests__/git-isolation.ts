@@ -1,4 +1,4 @@
-// 테스트 프로세스의 git 환경 격리. helpers.ts가 가장 먼저 import한다.
+// 테스트 프로세스의 git 환경 격리. vitest setupFiles(setup.ts)가 모든 테스트 파일보다 먼저 불러온다.
 // - GIT_* 환경변수 제거: git 훅 안에서 vitest를 돌려도 GIT_DIR·GIT_INDEX_FILE이 바깥 저장소를 가리키지 않게.
 // - HOME·XDG_CONFIG_HOME을 빈 임시 디렉터리로, 전역·시스템 git 설정 파일을 읽지 않게.
 // 테스트가 부르는 제품 코드(exportStaged, readTrailers, readHeadToolset)도 process.env를 물려받으므로 함께 격리된다.
@@ -14,7 +14,7 @@ export const REAL_ENV: NodeJS.ProcessEnv = Object.fromEntries(
 const home = mkdtempSync(join(tmpdir(), 'harness-test-home-'));
 const emptyConfig = join(home, 'empty.gitconfig');
 writeFileSync(emptyConfig, '');
-// 정리: vitest에서는 helpers.ts의 afterAll, 일반 node 실행에서는 exit 이벤트.
+// 정리: vitest에서는 setup.ts의 afterAll, 일반 node 실행에서는 exit 이벤트.
 process.on('exit', () => rmSync(home, { recursive: true, force: true }));
 
 for (const k of Object.keys(process.env)) if (k.startsWith('GIT_')) delete process.env[k];

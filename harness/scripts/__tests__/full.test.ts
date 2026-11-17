@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runCheck, type Io } from '../harness-check.ts';
 import { checkToolsetVersion, runFull, parsePlacement, latestProposal, type CheckResult } from '../lib/full.ts';
-import { parseToolset } from '../lib/toolset.ts';
+import { parseToolset, readHeadToolset } from '../lib/toolset.ts';
 import { PROJECT_ROOT } from '../lib/common.ts';
 import { typecheckHarness } from '../lib/typecheck.ts';
 import { renderIndex } from '../lib/index-gen.ts';
@@ -320,6 +320,18 @@ describe('full: toolset version', () => {
     writeFiles(root, { 'harness/toolset.yaml': ts(2, ['test.unit', 'build', 'new.tool']) });
     git(root, ['add', '-A']);
     expect(runCheck(root, ['--full', '--no-write', '--staged'], io)).toBe(0);
+  });
+
+  it('프로젝트가 다른 저장소의 하위 디렉터리면 skip(바깥 저장소의 toolset을 읽지 않는다)', () => {
+    const outer = makeGitRepo({ 'harness/toolset.yaml': ts(9, ['outer.tool']) });
+    writeFiles(outer, Object.fromEntries(Object.entries(baseFiles()).map(([k, v]) => [`proj/${k}`, v])));
+    writeFiles(outer, { 'proj/harness/toolset.yaml': ts(1, ['test.unit', 'build']) });
+    git(outer, ['add', '-A']);
+    git(outer, ['commit', '-q', '-m', 'init']);
+    const proj = join(outer, 'proj');
+    expect(readHeadToolset(proj)).toBeUndefined();
+    expect(status(proj, 'toolset version')).toEqual(['skip', expect.stringContaining('하위 디렉터리')]);
+    expect(readHeadToolset(outer)).toContain('outer.tool'); // 최상위에서는 읽는다
   });
 
   it('저장소 toolset은 HEAD 대비 규칙을 지킨다', () => {

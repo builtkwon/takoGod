@@ -93,8 +93,15 @@ export function loadToolset(root: string): ToolsetResult {
   return parseToolset(text);
 }
 
-/** 비교 기준: root 저장소 HEAD의 toolset.yaml 내용. git 저장소가 아니거나 HEAD·파일이 없으면 undefined. */
+/**
+ * 비교 기준: root 저장소 HEAD의 toolset.yaml 내용.
+ * - root가 git 최상위가 아니면(다른 저장소의 하위 디렉터리) undefined → 검사 skip. 바깥 저장소 파일을 읽지 않는다.
+ * - 경로는 `HEAD:./`(cwd 기준 상대)로 읽는다.
+ * - git 저장소가 아니거나 HEAD·파일이 없으면 undefined.
+ */
 export function readHeadToolset(root: string): string | undefined {
-  const r = spawnSync('git', ['show', `HEAD:${TOOLSET_PATH}`], { cwd: root, encoding: 'utf8' });
+  const prefix = spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: root, encoding: 'utf8' });
+  if (prefix.error !== undefined || prefix.status !== 0 || prefix.stdout.trim() !== '') return undefined;
+  const r = spawnSync('git', ['show', `HEAD:./${TOOLSET_PATH}`], { cwd: root, encoding: 'utf8' });
   return r.error === undefined && r.status === 0 ? r.stdout : undefined;
 }

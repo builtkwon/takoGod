@@ -268,11 +268,12 @@ export function checkBodyToolCalls(root: string, model: HarnessModel, toolset: T
 
 /**
  * toolset version: 도구를 추가·제거하면(ID 집합이 기준과 다르면) version이 기준보다 커야 한다. 줄어들면 항상 실패.
- * 기준은 HEAD의 toolset.yaml. 기준이 없으면(첫 커밋, git 아님) skip.
+ * 기준은 HEAD의 toolset.yaml. 기준이 없으면(첫 커밋, git 아님, 프로젝트가 다른 저장소의 하위 디렉터리) skip.
+ * 강제 시점은 pre-commit뿐이다(--amend·cherry-pick·revert는 대상 아님) → docs/rules/architecture/modules/harness.md
  */
 export function checkToolsetVersion(current: Toolset, baseText: string | undefined): CheckResult {
   const name = 'toolset version';
-  if (baseText === undefined) return { name, status: 'skip', messages: ['비교 기준(HEAD의 toolset.yaml) 없음'] };
+  if (baseText === undefined) return { name, status: 'skip', messages: ['비교 기준(HEAD의 toolset.yaml) 없음 — 첫 커밋·git 아님·하위 디렉터리 프로젝트'] };
   const base = parseToolset(baseText);
   if (!base.ok) return { name, status: 'skip', messages: ['HEAD의 toolset.yaml을 읽지 못함'] };
   const before = new Set(base.toolset.tools.map((t) => t.id));

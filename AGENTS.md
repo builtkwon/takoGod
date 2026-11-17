@@ -20,7 +20,7 @@
 
 하네스: 도구 원본은 [harness/toolset.yaml](harness/toolset.yaml)이고 `pnpm tool <id>`로 실행한다. 스킬 목록은 `.claude/skills/INDEX.md`(생성물). 설계 원본은 [docs/harness-design.md](docs/harness-design.md)이며 수정하지 않는다. 확정 규칙은 [modules/harness.md](docs/rules/architecture/modules/harness.md).
 
-pre-commit 훅: `pnpm install`이 `prepare`로 `git config core.hooksPath .githooks`를 설정한다(새 클론도 동일). 커밋 시 스테이지된 내용으로 하네스 full 검사를 돌린다.
+pre-commit 훅: `pnpm install`이 `prepare`로 `git config core.hooksPath .githooks`를 설정한다(새 클론도 동일). 단, 이 폴더가 git 저장소 최상위일 때만이고, `.git` 없는 복사본·다른 저장소의 하위 디렉터리에서는 건너뛴다(install은 성공). 커밋 시 스테이지된 내용으로 하네스 full 검사를 돌린다. 스킬·에이전트 본문의 명령어 금지 규칙(경로 실행 검출 포함)은 [modules/harness.md](docs/rules/architecture/modules/harness.md#도구-호출).
 
 ## 핵심 기준
 

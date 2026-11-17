@@ -92,6 +92,25 @@ describe('SKILL.md format', () => {
     }
   });
 
+  it('경로 중간 마디는 명령어가 아니다(@types/node, src/ 등), 경로 실행은 명령어다', () => {
+    for (const ok of [
+      '`@types/node` 추가',
+      '@types/node@24',
+      'src/node/x.ts',
+      '/src/node/x.ts',
+      'packages/tsx/README',
+      'harness/scripts/__tests__/node',
+      'src/pnpm/index.ts',
+      'https://example.com/node',
+      'docs/node.md',
+    ]) {
+      expect([ok, findCommandStrings(ok)]).toEqual([ok, []]);
+    }
+    for (const bad of ['/usr/bin/node a.js', '~/bin/node a.js', './node_modules/.bin/tsx a.ts', '../bin/pnpm i', 'node_modules/.bin/npx foo', 'vendor/bin/node x']) {
+      expect([bad, findCommandStrings(bad)]).toEqual([bad, [expect.stringContaining('명령어 문자열')]]);
+    }
+  });
+
   it('본문 도구 호출 ID 추출: 실제 ID만, 중복 제거', () => {
     expect(findToolCallIds('`pnpm tool <id>`, pnpm tool test.unit, pnpm tool harness.check -- --full, pnpm tool test.unit.')).toEqual([
       'test.unit',

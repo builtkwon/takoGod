@@ -1,15 +1,11 @@
 // 테스트 픽스처: 임시 저장소와 SKILL.md·에이전트 생성기.
-import { ISOLATED_HOME } from './git-isolation.ts'; // 가장 먼저: git 환경 격리
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterAll, afterEach, vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 const created: string[] = [];
-
-// vitest 워커는 exit 이벤트 없이 끝나므로 격리용 HOME은 파일마다 afterAll에서 지운다.
-afterAll(() => rmSync(ISOLATED_HOME, { recursive: true, force: true }));
 
 afterEach(() => {
   while (created.length > 0) rmSync(created.pop() as string, { recursive: true, force: true });

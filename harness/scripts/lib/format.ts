@@ -26,11 +26,18 @@ export function classify(rel: string): Target {
 
 /**
  * 명령어 문자열.
- * - 검출: 단독 명령(`pnpm build`), 경로 실행(`/usr/bin/node a.js`, `node_modules/.bin/tsx x`), 문장 끝(`pnpm.`)
+ * - 검출: 단독 명령(`pnpm build`), 문장 끝(`pnpm.`),
+ *   경로 실행 — `/`·`./`·`../`·`~/`로 시작하는 경로 끝(`/usr/bin/node a.js`) 또는 `bin/`·`.bin/` 바로 뒤(`node_modules/.bin/tsx`)
  * - 미검출: 파일 이름(App.tsx, pnpm-lock.yaml, foo.node, my-node, .pnpm-store), 이름 일부(node_modules),
- *   모듈 지정자(`node:fs`)
+ *   모듈 지정자(`node:fs`), 경로 중간 마디(`@types/node`, `src/node/x.ts`, `packages/tsx/README`), URL
  */
-const CMD_RE = /(?<![\w.-])(pnpm|npx|tsx|node)(?![\w-]|[.:]\w)/;
+const CMD_TAIL = '(?![\\w/-]|[.:]\\w)';
+const CMD_RE = new RegExp(
+  [
+    `(?<![\\w./@~-])(pnpm|npx|tsx|node)${CMD_TAIL}`,
+    `(?<![\\w.@~:/-])(?:(?:~|\\.{1,2})?\\/(?:[\\w.@-]+\\/)*|(?:[\\w.@-]+\\/)*\\.?bin\\/)(pnpm|npx|tsx|node)${CMD_TAIL}`,
+  ].join('|'),
+);
 /** 허용 형식: `pnpm tool <id>`(문자 그대로 또는 실제 ID). 뒤의 `-- <인자>`는 명령어 문자열이 아니므로 허용. */
 const ALLOWED_TOOL_CALL_RE = /pnpm tool (?:<id>|[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*)/g;
 const TOOL_CALL_ID_RE = /pnpm tool ([a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*)/g;
@@ -41,7 +48,7 @@ export function findCommandStrings(body: string): string[] {
   body.split('\n').forEach((line, i) => {
     const stripped = line.replace(ALLOWED_TOOL_CALL_RE, '');
     const m = CMD_RE.exec(stripped);
-    if (m !== null) hits.push(`본문 ${i + 1}행에 명령어 문자열 "${m[1]}" — 도구는 pnpm tool <id>로만 부른다`);
+    if (m !== null) hits.push(`본문 ${i + 1}행에 명령어 문자열 "${m[1] ?? m[2]}" — 도구는 pnpm tool <id>로만 부른다`);
   });
   return hits;
 }
