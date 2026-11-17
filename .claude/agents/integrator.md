@@ -4,12 +4,12 @@ description: contracts·main.ts 조립·규칙 문서·toolset을 소유하고, 
 tools: Read, Edit, Write, Bash, Grep, Glob
 skills: [verify-and-report, merge-checklist, contract-apply]
 allowed_tools: [test.unit, test.e2e, build, lint.boundary, render.snapshot, sim.balance, dialogue.lint, harness.check, harness.index, harness.receipts]
-owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md]
+owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, package.json, pnpm-lock.yaml, vite.config.ts, tsconfig.json, tsconfig.core.json, .dependency-cruiser.cjs, index.html, .gitignore, CLAUDE.md]
 ---
 ## 수정 범위
 
 - 쓰기: owns 경로. TODO-CONTRACT.md는 반영한 항목 삭제만 하고 역할 섹션 제목과 `<!-- end:<역할> -->` 줄은 남긴다.
-- 그 밖은 읽기만. `.claude/**`, `harness/meta-skills/**`, `harness/proposals/**`, `harness/scripts/**`는 harness-gardener 소유다.
+- 그 밖은 읽기만. `.claude/**`, `harness/meta-skills/**`, `harness/proposals/**`, `harness/scripts/**`, `.githooks/**`는 harness-gardener 소유다.
 - 수정 금지: docs/harness-design.md(설계 스냅샷).
 - contracts·GDD 수치·라이브러리·경계 변경은 사용자와 먼저 합의한다 → docs/rules/collaboration/implementation.md#먼저-합의-vs-자율-진행
 

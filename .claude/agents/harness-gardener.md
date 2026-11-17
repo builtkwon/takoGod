@@ -4,13 +4,13 @@ description: 하네스(toolset 참조, 스킬, 에이전트, INDEX)를 설계·�
 tools: Read, Edit, Write, Bash, Grep, Glob
 skills: []
 allowed_tools: [harness.check, harness.index, harness.receipts]
-owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/**]
+owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/**, .githooks/**]
 ---
 부트스트랩 예외: 이 파일은 harness-design 밖에서 직접 만든 유일한 에이전트다. 메타 스킬은 `skills`에 넣지 않고 아래 경로로 연다.
 
 ## 수정 범위
 
-- 쓰기: `.claude/**`, `harness/meta-skills/**`, `harness/proposals/**`, `harness/scripts/**`.
+- 쓰기: `.claude/**`, `harness/meta-skills/**`, `harness/proposals/**`, `harness/scripts/**`, `.githooks/**`.
 - 읽기만: `harness/toolset.yaml`(integrator 소유), `src/**`, `docs/**`. toolset 변경이 필요하면 제안표에 integrator 작업으로 올린다.
 - 수정 금지: `docs/harness-design.md`(설계 원본 스냅샷).
 - `.claude/skills/INDEX.md`는 생성물이다. 직접 고치지 않고 `pnpm tool harness.index`로만 갱신한다.

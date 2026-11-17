@@ -6,7 +6,7 @@
 | 스킬 | 버전 | 설명 | 배치 에이전트 | requires | 도구 | 경로 |
 | --- | --- | --- | --- | --- | --- | --- |
 | contract-apply | v1 | TODO-CONTRACT.md의 contracts 변경 제안을 반영할 때 쓴다. 사용자 합의 후 src/contracts를 고치고 반영 항목을 지운 뒤 verify-and-report로 이어간다. | integrator | - | - | .claude/skills/contract-apply/SKILL.md |
-| contract-proposal | v1 | 구현 중 필요한 contracts 타입·이벤트가 없을 때 쓴다. contracts를 고치지 않고 TODO-CONTRACT.md의 자기 역할 섹션에 제안을 추가한다. | core-dev, render-dev, ui-dev | - | - | .claude/skills/contract-proposal/SKILL.md |
+| contract-proposal | v2 | 구현 중 필요한 contracts 타입·이벤트가 없거나 owns 밖 파일(설정 포함) 변경이 필요할 때 쓴다. 직접 고치지 않고 TODO-CONTRACT.md 자기 역할 섹션에 제안만 추가한다. | core-dev, render-dev, ui-dev | - | - | .claude/skills/contract-proposal/SKILL.md |
 | dialogue-authoring | v1 | 손님 대사·리뷰 코멘트·튜토리얼 문구(src/data)를 쓰거나 고칠 때 쓴다. GDD 콘텐츠 기준으로 작성하고 대사 검사 뒤 verify-and-report로 이어간다. | ui-dev | - | dialogue.lint | .claude/skills/dialogue-authoring/SKILL.md |
 | independent-review | v1 | 독립 리뷰를 요청받았을 때 쓴다. 파일을 고치지 않고 영수증·도구 로그 대조, 테스트·경계 재실행, 체크 5항목 검토 후 지적을 분류해 보고한다. | reviewer | - | lint.boundary, test.e2e, test.unit | .claude/skills/independent-review/SKILL.md |
 | merge-checklist | v1 | 모듈 작업을 병합하거나 main.ts에서 core·render·ui를 조립할 때 쓴다. 모듈 보고 확인과 밸런스·대사·화면·E2E 검사 뒤 verify-and-report로 이어간다. | integrator | - | dialogue.lint, render.snapshot, sim.balance, test.e2e | .claude/skills/merge-checklist/SKILL.md |
