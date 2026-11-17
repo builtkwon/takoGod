@@ -2,9 +2,9 @@
 import { ShaderMaterial, Vector2, Vector3 } from 'three';
 import type { DataTexture, Texture } from 'three';
 
-/** GDD §제품 렌더타깃 해상도. 세로 240x320 전환은 미정(ADR 0001)이라 이 상수만 바꾸면 된다. */
-export const RT_W = 320;
-export const RT_H = 240;
+/** GDD §제품 렌더타깃 해상도(가로x세로, 세로 화면). 결정: ADR 0001. */
+export const RT_W = 240;
+export const RT_H = 320;
 
 const VERT = /* glsl */ `
 uniform vec2 uRes;

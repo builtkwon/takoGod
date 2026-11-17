@@ -20,6 +20,7 @@ const base: GameState = {
   customers: [],
   activeDialogues: [],
   reviews: [],
+  sessionAverage: null,
   tutorialCompleted: true,
 };
 

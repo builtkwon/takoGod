@@ -54,8 +54,8 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
   postScene.add(new Mesh(new PlaneGeometry(2, 2), postMat));
   const postCam = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-  const camera = new PerspectiveCamera(36, RT_W / RT_H, 0.1, 50);
-  camera.position.set(0, 5.2, 5.4);
+  const camera = new PerspectiveCamera(45, RT_W / RT_H, 0.1, 50);
+  camera.position.set(0, 7.5, 6.5);
   camera.lookAt(0, 0.4, -0.3);
 
   const tex = createTextures();
