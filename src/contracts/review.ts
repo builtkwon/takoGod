@@ -9,6 +9,6 @@ export interface ReviewResult {
   /** 1~5, 0.5 단위. */
   readonly stars: number;
   readonly comment: string;
-  /** source가 'customer'일 때만 있다. */
-  readonly personality?: Personality;
+  /** source가 'tutorial'이면 null. */
+  readonly personality: Personality | null;
 }

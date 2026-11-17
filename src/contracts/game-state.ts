@@ -15,5 +15,7 @@ export interface GameState {
   readonly activeDialogues: readonly ActiveDialogue[];
   /** 세션에서 받은 리뷰. 세션 점수는 이 목록의 별점 평균으로 계산한다. */
   readonly reviews: readonly ReviewResult[];
+  /** reviews 별점의 산술평균. core가 계산한다. 리뷰가 없으면 null. */
+  readonly sessionAverage: number | null;
   readonly tutorialCompleted: boolean;
 }
