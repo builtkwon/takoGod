@@ -12,6 +12,7 @@
 | `phase.ts` | PhaseId, PhaseConfig, TutorialStep |
 | `review.ts` | ReviewResult |
 | `game-state.ts` | GameState |
+| `session.ts` | SessionSnapshot, SessionStore(세션 저장 포트) |
 | `events.ts` | GameEvents(이벤트 목록), EventBus |
 | `tooling.ts` | 도구 연결 규약: BalanceSimulator, SimModule, SandboxStates, DialoguesModule, TOOL_ENTRY_PATHS |
 
