@@ -4,6 +4,7 @@ export type * from './customer';
 export type * from './phase';
 export type * from './review';
 export type * from './game-state';
+export type * from './session';
 export type * from './events';
 export type * from './tooling';
 export { TOOL_ENTRY_PATHS } from './tooling';
