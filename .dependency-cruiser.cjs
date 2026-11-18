@@ -48,6 +48,20 @@ module.exports = {
       to: { path: '^src/main\\.ts$' },
     },
     {
+      name: 'session-store-only-contracts',
+      comment: 'session-store.ts는 contracts만 import한다(외부 패키지 포함).',
+      severity: 'error',
+      from: { path: '^src/session-store\\.ts$' },
+      to: { pathNot: '^src/(contracts/|session-store\\.ts$)' },
+    },
+    {
+      name: 'session-store-only-main',
+      comment: 'session-store.ts는 main만 import한다(테스트 파일 제외).',
+      severity: 'error',
+      from: { path: '^src/', pathNot: '^src/(main|session-store)(\\.test)?\\.ts$' },
+      to: { path: '^src/session-store\\.ts$' },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       from: {},
