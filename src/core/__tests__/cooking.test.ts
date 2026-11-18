@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDonenessJudge, gaugeValue, rollPosition } from './cooking';
+import { createDonenessJudge, gaugeValue, rollPosition } from '../cooking';
 
 describe('익음 게이지 (GDD §굽기)', () => {
   const main = createDonenessJudge(false);

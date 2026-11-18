@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRng, shuffle } from './rng';
+import { createRng, shuffle } from '../rng';
 
 describe('rng', () => {
   it('같은 시드는 같은 수열, [0,1) 범위', () => {

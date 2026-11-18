@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SessionSnapshot } from '../contracts';
-import { createMemorySessionStore } from './session';
+import type { SessionSnapshot } from '../../contracts';
+import { createMemorySessionStore } from '../session';
 
 const snap: SessionSnapshot = { version: 1, tutorialCompleted: true, finished: false, reviews: [] };
 

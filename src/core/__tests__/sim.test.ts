@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BalanceSimulator } from './sim';
+import { BalanceSimulator } from '../sim';
 
 describe('BalanceSimulator', () => {
   it('평균 별점은 1~5 사이 유한수', () => {
