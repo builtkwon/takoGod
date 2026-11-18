@@ -12,6 +12,7 @@
 | `phase.ts` | PhaseId, PhaseConfig, TutorialStep(deprecated), TutorialStage, TutorialStepV2 |
 | `review.ts` | ReviewResult |
 | `game-state.ts` | GameState(deprecated), GameStateV2 |
+| `scene.ts` | PickTarget, ScenePicker(장면 좌표 판정 포트. render 구현, ui 사용) |
 | `session.ts` | SessionSnapshot, SessionStore(세션 저장 포트) |
 | `events.ts` | GameEvents(이벤트 목록), EventBus |
 | `tooling.ts` | 도구 연결 규약: BalanceSimulator, SimModule, SandboxStates, DialoguesModule, TOOL_ENTRY_PATHS |
@@ -23,4 +24,6 @@
 ## bootstrap
 
 - `src/*.ts`: 진입점 `main.ts`는 게임 루프(`tick(dt)` 호출), core·render·ui 조립, PWA 등록. 브라우저 어댑터(`session-store.ts` 등)는 contracts 포트를 구현한다. 테스트는 `src/__tests__/`.
+- ScenePicker(`scene.ts`)는 render가 구현하고 ui가 받는다. render가 어디에 노출하고 ui가 어디로 받는지는 contracts에 적지 않고 main.ts 조립 시 연결한다.
+- ScenePicker는 main.ts가 render에서 받아 mountUi에 넘긴다.
 - 금지: 게임 규칙 구현.
