@@ -33,35 +33,39 @@ function listing(toolset: Toolset): string {
   return toolset.tools.map((t) => `  ${t.id.padEnd(16)} ${t.status.padEnd(8)} ${t.purpose}`).join('\n');
 }
 
+/** 종료코드를 마지막 줄에 남긴다(파이프·$? 없이 읽기 위함). id가 없으면 `<none>`. */
+function finish(id: string | undefined, code: number): number {
+  console.log(`[tool] ${id ?? '<none>'} exit=${code}`);
+  return code;
+}
+
 export function runTool(root: string, argv: readonly string[]): number {
   const loaded = loadToolset(root);
   if (!loaded.ok) {
     console.error(`toolset.yaml 오류:\n  ${loaded.errors.join('\n  ')}`);
-    return 1;
+    return finish(argv[0], 1);
   }
   const { toolset } = loaded;
   const [id, ...rest] = argv;
   if (id === undefined || id === '--' || id.startsWith('-')) {
     console.error(`사용법: pnpm tool <id> [-- 인자]\n등록 도구:\n${listing(toolset)}`);
-    return 1;
+    return finish(id, 1);
   }
   const r = resolveTool(toolset, id);
   if (r.kind === 'unknown') {
     console.error(`미등록 도구 ID: ${id}\n등록 도구:\n${listing(toolset)}`);
-    return 1;
+    return finish(id, 1);
   }
   if (r.kind === 'planned') {
     console.error(`실행 거부: ${id}는 planned 상태다(${r.tool.purpose}). active 전환은 toolset.yaml 소유자가 한다.`);
-    return 1;
+    return finish(id, 1);
   }
   const command = buildCommand(r.tool, normalizeArgs(rest));
   const env = { ...process.env, PATH: [join(root, 'node_modules', '.bin'), process.env['PATH'] ?? ''].join(delimiter) };
   const res = spawnSync(command, { cwd: root, env, shell: true, stdio: 'inherit' });
   if (res.error !== undefined) console.error(`실행 실패: ${res.error.message}`);
   const code = res.error === undefined ? (res.status ?? 1) : 1;
-  // 파이프·$? 없이 종료코드를 읽도록 마지막 줄에 남긴다.
-  console.log(`[tool] ${id} exit=${code}`);
-  return code;
+  return finish(id, code);
 }
 
 if (isMain(import.meta.url)) {

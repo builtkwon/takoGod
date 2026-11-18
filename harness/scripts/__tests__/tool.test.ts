@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PROJECT_ROOT } from '../lib/common.ts';
 import { loadToolset, parseToolset } from '../lib/toolset.ts';
 import { buildCommand, normalizeArgs, resolveTool, runTool } from '../tool.ts';
@@ -106,6 +106,38 @@ describe('runTool', () => {
     const root = makeRepo({ 'harness/toolset.yaml': tool({ run: "sh -c 'exit $#' x" }) });
     expect(runTool(root, ['x.y'])).toBe(0);
     expect(runTool(root, ['x.y', '--', 'a', 'b c'])).toBe(2);
+  });
+
+  it('거부 경로(toolset 오류·사용법·미등록·planned)도 마지막 줄에 종료코드를 남긴다', () => {
+    const c = captureConsole();
+    const ok = makeRepo({ 'harness/toolset.yaml': TOOLSET });
+    runTool(makeRepo(), ['build']);
+    runTool(ok, []);
+    runTool(ok, ['nope']);
+    runTool(ok, ['test.e2e']);
+    expect(c.out().split('\n')).toEqual([
+      '[tool] build exit=1',
+      '[tool] <none> exit=1',
+      '[tool] nope exit=1',
+      '[tool] test.e2e exit=1',
+    ]);
+  });
+
+  it('시그널로 끝나 status가 null이면 exit=1', () => {
+    const c = captureConsole();
+    const root = makeRepo({ 'harness/toolset.yaml': tool({ run: 'kill -9 $$' }) });
+    expect(runTool(root, ['x.y'])).toBe(1);
+    expect(c.out()).toBe('[tool] x.y exit=1');
+  });
+
+  it('spawn error(E2BIG)면 실행 실패를 알리고 exit=1', () => {
+    const c = captureConsole();
+    vi.stubEnv('TOOL_TEST_HUGE', 'x'.repeat(4_000_000));
+    const root = makeRepo({ 'harness/toolset.yaml': tool() });
+    expect(runTool(root, ['x.y'])).toBe(1);
+    vi.unstubAllEnvs();
+    expect(c.err()).toContain('실행 실패');
+    expect(c.out()).toBe('[tool] x.y exit=1');
   });
 
   it('마지막 줄에 `[tool] <id> exit=<코드>`를 출력한다', () => {

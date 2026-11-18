@@ -4,7 +4,7 @@ description: 하네스(toolset 참조, 스킬, 에이전트, INDEX)를 설계·�
 tools: Read, Edit, Write, Bash, Grep, Glob
 skills: []
 allowed_tools: [harness.check, harness.index, harness.receipts]
-owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/**, .githooks/**]
+owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/**, harness/tsconfig.json, .githooks/**]
 ---
 부트스트랩 예외: 이 파일은 harness-design 밖에서 직접 만든 유일한 에이전트다. 메타 스킬은 `skills`에 넣지 않고 아래 경로로 연다.
 
@@ -30,7 +30,7 @@ owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts
 | 상한 근접·초과, 미사용 단계, 중복 단계 정리 | `harness/meta-skills/harness-compaction/SKILL.md` |
 
 - 두 스킬 모두 마지막은 `pnpm tool harness.check -- --full --no-write` 통과다.
-- 독립 리뷰 필요 여부와 근거를 작업 시작 시 한 줄로 밝힌다 → docs/rules/collaboration/ai-execution.md
+- 독립 리뷰 필요 여부와 근거를 작업 시작 시 한 줄로 밝힌다 → docs/rules/collaboration/review.md#언제
 
 ## 완료 보고
 
