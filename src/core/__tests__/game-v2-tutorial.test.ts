@@ -157,8 +157,9 @@ describe('튜토리얼: 현재 단계 외 조작 거부', () => {
     expect(stage(h)).toBe('fune');
     h.pick(0);
     expect(h.game.state.holding).toBe(0);
-    h.drop('offscreen');
+    h.drop('other');
     expect(h.game.state.holding).toBeNull();
+    expect(h.of('cook/dropped')).toEqual([]);
     expect(h.of('cook/rejected').at(-1)).toEqual({ hole: 0, reason: 'tutorial-step' });
     expect(h.hole(0).stage).toBe('done');
     expect(h.of('tutorial/invalid-action').at(-1)).toEqual({ expected: 'fune' });

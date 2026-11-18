@@ -33,7 +33,7 @@ function perfectBot(bus: EventBus, s: GameStateV2): void {
 
 /**
  * 무작위 플레이(GDD §밸런스 목표): 틱마다 무작위 구멍 하나에 그 구멍이 받을 수 있는 다음 조작을 한다.
- * 재료는 트레이에서 무작위, 굴리기 타이밍은 무작위, 대화 답은 무작위(못 누르면 시간초과). 탄 것은 화면 밖으로 버린다.
+ * 재료는 트레이에서 무작위, 굴리기 타이밍은 무작위, 대화 답은 무작위(못 누르면 시간초과). 탄 것은 후네 밖(other)에 버린다.
  */
 function randomBot(bus: EventBus, s: GameStateV2, rng: () => number): void {
   for (const d of s.activeDialogues) {
@@ -51,7 +51,7 @@ function randomBot(bus: EventBus, s: GameStateV2, rng: () => number): void {
   } else if (h.stage === 'filled' || h.stage === 'rolled') bus.emit('input/roll', { hole });
   else if (h.stage === 'done' || h.stage === 'dark' || h.stage === 'burnt') {
     bus.emit('input/pick', { hole });
-    bus.emit('input/drop', { target: h.stage === 'burnt' ? 'offscreen' : 'fune' });
+    bus.emit('input/drop', { target: h.stage === 'burnt' ? 'other' : 'fune' });
   }
 }
 

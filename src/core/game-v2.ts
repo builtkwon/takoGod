@@ -347,13 +347,14 @@ export class GameV2 {
     if (this.isFinished || index === null) return;
     const hole = this.holes[index] as Hole;
     this.holding = null; // 거부돼도 들기는 끝난다(완성품은 원위치)
+    if (e.target === 'cancel') return; // 포인터 취소·백그라운드: 원래 구멍으로 돌아가 탐 타이머를 이어 센다
     if (this.phase === 'tutorial' && e.target !== 'fune') return this.rejectTutorial(index);
-    if (hole.stage === 'burnt') {
-      if (e.target === 'offscreen') this.holes[index] = newHole();
-      else this.reject(index, 'burnt-item');
+    if (e.target !== 'fune' || hole.stage === 'burnt') {
+      // 후네 밖('other'·'offscreen')이거나 탄 것: 떨어져 사라진다(GDD §굽기)
+      this.holes[index] = newHole();
+      this.bus.emit('cook/dropped', { hole: index, item: hole.stage === 'burnt' ? 'burnt' : hole.stage === 'dark' ? 'dark' : 'done' });
       return;
     }
-    if (e.target !== 'fune') return; // 다른 곳·화면 밖: 원래 구멍에 돌아가 타이머를 이어 센다
     // 도달 불가: 구멍 6개, 익힘 3초가 교체 입장 2초보다 길다(방어 코드).
     if (this.fune.length >= FUNE_SIZE) return this.reject(index, 'fune-full');
     const item: FuneItem = {

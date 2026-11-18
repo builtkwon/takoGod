@@ -8,6 +8,7 @@ import { syntheticDataV2 } from '../synthetic-data-v2';
 
 export const OUTPUT_EVENTS: readonly GameEventType[] = [
   'cook/rejected',
+  'cook/dropped',
   'cook/rolled',
   'cook/tap-ignored',
   'cook/darkened',
