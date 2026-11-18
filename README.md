@@ -4,16 +4,18 @@
 
 ## 구현 상태
 
-main은 GDD·규칙 문서·하네스 기준선이다. `src/contracts` 타입과 빌드·테스트·경계 검사 설정이 있고 core·render·ui·data는 빈 진입점이다. 구현은 아래 브랜치에 있고 병합을 기다리는 중이다(5단계). 병합 절차는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
+5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 지금은 6단계 굽기 조작 개편 중이다: GDD 개정과 contracts v2(새 타입·이벤트, 옛 것은 deprecated) 추가를 마쳤고, core·render·ui 전환은 feat 브랜치에서 진행 중이다(main의 게임은 아직 옛 굽기 흐름이다). 병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
 ## 브랜치
 
 | 브랜치 | 내용 | 상태 |
 | --- | --- | --- |
-| main | GDD, 규칙 문서, contracts, 하네스 | 기준선 |
-| feat/core | src/core: 굽기·손님·점수·페이즈·세션 저장, BalanceSimulator | 구현됨, 병합 대기 |
-| feat/render | src/render: PS1 렌더러(240x320 세로), 모델, sandbox 상태 | 구현됨, 병합 대기 |
-| feat/ui | src/ui, src/data: 오버레이, 대사·리뷰·튜토리얼 데이터 | 구현됨, 병합 대기 |
+| main | GDD, 규칙 문서, contracts, 하네스, 병합된 구현과 조립(main.ts), PWA | 기준선. push 시 자동 배포 |
+| feat/core | src/core: 6단계 굽기 개편 구현(구멍 독립 상태기계, 후네 서빙, 인내·다시해줘·떠남) | 진행 중. 6단계 병합 뒤 삭제 |
+| feat/render | src/render: 후네 모델, 굽기 색 단계, sandbox 상태 | 진행 중. 6단계 병합 뒤 삭제 |
+| feat/ui | src/ui, src/data: 끌어 놓기 조작, 새 화면 배치 | 6단계 작업용(이전 작업은 main에 병합됨). 6단계 병합 뒤 삭제 |
+
+- 병합 전에 README를 최신화하고(그 변경이 병합 직전 main 커밋), 병합 뒤 브랜치는 로컬·원격 모두 삭제한다. 새 작업은 main에서 `feat/<모듈>-<주제>` 브랜치를 만든다(예: `feat/ui-drag`). 위 feat/core·render·ui는 6단계 병합 뒤 삭제하는 1회 예외이고 → [implementation.md](docs/rules/collaboration/implementation.md#병합).
 
 ## 폴더 구조
 
@@ -44,9 +46,14 @@ src/
   contracts/         core와 render·ui 사이 타입·이벤트
   core/              순수 게임 로직(three·DOM 금지)
   render/            Three.js PS1 렌더링
-  ui/                DOM 오버레이
+  ui/                DOM 오버레이(iOS 설치 안내 포함)
   data/              대사·리뷰 코멘트·튜토리얼 문구
-  main.ts            조립
+  main.ts            조립·루프·서비스 워커 등록
+  session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
+  __tests__/         src 최상위 파일의 단위 테스트(모듈마다 자기 __tests__/)
+e2e/                 Playwright 시나리오(game.spec.ts)
+playwright.config.ts E2E 설정(mobile 프로젝트, build 후 preview)
+public/              manifest, 아이콘(PNG), sw.js
 .artifacts/          작업 기록(gitignore 대상)
 ```
 
@@ -77,7 +84,7 @@ src/
 | core-dev | src/core/** | verify-and-report, tdd-game-rule, contract-proposal | test.unit, build, lint.boundary, sim.balance |
 | render-dev | src/render/** | verify-and-report, ps1-visual-check, contract-proposal | test.unit, build, lint.boundary, render.snapshot |
 | ui-dev | src/ui/**, src/data/** | verify-and-report, dialogue-authoring, contract-proposal | test.unit, build, lint.boundary, dialogue.lint |
-| integrator | src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, 루트 설정 파일 | verify-and-report, merge-checklist, contract-apply | test.unit, test.e2e, build, lint.boundary, render.snapshot, sim.balance, dialogue.lint, harness.check, harness.index, harness.receipts |
+| integrator | src/*.ts, src/__tests__/**, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, e2e/**, public/**, playwright.config.ts, 루트 설정 파일 | verify-and-report, merge-checklist, contract-apply | test.unit, test.e2e, build, lint.boundary, render.snapshot, sim.balance, dialogue.lint, harness.check, harness.index, harness.receipts |
 | harness-gardener | .claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/**, .githooks/** | - | harness.check, harness.index, harness.receipts |
 | reviewer | 없음(읽기 전용) | independent-review | test.unit, test.e2e, build, lint.boundary, sim.balance, render.snapshot |
 
@@ -87,8 +94,10 @@ src/
 - 대화형 작업자 tako-core, tako-render, tako-ui는 `claude --agent <역할>`로 저장소 밖 worktree(feat/core, feat/render, feat/ui)에서 실행되며 SendMessage로 소통한다.
 - integrator와 harness-gardener는 main 폴더에서 실행한다.
 - reviewer와 반박 검토는 PM의 하위 에이전트다.
-- 작업자 흐름: 에이전트 정의 → AGENTS.md와 INDEX 자기 행 확인 → 독립 리뷰 여부 1줄 → 스킬 단계 → `pnpm tool` 실행 → 완료 보고와 영수증.
+- 작업자 흐름: 에이전트 정의 → 착수 전 owns 대조(범위 밖 파일이 필요하면 착수하지 않고 보고) → AGENTS.md와 INDEX 자기 행 확인 → 독립 리뷰 여부 1줄 → 스킬 단계 → `pnpm tool` 실행 → 완료 보고와 영수증.
 - PM 흐름: 도구 재실행 대조 → 판정 → 리뷰 조건이면 reviewer → 커밋 승인 또는 사용자 결정 표.
+- 병합 흐름: README 최신화 커밋 → merge-checklist로 main에 `--no-ff` 병합 → 병합한 브랜치를 로컬·원격에서 삭제(원격은 PM) → [implementation.md](docs/rules/collaboration/implementation.md#병합).
+- 커밋 승인: 사용자가 위임한 범위(검증 통과, 사용자 결정 항목 없음, 영수증 유효)는 PM 승인으로 대신하고, GDD 수치·contracts·라이브러리·규칙 문서·ADR·main 병합·배포는 사용자 승인을 받는다 → [commits.md](docs/rules/collaboration/commits.md).
 - 작업당 왕복 2회, 자동 수정 3회 같은 한도는 [review.md](docs/rules/collaboration/review.md#대화-한도)와 [ai-execution.md](docs/rules/collaboration/ai-execution.md#자동-수정-한도)에 있다.
 
 ## 실행
@@ -99,10 +108,21 @@ Node 24, pnpm 10(`packageManager`에 고정. corepack 사용 시 `corepack enabl
 pnpm install
 pnpm dev                          # 개발 서버
 pnpm build                        # 타입 검사(tsconfig.json, tsconfig.core.json) + 빌드 → dist/
-pnpm vitest run --passWithNoTests # 단위 테스트
+pnpm vitest run                   # 단위 테스트
 pnpm depcruise                    # 모듈 경계 검사
+pnpm tool test.e2e                # E2E(build 후 vite preview 대상)
 ```
+
+## 테스트
+
+세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 9개: 부팅, PWA, 튜토리얼, 복원, 손상된 저장값 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
+
+## PWA
+
+- 오프라인 셸: `public/sw.js`가 셸과 빌드 자산을 캐시한다. 내비게이션은 네트워크 우선·오프라인이면 캐시, 새 셸을 받으면 참조하지 않는 옛 해시 자산을 지운다. 서비스 워커는 빌드 결과(PROD)에서만 등록한다.
+- 아이콘: PNG 192·512(any), maskable 512, apple-touch 180, 파비콘은 PNG(icon-192). manifest에는 192·512·maskable을 등록했다(`public/manifest.webmanifest`).
+- iOS Safari에서는 첫 화면 전에 홈 화면 추가 안내를 보여주고 "웹에서 계속하기"로 넘어갈 수 있다.
 
 ## 배포
 
-Cloudflare Pages 정적 배포 예정(`dist/`). 미설정.
+Cloudflare Pages 정적 배포: https://takogod.pages.dev. main에 push하면 자동 배포된다. 빌드 명령 `pnpm build`, 출력 `dist`, 환경 변수 `NODE_VERSION=24`. 설정은 Cloudflare 쪽에 있고 저장소에는 배포 설정 파일이 없다.

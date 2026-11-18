@@ -14,9 +14,9 @@ function isReview(r: unknown): r is ReviewResult {
   return (
     (v.source === 'tutorial' || v.source === 'customer') &&
     typeof v.stars === 'number' &&
-    v.stars >= 1 &&
+    v.stars >= 0 &&
     v.stars <= 5 &&
-    Number.isInteger(v.stars * 2) && // 0.5 단위(GDD §점수)
+    Number.isInteger(v.stars * 2) && // 0.5 단위. 0~1점은 0~1점 떠남(GDD §점수)
     typeof v.comment === 'string' &&
     (v.personality === null || PERSONALITIES.includes(v.personality))
   );

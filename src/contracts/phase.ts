@@ -15,8 +15,23 @@ export interface PhaseConfig {
   readonly countsReviews: boolean;
 }
 
-/** 튜토리얼 한 단계. target 단계의 버튼에 화살표를 띄우고 message를 상단에 표시한다. */
+/**
+ * 튜토리얼 한 단계. target 단계의 버튼에 화살표를 띄우고 message를 상단에 표시한다.
+ * @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 TutorialStepV2.
+ */
 export interface TutorialStep {
   readonly target: CookStep;
+  readonly message: string;
+}
+
+/**
+ * 튜토리얼 유도 단계(GDD §진행 튜토리얼). 단계마다 6구 모두에 같은 조작을 하게 한다.
+ * 순서: 마가린 → 반죽물 → 익힘 기다림 → 속재료 → 굴리기 1 → 굴리기 2 → 후네 담기.
+ */
+export type TutorialStage = 'margarine' | 'batter' | 'cook-wait' | 'filling' | 'roll-1' | 'roll-2' | 'fune';
+
+/** 튜토리얼 안내 한 개(새 흐름). stage 조작의 시작점→목적지에 화살표를 띄우고 message를 상단에 표시한다. */
+export interface TutorialStepV2 {
+  readonly stage: TutorialStage;
   readonly message: string;
 }
