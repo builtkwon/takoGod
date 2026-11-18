@@ -1,7 +1,7 @@
 // GDD §콘텐츠 수량 대조: 대사 성격당 10(총 40), 리뷰 코멘트 성격당 별점 구간 5×3, 튜토리얼 안내 9
 import { describe, expect, it } from 'vitest';
-import type { CookStep, Personality } from '../contracts';
-import { dialogues, reviewComments, tutorialReviewComment, tutorialSteps } from './index';
+import type { CookStep, Personality } from '../../contracts';
+import { dialogues, reviewComments, tutorialReviewComment, tutorialSteps } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 const STEPS: readonly CookStep[] = ['margarine', 'batter', 'cook-1', 'filling', 'cook-2', 'roll-1', 'roll-2', 'roll-3', 'done'];
