@@ -4,16 +4,24 @@
 
 ## 구현 상태
 
-5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 지금은 6단계 굽기 조작 개편 중이다: GDD 개정과 contracts v2(새 타입·이벤트, 옛 것은 deprecated) 추가를 마쳤고, core·render·ui 전환은 feat 브랜치에서 진행 중이다(main의 게임은 아직 옛 굽기 흐름이다). 병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
+5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 6단계 굽기 조작 개편을 통합하는 중이다. GDD 개정과 contracts v2(새 타입·이벤트, 옛 것은 deprecated)는 main에 있고, core·render·ui의 개편 구현을 병합해 `main.ts`를 V2 진입점(GameV2·renderV2·ScenePicker·mountUiV2)으로 전환한다. 옛 코드 파일은 후속 정리 작업에서 지운다.
+
+굽기 개편의 새 게임 규칙은 [GDD](docs/GDD.md)가 원본이다. 요약만 적는다.
+- 구멍마다 독립 상태로 진행하고, 재료는 끌어 놓고 구멍은 탭해 굴린다(§굽기).
+- 완성품은 후네에 담아 서빙한다. 후네 밖에 놓으면 떨어져 사라지고 탄 것은 항상 버린다(§굽기).
+- 손님마다 인내(얼굴 색 변화)가 있고, 별점이 낮으면 다시해줘 요청이나 0~1점 떠남이 있다(§손님 대화, §점수).
+- 점수는 비공개다. 서빙 직후 맛보기 반응 대사와 합산 결과를 보여 준다(§손님 대화).
+
+병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
 ## 브랜치
 
 | 브랜치 | 내용 | 상태 |
 | --- | --- | --- |
 | main | GDD, 규칙 문서, contracts, 하네스, 병합된 구현과 조립(main.ts), PWA | 기준선. push 시 자동 배포 |
-| feat/core | src/core: 6단계 굽기 개편 구현(구멍 독립 상태기계, 후네 서빙, 인내·다시해줘·떠남) | 진행 중. 6단계 병합 뒤 삭제 |
-| feat/render | src/render: 후네 모델, 굽기 색 단계, sandbox 상태 | 진행 중. 6단계 병합 뒤 삭제 |
-| feat/ui | src/ui, src/data: 끌어 놓기 조작, 새 화면 배치 | 6단계 작업용(이전 작업은 main에 병합됨). 6단계 병합 뒤 삭제 |
+| feat/core | src/core: 굽기 개편 구현(구멍 독립 상태기계, 후네 서빙, 인내·다시해줘·떠남, 튜토리얼 V2) | 6단계 통합으로 main에 병합. 정리(삭제)는 PM이 조율 |
+| feat/render | src/render: GameStateV2 렌더, ScenePicker, 후네 모델, 구멍 9상태·테두리·얼굴 색 | 6단계 통합으로 main에 병합. 정리(삭제)는 PM이 조율 |
+| feat/ui | src/ui, src/data: 끌어 놓기 조작·연출, 점수 공개, 맛보기 반응·튜토리얼 문구 | 6단계 통합으로 main에 병합. 정리(삭제)는 PM이 조율 |
 
 - 병합 전에 README를 최신화하고(그 변경이 병합 직전 main 커밋), 병합 뒤 브랜치는 로컬·원격 모두 삭제한다. 새 작업은 main에서 `feat/<모듈>-<주제>` 브랜치를 만든다(예: `feat/ui-drag`). 위 feat/core·render·ui는 6단계 병합 뒤 삭제하는 1회 예외이고 → [implementation.md](docs/rules/collaboration/implementation.md#병합).
 
