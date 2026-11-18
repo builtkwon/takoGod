@@ -1,5 +1,7 @@
 // 원본: docs/rules/development/testing.md#e2e, docs/GDD.md §튜토리얼, §제품
 import { expect, test, type Page } from '@playwright/test';
+import type { PickTarget, ScenePicker } from '../src/contracts';
+import { createScenePicker } from '../src/render/pick';
 
 const KEY = 'takoyaki:session';
 
@@ -11,22 +13,96 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
-/** 시간을 고정하고 시작 버튼까지 누른다. 이후 시간은 page.clock으로만 흘린다. */
+const T0 = new Date('2026-01-01T09:00:00');
+
+/**
+ * 시간을 고정하고 시작 버튼까지 누른다. 시작 뒤 시계를 멈추므로(pauseAt) 이후 시간은 page.clock.runFor로만 흐른다.
+ * 시작 시각을 고정해 core의 난수 시드(Date.now)도 매번 같다.
+ */
 async function start(page: Page): Promise<void> {
-  await page.clock.install();
+  await page.clock.install({ time: T0 });
   await page.goto('/');
   await page.getByRole('button', { name: '시작' }).click();
+  await page.clock.pauseAt(new Date(T0.getTime() + 1000));
+  // 멈춘 시계는 실제 시간이 지나도 같은 값이다(주석과 동작이 맞는지 확인).
+  const t1 = await page.evaluate(() => Date.now());
+  expect(await page.evaluate(() => Date.now())).toBe(t1);
 }
 
-const tool = (page: Page, label: string) => page.locator('.ui-tool', { hasText: label });
+interface Pt {
+  readonly x: number;
+  readonly y: number;
+}
 
-/** 6구 모두에 같은 도구를 한 번씩 누른다(튜토리얼은 가장 뒤처진 구멍의 단계만 받는다). */
-async function tapAll(page: Page, label: string, ingredient?: string): Promise<void> {
+/**
+ * 장면 좌표 판정기. 3D 장면에는 DOM 요소가 없어 구멍·트레이·후네의 화면 좌표를 render의 순수 함수(src/render/pick.ts)로 계산한다.
+ * 게임 코드에 테스트용 장치를 두지 않고 canvas의 화면 위치(boundingBox)만 받는다. 트레이는 6칸으로 둔다.
+ */
+async function scenePicker(page: Page): Promise<ScenePicker> {
+  const box = await page.locator('canvas').boundingBox();
+  if (box === null) throw new Error('canvas 없음');
+  const rect = { left: box.x, top: box.y, width: box.width, height: box.height } as DOMRect;
+  return createScenePicker({ getBoundingClientRect: () => rect }, () => 6);
+}
+
+function at(picker: ScenePicker, target: PickTarget): Pt {
+  const p = picker.anchor(target);
+  if (p === null) throw new Error(`anchor 없음: ${JSON.stringify(target)}`);
+  return p;
+}
+
+/** DOM 요소(마가린 통·반죽 주전자)의 가운데 좌표. */
+async function center(page: Page, selector: string): Promise<Pt> {
+  const b = await page.locator(selector).boundingBox();
+  if (b === null) throw new Error(`요소 없음: ${selector}`);
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+}
+
+/** from에서 눌러 to까지 끌고 놓는다. */
+async function drag(page: Page, from: Pt, to: Pt): Promise<void> {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 6 });
+  await page.mouse.up();
+}
+
+/** 6구 모두에 같은 재료를 끌어 놓는다(튜토리얼은 단계별로 6구에 같은 조작을 하게 유도한다). */
+async function dragAll(page: Page, picker: ScenePicker, from: () => Promise<Pt>): Promise<void> {
+  for (let i = 0; i < 6; i++) await drag(page, await from(), at(picker, { kind: 'hole', index: i }));
+}
+
+/** 6구를 한 번씩 탭한다(굴리기). */
+async function tapAll(page: Page, picker: ScenePicker): Promise<void> {
   for (let i = 0; i < 6; i++) {
-    await page.locator('.ui-chip').nth(i).click();
-    await tool(page, label).click();
-    if (ingredient) await page.locator('.ui-ingredient', { hasText: ingredient }).click();
+    const p = at(picker, { kind: 'hole', index: i });
+    await page.mouse.click(p.x, p.y);
   }
+}
+
+/** 6구의 완성품을 하나씩 들어 후네에 놓는다. */
+async function funeAll(page: Page, picker: ScenePicker): Promise<void> {
+  const fune = at(picker, { kind: 'fune' });
+  for (let i = 0; i < 6; i++) {
+    const p = at(picker, { kind: 'hole', index: i });
+    await page.mouse.move(p.x, p.y);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 24, p.y + 24, { steps: 2 }); // 탭이 아니라 들기로 인식되는 이동
+    await page.mouse.move(fune.x, fune.y, { steps: 6 });
+    await page.mouse.up();
+  }
+}
+
+/** 튜토리얼 한 판: 마가린 → 반죽물 → 익힘 기다림 → 속재료(문어) → 굴리기 1 → 굴리기 2 → 후네 담기. */
+async function playTutorial(page: Page): Promise<void> {
+  const picker = await scenePicker(page);
+  await dragAll(page, picker, () => center(page, '.ui-bucket-margarine'));
+  await dragAll(page, picker, () => center(page, '.ui-bucket-batter'));
+  await page.clock.runFor(3500); // 익힘 3초(GDD §굽기). 시계가 멈춰 있어 이 호출로만 시간이 흐른다.
+  // 튜토리얼의 트레이는 섞이기 전이라 문어가 0번 칸이다(트레이는 서빙 시점에 섞인다).
+  await dragAll(page, picker, async () => at(picker, { kind: 'tray', slot: 0 }));
+  await tapAll(page, picker); // 굴리기 1(튜토리얼은 바 전 구간 성공)
+  await tapAll(page, picker); // 굴리기 2
+  await funeAll(page, picker);
 }
 
 test('부팅: 콘솔 에러 없이 캔버스와 타이틀이 뜬다', async ({ page }) => {
@@ -115,16 +191,9 @@ test('PWA: install 중 셸 요청이 500이면 설치를 실패시키고 오류 
 test('튜토리얼 한 판을 끝내면 5★ 리뷰가 저장된다', async ({ page }) => {
   const errors = collectErrors(page);
   await start(page);
-  await expect(page.locator('.ui-phase')).toHaveText('튜토리얼');
+  await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
 
-  await tapAll(page, '마가린');
-  await tapAll(page, '반죽물');
-  await page.clock.runFor(2500); // 익음 게이지 적정 구간 진입(튜토리얼 40~100, 초당 20)
-  await tapAll(page, '익히기');
-  await tapAll(page, '속재료', '문어');
-  await page.clock.runFor(2500);
-  await tapAll(page, '익히기');
-  for (let i = 0; i < 3; i++) await tapAll(page, '굴리기'); // 튜토리얼 굴리기는 전 구간 성공
+  await playTutorial(page);
 
   await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
   const saved = await page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) ?? 'null'), KEY);
@@ -134,8 +203,9 @@ test('튜토리얼 한 판을 끝내면 5★ 리뷰가 저장된다', async ({ p
 
   // 새로고침하면 튜토리얼을 건너뛴다.
   await page.reload();
+  await page.clock.resume(); // 새로고침 뒤에도 시계가 멈춰 있어 rAF(HUD 갱신)가 돌도록 다시 흐르게 한다.
   await page.getByRole('button', { name: '시작' }).click();
-  await expect(page.locator('.ui-phase')).toHaveText('1단계');
+  await expect(page.locator('.ui-hud2')).toContainText('1단계');
   expect(errors).toEqual([]);
 });
 
@@ -157,5 +227,5 @@ test('손상된 저장값은 버리고 튜토리얼부터 시작한다', async (
   await page.evaluate((k) => sessionStorage.setItem(k, '{"version":1,"tutorialCompleted":true,"finished":false,"reviews":[null]}'), KEY);
   await page.reload();
   await page.getByRole('button', { name: '시작' }).click();
-  await expect(page.locator('.ui-phase')).toHaveText('튜토리얼');
+  await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
 });
