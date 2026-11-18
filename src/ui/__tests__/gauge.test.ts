@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { CookStep } from '../contracts';
-import { sessionAverageText } from './format';
-import { gaugeBands, judgedText, markerPercent } from './gauge';
+import type { CookStep } from '../../contracts';
+import { sessionAverageText } from '../format';
+import { gaugeBands, judgedText, markerPercent } from '../gauge';
 
 const edges = (step: CookStep, tutorial: boolean) => gaugeBands(step, tutorial)?.map((b) => [b.zone, b.from, b.to]);
 

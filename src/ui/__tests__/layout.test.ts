@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { overlaps, placeAnswerButtons, type Rect } from './layout';
+import { overlaps, placeAnswerButtons, type Rect } from '../layout';
 
 // 시드 고정 난수(mulberry32)
 function seeded(seed: number): () => number {

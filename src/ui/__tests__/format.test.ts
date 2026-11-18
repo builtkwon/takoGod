@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { averageText, phaseLabel, starsText } from './format';
-import { stepForTool, TOOLS, toolForStep } from './tools';
+import { averageText, phaseLabel, starsText } from '../format';
+import { stepForTool, TOOLS, toolForStep } from '../tools';
 
 describe('format', () => {
   it('starsText: 0.5 단위', () => {
