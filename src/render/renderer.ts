@@ -38,7 +38,7 @@ export interface Ps1Renderer {
   dispose(): void;
 }
 
-/** container 안에 4:3 캔버스를 맞춰 넣는다. 캔버스 버퍼는 렌더타깃 크기이고 CSS로 nearest 확대한다. */
+/** container 안에 렌더타깃 비율(RT_W x RT_H, 현재 240x320 세로 3:4) 캔버스를 맞춰 넣는다.캔버스 버퍼는 렌더타깃 크기이고 CSS로 nearest 확대한다. */
 export function createRenderer(container: HTMLElement): Ps1Renderer {
   const renderer = new WebGLRenderer({ antialias: false, powerPreference: 'low-power' });
   renderer.setPixelRatio(1); // ADR 0001: 업스케일 배율은 CSS 크기로 정한다.
