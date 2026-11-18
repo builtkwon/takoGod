@@ -8,7 +8,7 @@
 | 모듈 | [architecture/modules/core.md](architecture/modules/core.md) | src/core |
 | | [architecture/modules/render.md](architecture/modules/render.md) | src/render |
 | | [architecture/modules/ui.md](architecture/modules/ui.md) | src/ui, src/data |
-| | [architecture/modules/contracts.md](architecture/modules/contracts.md) | src/contracts, src/main.ts |
+| | [architecture/modules/contracts.md](architecture/modules/contracts.md) | src/contracts, src/*.ts(main.ts 등) |
 | | [architecture/modules/harness.md](architecture/modules/harness.md) | harness/, .claude/ (소유, 도구 호출, 검사) |
 | 개발 | [development/typescript.md](development/typescript.md) | TypeScript 설정·작성 기준 |
 | | [development/testing.md](development/testing.md) | 테스트 위치·범위 |

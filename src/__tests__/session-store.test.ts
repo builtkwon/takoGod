@@ -1,7 +1,7 @@
 // 원본: docs/adr/0002-session-storage.md, docs/GDD.md §제품
 import { describe, expect, it } from 'vitest';
-import type { SessionSnapshot } from './contracts';
-import { SESSION_KEY, createBrowserSessionStore, type StorageLike } from './session-store';
+import type { SessionSnapshot } from '../contracts';
+import { SESSION_KEY, createBrowserSessionStore, type StorageLike } from '../session-store';
 
 const snap: SessionSnapshot = {
   version: 1,

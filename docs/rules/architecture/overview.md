@@ -7,7 +7,7 @@
 | domain+application | `src/core` | 금지: DOM·Three.js·브라우저 API. 필수: 시간은 주입식 clock(`tick(dt)`), 저장소는 인터페이스 |
 | 포트 | `src/contracts` | 필수: 모든 모듈 간 타입·EventBus 이벤트를 여기에 둔다. 구현 세션은 읽기 전용 |
 | 어댑터 | `src/render`, `src/ui`, `src/data` | 필수: core와는 contracts로만 통신. 금지: 게임 규칙 구현 |
-| bootstrap | `src/main.ts` | 루프·조립·PWA |
+| bootstrap | `src/*.ts` | 진입점 `main.ts`(루프·조립·PWA 등록), 브라우저 어댑터(`session-store.ts` 등). 필수: main.ts 외 최상위 파일은 contracts만 import하고 main.ts와 테스트만 import한다 |
 
 모듈별 소유와 세부 규칙은 [modules/](modules/)를 본다.
 

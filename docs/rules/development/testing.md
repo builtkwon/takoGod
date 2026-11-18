@@ -4,7 +4,7 @@
 
 | 층 | 도구 | 위치 |
 | --- | --- | --- |
-| 단위 | Vitest(node). `pnpm vitest run` | 대상 옆 `*.test.ts`(`vite.config.ts`의 `test.include`). 하네스는 `harness/scripts/__tests__/` |
+| 단위 | Vitest(node). `pnpm vitest run` | 모듈의 `__tests__/<대상>.test.ts`(`vite.config.ts`의 `test.include`). src 최상위 파일은 `src/__tests__/`, 하네스는 `harness/scripts/__tests__/`. fixtures는 필요할 때 `__tests__/fixtures/` |
 | 화면 | render.snapshot | `src/render/sandbox.*` |
 | E2E | Playwright, mobile 프로젝트 1개 | `e2e/*.spec.ts` |
 

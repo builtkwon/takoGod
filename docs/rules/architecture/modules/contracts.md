@@ -1,4 +1,4 @@
-# contracts (`src/contracts`) · bootstrap (`src/main.ts`)
+# contracts (`src/contracts`) · bootstrap (`src/*.ts`)
 
 - 소유: integrator. 그 외 세션은 읽기 전용.
 - 계층 규칙: [overview.md](../overview.md#계층)
@@ -22,5 +22,5 @@
 
 ## bootstrap
 
-- `src/main.ts`: 게임 루프(`tick(dt)` 호출), core·render·ui 조립, PWA 등록.
+- `src/*.ts`: 진입점 `main.ts`는 게임 루프(`tick(dt)` 호출), core·render·ui 조립, PWA 등록. 브라우저 어댑터(`session-store.ts` 등)는 contracts 포트를 구현한다. 테스트는 `src/__tests__/`.
 - 금지: 게임 규칙 구현.
