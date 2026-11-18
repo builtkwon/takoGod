@@ -17,11 +17,18 @@ interface Shown {
 }
 
 export interface Dialogues {
-  update(state: GameState): void;
+  update(state: Pick<GameState, 'activeDialogues'>): void;
 }
 
 /** 말풍선과 랜덤 배치 답 버튼. fixed·toolbar: 이 요소들(도구바는 트레이 영역 포함)과 답 버튼은 겹치지 않는다. */
-export function createDialogues(ctx: UiContext, fixed: readonly HTMLElement[], toolbar: HTMLElement, rng: () => number = Math.random): Dialogues {
+export function createDialogues(
+  ctx: Pick<UiContext, 'layer' | 'bus' | 'disposers'>,
+  fixed: readonly HTMLElement[],
+  toolbar: HTMLElement | null,
+  rng: () => number = Math.random,
+  /** layer 기준 좌표의 추가 장애물(장면의 구멍·트레이·후네 등). 말풍선을 놓을 때마다 부른다. */
+  extra: () => readonly Rect[] = () => [],
+): Dialogues {
   const shown = new Map<string, Shown>();
 
   const rectOf = (e: HTMLElement): Rect => {
@@ -50,10 +57,11 @@ export function createDialogues(ctx: UiContext, fixed: readonly HTMLElement[], t
       bubble.append(el('b', '', PERSONALITY_LABEL[line.personality]), el('p', '', line.prompt), timer);
       ctx.layer.append(bubble);
 
-      const tb = rectOf(toolbar);
+      const tb = toolbar ? rectOf(toolbar) : null;
       const obstacles = [
         ...[...fixed, bubble, ...[...shown.values()].flatMap((s) => [s.bubble, ...s.buttons])].map(rectOf),
-        { ...tb, y: tb.y - TRAY_RESERVE, h: tb.h + TRAY_RESERVE },
+        ...(tb ? [{ ...tb, y: tb.y - TRAY_RESERVE, h: tb.h + TRAY_RESERVE }] : []),
+        ...extra(),
       ];
       const base = ctx.layer.getBoundingClientRect();
       const spots = placeAnswerButtons({ w: base.width, h: base.height }, BTN, obstacles, rng);
