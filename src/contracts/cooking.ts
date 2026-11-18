@@ -124,13 +124,25 @@ export interface FuneItem {
   readonly dark: boolean;
 }
 
-/** 놓은 곳. 버리기는 'offscreen'이다. 포인터 취소·앱 백그라운드 전환은 'other'로 보낸다. */
-export type DropTarget = 'fune' | 'offscreen' | 'other';
+/**
+ * 놓은 곳(GDD §굽기). 후네에 닿게 놓으면 'fune', 그 밖의 곳(화면 밖 포함)은 'other'다.
+ * 포인터 취소·앱 백그라운드 전환은 놓은 것이 아니라 'cancel'로 보낸다(원래 구멍으로 되돌리고 탐 타이머를 다시 흘린다).
+ */
+export type DropTarget =
+  | 'fune'
+  | 'other'
+  | 'cancel'
+  /** @deprecated 'other'로 통합. 화면 밖에 놓아도 후네 밖과 같다(떨어져 사라진다). */
+  | 'offscreen';
 
-/** 조작이 거부된 이유. 거부되면 재료·완성품은 원위치로 돌아간다(ui가 되돌리기만 한다). */
+/**
+ * 조작이 거부된 이유. 거부되면 재료·완성품은 원위치로 돌아간다(ui가 되돌리기만 한다).
+ * 후네 밖에 놓기는 거부가 아니라 떨어져 사라진다(cook/dropped). 튜토리얼만 후네 밖 놓기를 거부한다.
+ */
 export type RejectReason =
   | 'invalid-stage' // 지금 상태에서 받을 수 없는 재료·조작
-  | 'fune-full' // 후네가 가득 찼다
-  | 'burnt-item' // 탄 것은 후네·다른 곳에 놓을 수 없다
+  | 'fune-full' // 후네가 가득 찼다(떨어뜨리지 않고 원래 구멍으로 되돌린다)
+  /** @deprecated 탄 것은 거부가 아니라 어디에 놓든 떨어져 사라진다(cook/dropped). 더 이상 내지 않는다. */
+  | 'burnt-item'
   | 'already-holding' // 들기는 동시에 1개
-  | 'tutorial-step'; // 튜토리얼에서 현재 유도 단계가 아닌 조작
+  | 'tutorial-step'; // 튜토리얼에서 현재 유도 단계가 아닌 조작(후네 밖 놓기 포함)
