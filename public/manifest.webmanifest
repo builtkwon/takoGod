@@ -1,0 +1,11 @@
+{
+  "name": "타코야끼트럭",
+  "short_name": "타코야끼트럭",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0a12",
+  "theme_color": "#0d0a12",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
