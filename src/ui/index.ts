@@ -4,6 +4,7 @@ import type { EventBus, GameState, ReviewResult } from '../contracts';
 import { el, type UiContext } from './dom';
 import { createDialogues } from './dialogue';
 import { createHud } from './hud';
+import { showIosInstall } from './install';
 import { showResult, showReviewCard, showTitle, showTutorialComplete } from './screens';
 import { CSS } from './styles';
 import { createToolbar } from './toolbar';
@@ -45,7 +46,7 @@ export function mountUi(root: HTMLElement, bus: EventBus, getState: () => GameSt
   raf = requestAnimationFrame(frame);
 
   return {
-    title: () => showTitle(layer),
+    title: () => showIosInstall(layer).then(() => showTitle(layer)),
     showResult: (result) => showResult(layer, result),
     destroy() {
       cancelAnimationFrame(raf);
