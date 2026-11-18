@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { CookStep, IngredientId, Personality } from '../contracts';
-import { BALL_UNIT, DISC_UNIT, DOUGH_LOOKS, FILLING_GEO, HOLE_POS, MODEL_OF, doughTint } from './models';
-import { MAX_TEX_SIZE, createTextures } from './textures';
+import type { CookStep, IngredientId, Personality } from '../../contracts';
+import { BALL_UNIT, DISC_UNIT, DOUGH_LOOKS, FILLING_GEO, HOLE_POS, MODEL_OF, doughTint } from '../models';
+import { MAX_TEX_SIZE, createTextures } from '../textures';
 
 const STEPS: CookStep[] = ['margarine', 'batter', 'cook-1', 'filling', 'cook-2', 'roll-1', 'roll-2', 'roll-3', 'done'];
 const INGREDIENTS: IngredientId[] = ['octopus', 'wasabi', 'raw-garlic', 'eraser', 'marshmallow', 'chili'];
