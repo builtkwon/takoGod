@@ -109,6 +109,8 @@ export interface HoleStateV2 {
   readonly rollHits: readonly [boolean | null, boolean | null];
   /** 이 구멍의 다음 굴리기에 적용되는 영역(W1은 'filled', W2는 'rolled'). 굴릴 수 없는 단계는 null. 바에 표시할 영역은 GameStateV2.barZone이다. */
   readonly rollZone: RollZone | null;
+  /** core가 GDD §굽기 깜빡임 조건으로 정한다. render는 테두리 깜빡임에만 쓴다. */
+  readonly warn: boolean;
 }
 
 /** 후네에 담긴 완성품 하나의 판정 사실. 결함 계산과 맛보기 반응의 근거다. */
