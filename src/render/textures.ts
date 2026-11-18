@@ -55,6 +55,7 @@ export interface Textures {
   readonly sauce: DataTexture;
   readonly grain: DataTexture;
   readonly fabric: DataTexture;
+  readonly fune: DataTexture;
   /** 모든 텍스처. dispose용. */
   readonly all: readonly DataTexture[];
 }
@@ -76,5 +77,7 @@ export function createTextures(): Textures {
   const grain = make(16, 7, (_x, _y, r) => jitter([225, 225, 225], 25, r));
   // 옷감: 체크 직조.
   const fabric = make(16, 8, (x, y, r) => jitter((x >> 1) % 2 === (y >> 1) % 2 ? [235, 235, 235] : [200, 200, 200], 6, r));
-  return { iron, wood, butter, batter, crust, sauce, grain, fabric, all: [iron, wood, butter, batter, crust, sauce, grain, fabric] };
+  // 후네: 연한 나무결 + 가로 방향 짙은 결 줄.
+  const fune = make(32, 9, (_x, y, r) => (y % 6 === 1 && r() > 0.25 ? [178, 134, 82] : jitter([224, 184, 124], 8, r)));
+  return { iron, wood, butter, batter, crust, sauce, grain, fabric, fune, all: [iron, wood, butter, batter, crust, sauce, grain, fabric, fune] };
 }

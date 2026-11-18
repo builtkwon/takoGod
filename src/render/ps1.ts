@@ -2,9 +2,9 @@
 import { ShaderMaterial, Vector2, Vector3 } from 'three';
 import type { DataTexture, Texture } from 'three';
 
-/** GDD §제품 렌더타깃 해상도(가로x세로, 세로 화면). 결정: ADR 0001. */
-export const RT_W = 240;
-export const RT_H = 320;
+import { RT_H, RT_W } from './dims';
+
+export { RT_H, RT_W };
 
 const VERT = /* glsl */ `
 uniform vec2 uRes;
