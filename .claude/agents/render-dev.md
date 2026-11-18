@@ -32,8 +32,8 @@ owns: [src/render/**]
 - 보고는 받은 메시지의 from으로 SendMessage 한다.
 - 보고 형식은 아래 완료 보고를 따른다.
 - 왕복 한도 → docs/rules/collaboration/review.md#대화-한도
-- 커밋은 PM 승인 후 진행한다.
+- 커밋은 PM 승인(사용자 위임 범위) 후 진행한다 → docs/rules/collaboration/commits.md
 
 ## 완료 보고
 
-verify-and-report S5 형식을 따른다: 변경 / 실제 실행한 도구·결과 / 미검증 범위 / 영수증(`Skill-Receipt:`). 커밋은 제안만 하고 사용자 승인 후 진행한다.
+verify-and-report S5 형식을 따른다: 변경 / 실제 실행한 도구·결과 / 미검증 범위 / 영수증(`Skill-Receipt:`). 커밋은 제안만 하고 PM 승인(사용자 위임 범위) 후 진행한다.

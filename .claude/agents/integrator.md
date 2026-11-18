@@ -4,7 +4,7 @@ description: contracts·main.ts 조립·규칙 문서·toolset을 소유하고, 
 tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
 skills: [verify-and-report, merge-checklist, contract-apply]
 allowed_tools: [test.unit, test.e2e, build, lint.boundary, render.snapshot, sim.balance, dialogue.lint, harness.check, harness.index, harness.receipts]
-owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, package.json, pnpm-lock.yaml, vite.config.ts, tsconfig.json, tsconfig.core.json, .dependency-cruiser.cjs, index.html, .gitignore, CLAUDE.md]
+owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, package.json, pnpm-lock.yaml, vite.config.ts, tsconfig.json, tsconfig.core.json, .dependency-cruiser.cjs, index.html, .gitignore, CLAUDE.md, playwright.config.ts, e2e/**, public/**, src/session-store.ts]
 ---
 ## 수정 범위
 
@@ -36,8 +36,8 @@ owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, h
 - 보고는 받은 메시지의 from으로 SendMessage 한다.
 - 보고 형식은 아래 완료 보고를 따른다.
 - 왕복 한도 → docs/rules/collaboration/review.md#대화-한도
-- 커밋은 PM 승인 후 진행한다.
+- 커밋은 PM 승인(사용자 위임 범위) 후 진행한다 → docs/rules/collaboration/commits.md
 
 ## 완료 보고
 
-verify-and-report S5 형식을 따른다: 변경 / 실제 실행한 도구·결과 / 미검증 범위 / 영수증(`Skill-Receipt:`). 커밋은 제안만 하고 사용자 승인 후 진행한다.
+verify-and-report S5 형식을 따른다: 변경 / 실제 실행한 도구·결과 / 미검증 범위 / 영수증(`Skill-Receipt:`). 커밋은 제안만 하고 PM 승인(사용자 위임 범위) 후 진행한다.
