@@ -17,6 +17,7 @@ owns: [src/ui/**, src/data/**]
 1. AGENTS.md를 읽는다.
 2. `.claude/skills/INDEX.md`에서 ui-dev 행의 스킬만 확인한다.
 3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/review.md#언제
+4. 지시의 대상 파일을 owns와 대조한다. 범위 밖이면 착수하지 말고 PM에 보고한다(contracts·설정이면 contract-proposal).
 
 ## 필수·조건부 스킬
 

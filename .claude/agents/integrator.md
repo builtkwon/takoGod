@@ -4,7 +4,7 @@ description: contracts·main.ts 조립·규칙 문서·toolset을 소유하고, 
 tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
 skills: [verify-and-report, merge-checklist, contract-apply]
 allowed_tools: [test.unit, test.e2e, build, lint.boundary, render.snapshot, sim.balance, dialogue.lint, harness.check, harness.index, harness.receipts]
-owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, package.json, pnpm-lock.yaml, vite.config.ts, tsconfig.json, tsconfig.core.json, .dependency-cruiser.cjs, index.html, .gitignore, CLAUDE.md, playwright.config.ts, e2e/**, public/**, src/session-store.ts]
+owns: [src/*.ts, src/__tests__/**, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, package.json, pnpm-lock.yaml, vite.config.ts, tsconfig.json, tsconfig.core.json, .dependency-cruiser.cjs, index.html, .gitignore, CLAUDE.md, playwright.config.ts, e2e/**, public/**]
 ---
 ## 수정 범위
 
@@ -18,6 +18,7 @@ owns: [src/main.ts, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, h
 1. AGENTS.md를 읽는다.
 2. `.claude/skills/INDEX.md`에서 integrator 행의 스킬만 확인한다.
 3. 독립 리뷰 필요 여부와 근거를 한 줄로 밝힌다 → docs/rules/collaboration/review.md#언제
+4. 지시의 대상 파일을 owns와 대조한다. 범위 밖이면 착수하지 말고 PM에 보고한다(contracts·설정이면 contract-proposal).
 
 ## 필수·조건부 스킬
 

@@ -20,6 +20,7 @@ owns: [.claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts
 1. AGENTS.md를 읽는다.
 2. `pnpm tool harness.check -- --summary --read-only`로 현황을 본다.
 3. 작업에 맞는 메타 스킬을 연다(아래). `.claude/skills/INDEX.md`에는 이 에이전트의 스킬이 없다.
+4. 지시의 대상 파일을 owns와 대조한다. 범위 밖이면 착수하지 말고 PM에 보고한다.
 
 ## 필수·조건부 스킬
 
