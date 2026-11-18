@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CookStep, IngredientId, Personality } from '../../contracts';
-import { BALL_UNIT, DISC_UNIT, DOUGH_LOOKS, FILLING_GEO, HOLE_POS, MODEL_OF, doughTint } from '../models';
+import { BALL_UNIT, DISC_UNIT, DOUGH_LOOKS, FILLING_GEO, FUNE_SLOTS, HOLE_POS, MODEL_OF, bakeTint, doughTint } from '../models';
 import { MAX_TEX_SIZE, createTextures } from '../textures';
 
 const STEPS: CookStep[] = ['margarine', 'batter', 'cook-1', 'filling', 'cook-2', 'roll-1', 'roll-2', 'roll-3', 'done'];
@@ -73,5 +73,25 @@ describe('doughTint', () => {
     const plain = doughTint('done', 0, []);
     expect(doughTint('done', 0, ['perfect', 'perfect', 'burnt'])).toEqual(plain);
     expect(doughTint('done', 0, ['perfect', 'perfect', 'perfect', 'burnt', 'under'])).toEqual(plain);
+  });
+});
+
+describe('굽기 색 단계·후네', () => {
+  const lum = (t: readonly [number, number, number]) => t[0] + t[1] + t[2];
+
+  it('색조는 보통 > 어두움 > 탄 것 순으로 어두워진다', () => {
+    expect(lum(bakeTint('normal'))).toBeGreaterThan(lum(bakeTint('dark')));
+    expect(lum(bakeTint('dark'))).toBeGreaterThan(lum(bakeTint('burnt')));
+  });
+
+  it('doughTint는 stage를 완성 색조에 곱한다', () => {
+    expect(doughTint('done', 0, [], 'normal')).toEqual([1, 1, 1]);
+    expect(doughTint('done', 0, [], 'burnt')).toEqual(bakeTint('burnt'));
+  });
+
+  it('후네 슬롯은 6개이고 2줄 x 3개다', () => {
+    expect(FUNE_SLOTS).toHaveLength(6);
+    expect(new Set(FUNE_SLOTS.map((s) => s[2])).size).toBe(2);
+    expect(new Set(FUNE_SLOTS.map((s) => s[0])).size).toBe(3);
   });
 });

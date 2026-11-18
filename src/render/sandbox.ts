@@ -1,6 +1,8 @@
 // sandbox.html?state=<name> 진입점. 상태 이름 목록은 sandbox.states.json과 같아야 한다.
 import type { CookStep, Customer, Doneness, GameState, HoleState, Ingredient, IngredientId } from '../contracts';
 import { createRenderer } from './index';
+import type { RenderExtra } from './renderer';
+import type { BakeStage } from './models';
 
 const IDS: readonly IngredientId[] = ['octopus', 'wasabi', 'raw-garlic', 'eraser', 'marshmallow', 'chili'];
 const ing = (id: IngredientId): Ingredient => ({ id, isTrap: id !== 'octopus' });
@@ -24,13 +26,28 @@ const base: GameState = {
   tutorialCompleted: true,
 };
 
+const done6 = { ...base, holes: Array.from({ length: 6 }, (_, i) => hole(i, 'done')) };
+
 const STATES: Readonly<Record<string, GameState>> = {
   'griddle-empty': { ...base, tray: [] },
   'steps-early': { ...base, holes: [hole(0, 'margarine'), hole(1, 'batter'), hole(2, 'cook-1', 0.5), hole(3, 'filling'), hole(4, 'cook-2', 0.5, 'octopus'), hole(5, 'roll-1')] },
   'steps-late': { ...base, holes: [hole(0, 'roll-2'), hole(1, 'roll-3'), hole(2, 'done'), hole(3, 'done', 0, null, ['burnt']), hole(4, 'roll-1', 0, null, ['under']), hole(5, 'margarine')] },
   doneness: { ...base, holes: [0, 0.2, 0.45, 0.7, 0.9, 1].map((g, i) => hole(i, 'cook-1', g)) },
   fillings: { ...base, holes: IDS.map((id, i) => hole(i, 'cook-2', 0.3, id)) },
+  'fune-empty': done6,
+  'fune-full': done6,
+  'hole-dark': done6,
+  'hole-burnt': done6,
   customers: { ...base, customers: [customer('c1', 'salaryman'), customer('c2', 'grandma')] },
+};
+
+// 색 단계·후네는 GameState 밖의 표시 정보라 RenderExtra로 따로 준다.
+const stages = (...s: BakeStage[]): RenderExtra => ({ stages: s });
+const EXTRAS: Readonly<Record<string, RenderExtra>> = {
+  'fune-empty': {},
+  'fune-full': { fune: ['normal', 'normal', 'normal', 'normal', 'normal', 'normal'] },
+  'hole-dark': stages('normal', 'dark', 'dark', 'normal', 'dark', 'normal'),
+  'hole-burnt': stages('normal', 'dark', 'burnt', 'burnt', 'dark', 'normal'),
 };
 
 const name = new URLSearchParams(location.search).get('state') ?? 'griddle-empty';
@@ -40,5 +57,5 @@ if (app === null) throw new Error('#app 없음');
 if (state === undefined) {
   app.innerHTML = `<div id="err">알 수 없는 state: ${name.replace(/[<>&]/g, '')}<br>가능: ${Object.keys(STATES).join(', ')}</div>`;
 } else {
-  createRenderer(app).render(state);
+  createRenderer(app).render(state, EXTRAS[name]);
 }

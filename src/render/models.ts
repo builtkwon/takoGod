@@ -54,17 +54,54 @@ export const CUSTOMER_POS: readonly V3[] = [
   [1.5, 0, -2.3],
 ];
 
+/** 카운터는 뒤쪽 끝(z=-2.5)을 고정하고 후네 앞까지 늘렸다. */
+const COUNTER_BACK = -2.5;
+const COUNTER_FRONT = 4.6;
+const COUNTER_DEPTH = COUNTER_FRONT - COUNTER_BACK;
+const COUNTER_Z = (COUNTER_FRONT + COUNTER_BACK) / 2;
+
 /** 정적 장면: 카운터·철판·구멍·트레이판·뒷벽. */
 export function buildStatic(tex: Textures): Group {
   const g = new Group();
   const add = (geo: BufferGeometry, map: DataTexture, bias = 0) => g.add(new Mesh(geo, ps1Material(map, undefined, bias)));
-  add(merge([part(new BoxGeometry(6, 0.2, 5.4), 0xffffff, [0, -0.1, 0.2])]), tex.wood);
+  add(merge([part(new BoxGeometry(6, 0.2, COUNTER_DEPTH), 0xffffff, [0, -0.1, COUNTER_Z])]), tex.wood);
   add(merge([part(new BoxGeometry(3.7, PLATE_TOP, 2.5), 0xffffff, [0, PLATE_TOP / 2, 0])]), tex.iron);
   // 구멍 테두리·바닥은 철판 윗면 위 데칼이라 깊이 보정을 단계별로 준다.
   add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.52, 0.52, 0.012, 12), 0x55555c, [x, y + 0.004, z]))), tex.iron, 0.00005);
   add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.45, 0.45, 0.012, 12), 0x141416, [x, y + 0.01, z]))), tex.iron, 0.0001);
   add(merge([part(new BoxGeometry(3.5, 0.1, 0.55), 0xffffff, [0, TRAY_TOP / 2, TRAY_Z])]), tex.wood);
   add(merge([part(new BoxGeometry(6, 3, 0.2), 0xd8423a, [0, 1.5, -3.2])]), tex.fabric);
+  return g;
+}
+
+// --- 후네(나룻배 모양 용기) ---------------------------------------------------
+
+/** 후네 중심 z. 철판·트레이 아래(화면 하단). */
+export const FUNE_Z = 3.5;
+const FUNE_FLOOR = 0.06;
+/** 후네에 담기는 타코야끼 반지름. 철판 위 완성품(0.42)보다 작게 줄여 6개가 2줄로 들어간다. */
+export const FUNE_BALL_R = 0.3;
+/** 후네 슬롯 6개: 2줄(z) x 3개(x), 인덱스 = 행 우선. 바닥(y)은 포함하지 않는다. */
+export const FUNE_SLOTS: readonly V3[] = Array.from({ length: 6 }, (_, i): V3 => [(i % 3 - 1) * 0.72, FUNE_FLOOR, FUNE_Z + (Math.floor(i / 3) - 0.5) * 0.62]);
+
+/** 6각형 바닥(양 끝이 뾰족한 배 모양) + 변마다 바깥으로 기울어진 옆판 6장. 나무 텍스처 1장. */
+export function buildFune(tex: Textures): Group {
+  const rx = 1.55;
+  const rz = 0.75;
+  const corner = (k: number): [number, number] => [rx * Math.cos((k * Math.PI) / 3), rz * Math.sin((k * Math.PI) / 3)];
+  const parts = [part(new CylinderGeometry(1, 1, FUNE_FLOOR, 6), 0xa8743c, [0, FUNE_FLOOR / 2, FUNE_Z], [rz, 1, rx], [0, Math.PI / 2, 0])];
+  for (let k = 0; k < 6; k++) {
+    const [ax, az] = corner(k);
+    const [bx, bz] = corner(k + 1);
+    const [dx, dz] = [bx - ax, bz - az];
+    const [mx, mz] = [(ax + bx) / 2, (az + bz) / 2];
+    const yaw = -Math.atan2(dz, dx);
+    // 박스 로컬 +z가 월드에서 향하는 쪽(-dz, dx)이 바깥(중심→변 중점)이 되게 기울기 부호를 정한다.
+    const lean = -dz * mx + dx * mz >= 0 ? 0.4 : -0.4;
+    parts.push(part(new BoxGeometry(Math.hypot(dx, dz), 0.3, 0.06), k % 3 === 0 ? 0xd9a866 : 0xc8924f, [mx * 1.03, 0.16, FUNE_Z + mz * 1.03], [1, 1, 1], [lean, yaw, 0]));
+  }
+  const g = new Group();
+  g.add(new Mesh(merge(parts), ps1Material(tex.fune)));
   return g;
 }
 
@@ -96,8 +133,18 @@ export const DOUGH_LOOKS: Readonly<Record<CookStep, DoughLook | null>> = {
 export const DISC_UNIT = part(new CylinderGeometry(1, 1, 1, 10), 0xffffff);
 export const BALL_UNIT = part(new SphereGeometry(1, 8, 6), 0xffffff);
 
-/** 구멍 상태에서 반죽 색조(곱셈)를 만든다. 익음 게이지는 cook 단계에서만 색으로 쓴다. */
-export function doughTint(step: CookStep, gauge: number, judgements: readonly Doneness[]): V3 {
+/**
+ * 완성 타코야끼의 색 단계: 보통 완성 / 어두움(진한 갈색) / 탄 것(거의 검정).
+ * shortcut: contracts가 굽기 개편으로 바뀌는 중이라 render 로컬 타입이다. 확정되면 contracts 타입에서 이 값으로 매핑한다.
+ */
+export type BakeStage = 'normal' | 'dark' | 'burnt';
+
+/** 소스 줄무늬 텍스처(205,140,64)에 곱하는 색조. 어두움은 진한 갈색, 탄 것은 거의 검정이 된다. */
+const BAKE_TINT: Readonly<Record<BakeStage, V3>> = { normal: [1, 1, 1], dark: [0.5, 0.4, 0.42], burnt: [0.14, 0.12, 0.12] };
+export const bakeTint = (stage: BakeStage): V3 => BAKE_TINT[stage];
+
+/** 구멍 상태에서 반죽 색조(곱셈)를 만든다. 익음 게이지는 cook 단계에서만 색으로 쓴다. stage는 완성 이후 색 단계다. */
+export function doughTint(step: CookStep, gauge: number, judgements: readonly Doneness[], stage: BakeStage = 'normal'): V3 {
   let t: V3 = [1, 1, 1];
   if (step === 'cook-1' || step === 'cook-2') {
     const k = Math.min(Math.max(gauge, 0), 1);
@@ -106,6 +153,10 @@ export function doughTint(step: CookStep, gauge: number, judgements: readonly Do
     t = [0.92, 0.8, 0.62];
   }
   // judgements 0~1은 익음 게이지, 2~4는 굴리기(GDD §굽기). 굴리기 실패는 시각 표시하지 않는다.
+  if (stage !== 'normal') {
+    const b = BAKE_TINT[stage];
+    return [t[0] * b[0], t[1] * b[1], t[2] * b[2]];
+  }
   return judgements.slice(0, 2).includes('burnt') ? [t[0] * 0.45, t[1] * 0.45, t[2] * 0.45] : t;
 }
 
