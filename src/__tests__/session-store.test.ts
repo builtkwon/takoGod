@@ -65,9 +65,9 @@ describe('SessionStore.load (ADR 0002 §결정 6)', () => {
     expect(load(withReviews([{ ...snap.reviews[1], personality: 'alien' }]))).toBeNull();
   });
 
-  it('stars는 1~5 범위의 0.5 단위만 허용한다(GDD §점수)', () => {
-    for (const stars of [0, 0.5, 5.5, 6, 3.3]) expect(load(withReviews([{ ...snap.reviews[1], stars }]))).toBeNull();
-    for (const stars of [1, 2.5, 5]) expect(load(withReviews([{ ...snap.reviews[1], stars }]))).not.toBeNull();
+  it('stars는 0~5 범위의 0.5 단위만 허용한다(GDD §점수: 0~1점 떠남 포함)', () => {
+    for (const stars of [-0.5, 5.5, 6, 3.3, 0.25]) expect(load(withReviews([{ ...snap.reviews[1], stars }]))).toBeNull();
+    for (const stars of [0, 0.5, 1, 2.5, 5]) expect(load(withReviews([{ ...snap.reviews[1], stars }]))).not.toBeNull();
   });
 
   it('sessionStorage 접근 자체가 던져도(쿠키 차단·opaque origin) 생성·load·save가 멈추지 않는다', () => {

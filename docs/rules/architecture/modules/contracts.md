@@ -7,11 +7,11 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `cooking.ts` | CookStep, Ingredient, Doneness, DonenessJudge, HoleState |
-| `customer.ts` | Personality, DialogueLine, Customer, ActiveDialogue |
-| `phase.ts` | PhaseId, PhaseConfig, TutorialStep |
+| `cooking.ts` | CookStep, Ingredient, Doneness, DonenessJudge, HoleState(옛 흐름, deprecated), HoleStage, HoleStateV2, Material, RollZone, FuneItem, DropTarget, RejectReason |
+| `customer.ts` | Personality, DialogueLine, Customer(deprecated), CustomerStatus, PatienceLevel, PlateDefect, TasteKind, TasteLines, ActiveDialogue |
+| `phase.ts` | PhaseId, PhaseConfig, TutorialStep(deprecated), TutorialStage, TutorialStepV2 |
 | `review.ts` | ReviewResult |
-| `game-state.ts` | GameState |
+| `game-state.ts` | GameState(deprecated), GameStateV2 |
 | `session.ts` | SessionSnapshot, SessionStore(세션 저장 포트) |
 | `events.ts` | GameEvents(이벤트 목록), EventBus |
 | `tooling.ts` | 도구 연결 규약: BalanceSimulator, SimModule, SandboxStates, DialoguesModule, TOOL_ENTRY_PATHS |
