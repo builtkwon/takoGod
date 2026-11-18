@@ -4,16 +4,18 @@
 
 ## 구현 상태
 
-5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 다음은 6단계 굽기 조작 개편이다(GDD 개정 예정, 아직 반영 전). 병합 절차는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
+5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 지금은 6단계 굽기 조작 개편 중이다: GDD 개정과 contracts v2(새 타입·이벤트, 옛 것은 deprecated) 추가를 마쳤고, core·render·ui 전환은 feat 브랜치에서 진행 중이다(main의 게임은 아직 옛 굽기 흐름이다). 병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
 ## 브랜치
 
 | 브랜치 | 내용 | 상태 |
 | --- | --- | --- |
 | main | GDD, 규칙 문서, contracts, 하네스, 병합된 구현과 조립(main.ts), PWA | 기준선. push 시 자동 배포 |
-| feat/core | src/core: 굽기·손님·점수·페이즈·세션 저장, BalanceSimulator | main에 병합됨. 후속 작업용 |
-| feat/render | src/render: PS1 렌더러(240x320 세로), 모델, sandbox 상태 | main에 병합됨. 후속 작업용 |
-| feat/ui | src/ui, src/data: 오버레이, 대사·리뷰·튜토리얼 데이터, iOS 설치 안내 | main에 병합됨. 후속 작업용 |
+| feat/core | src/core: 6단계 굽기 개편 구현(구멍 독립 상태기계, 후네 서빙, 인내·다시해줘·떠남) | 진행 중. 6단계 병합 뒤 삭제 |
+| feat/render | src/render: 후네 모델, 굽기 색 단계, sandbox 상태 | 진행 중. 6단계 병합 뒤 삭제 |
+| feat/ui | src/ui, src/data: 끌어 놓기 조작, 새 화면 배치 | 6단계 작업용(이전 작업은 main에 병합됨). 6단계 병합 뒤 삭제 |
+
+- 병합 전에 README를 최신화하고(그 변경이 병합 직전 main 커밋), 병합 뒤 브랜치는 로컬·원격 모두 삭제한다. 새 작업은 main에서 `feat/<모듈>-<주제>` 브랜치를 만든다(예: `feat/ui-drag`). 위 feat/core·render·ui는 6단계 병합 뒤 삭제하는 1회 예외이고 → [implementation.md](docs/rules/collaboration/implementation.md#병합).
 
 ## 폴더 구조
 
@@ -94,6 +96,7 @@ public/              manifest, 아이콘(PNG), sw.js
 - reviewer와 반박 검토는 PM의 하위 에이전트다.
 - 작업자 흐름: 에이전트 정의 → 착수 전 owns 대조(범위 밖 파일이 필요하면 착수하지 않고 보고) → AGENTS.md와 INDEX 자기 행 확인 → 독립 리뷰 여부 1줄 → 스킬 단계 → `pnpm tool` 실행 → 완료 보고와 영수증.
 - PM 흐름: 도구 재실행 대조 → 판정 → 리뷰 조건이면 reviewer → 커밋 승인 또는 사용자 결정 표.
+- 병합 흐름: README 최신화 커밋 → merge-checklist로 main에 `--no-ff` 병합 → 병합한 브랜치를 로컬·원격에서 삭제(원격은 PM) → [implementation.md](docs/rules/collaboration/implementation.md#병합).
 - 커밋 승인: 사용자가 위임한 범위(검증 통과, 사용자 결정 항목 없음, 영수증 유효)는 PM 승인으로 대신하고, GDD 수치·contracts·라이브러리·규칙 문서·ADR·main 병합·배포는 사용자 승인을 받는다 → [commits.md](docs/rules/collaboration/commits.md).
 - 작업당 왕복 2회, 자동 수정 3회 같은 한도는 [review.md](docs/rules/collaboration/review.md#대화-한도)와 [ai-execution.md](docs/rules/collaboration/ai-execution.md#자동-수정-한도)에 있다.
 
