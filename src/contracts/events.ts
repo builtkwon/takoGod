@@ -17,8 +17,9 @@ export interface GameEvents {
   /** 완성·어두움·탄 구멍을 들기 시작했다. 들고 있는 동안 탐 타이머가 멈춘다. */
   'input/pick': { readonly hole: number };
   /**
-   * 들고 있던 것을 놓았다. 버리기는 target 'offscreen'으로 통합한다: 탄 것을 화면 밖에 놓는 것도 후네·다른 곳에 놓는 것과 같은 "들었다 놓기"이고,
-   * 결과(빈칸 / 거부·원위치)는 core가 상태에 따라 정하므로 ui가 알릴 것은 놓은 곳뿐이다.
+   * 들고 있던 것을 놓았다. ui가 알릴 것은 놓은 곳뿐이고 결과는 core가 상태에 따라 정한다(GDD §굽기):
+   * 'fune'(후네에 닿게 놓음)이면 담기고(탄 것은 담기지 않고 떨어진다), 'other'(그 밖의 곳, 화면 밖 포함)이면 떨어져 사라진다(cook/dropped).
+   * 포인터 취소·앱 백그라운드 전환은 'cancel'로 보낸다(원래 구멍으로 되돌리고 탐 타이머를 다시 흘린다).
    */
   'input/drop': { readonly target: DropTarget };
 
@@ -33,6 +34,11 @@ export interface GameEvents {
   'cook/completed': { readonly hole: number };
   /** 조작을 거부했다. hole은 대상 구멍이다. 재료는 출처(트레이)로, 완성품은 이 구멍으로 돌아간다. ui는 되돌리기만 한다(튜토리얼 거부도 이 이벤트를 낸다). */
   'cook/rejected': { readonly hole: number; readonly reason: RejectReason };
+  /**
+   * 들고 있던 것이 후네에 담기지 않고 떨어져 사라졌다. hole은 비워진 원래 구멍이다.
+   * ui는 놓은 위치에서 아래로 떨어져 화면 밖으로 나가는 연출을 그린다(연출일 뿐 판정이 아니다. GDD §굽기).
+   */
+  'cook/dropped': { readonly hole: number; readonly item: 'done' | 'dark' | 'burnt' };
   /** 굴리기 결과. 적중 여부는 core가 탭 순간의 바 위치와 영역으로 판정한다(GDD §굽기). 구멍 상태는 GameStateV2.holes로 읽는다. */
   'cook/rolled': { readonly hole: number; readonly hit: boolean };
   /** 효과 없는 탭(굴릴 수 없는 상태). 감점 없음, 헛손질 효과음의 근거다(GDD §굽기). */

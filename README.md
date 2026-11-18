@@ -51,7 +51,7 @@ src/
   __tests__/         src 최상위 파일의 단위 테스트(모듈마다 자기 __tests__/)
 e2e/                 Playwright 시나리오(game.spec.ts)
 playwright.config.ts E2E 설정(mobile 프로젝트, build 후 preview)
-public/              manifest, 아이콘(SVG·PNG·apple-touch), sw.js
+public/              manifest, 아이콘(PNG), sw.js
 .artifacts/          작업 기록(gitignore 대상)
 ```
 
@@ -117,7 +117,7 @@ pnpm tool test.e2e                # E2E(build 후 vite preview 대상)
 ## PWA
 
 - 오프라인 셸: `public/sw.js`가 셸과 빌드 자산을 캐시한다. 내비게이션은 네트워크 우선·오프라인이면 캐시, 새 셸을 받으면 참조하지 않는 옛 해시 자산을 지운다. 서비스 워커는 빌드 결과(PROD)에서만 등록한다.
-- 아이콘: SVG, PNG(192·512·maskable), apple-touch-icon. `public/manifest.webmanifest`에 등록했다.
+- 아이콘: PNG 192·512(any), maskable 512, apple-touch 180, 파비콘은 PNG(icon-192). manifest에는 192·512·maskable을 등록했다(`public/manifest.webmanifest`).
 - iOS Safari에서는 첫 화면 전에 홈 화면 추가 안내를 보여주고 "웹에서 계속하기"로 넘어갈 수 있다.
 
 ## 배포
