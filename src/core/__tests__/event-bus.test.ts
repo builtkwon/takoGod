@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEventBus } from './event-bus';
+import { createEventBus } from '../event-bus';
 
 describe('EventBus', () => {
   it('구독자에게 payload를 전달하고 해제 함수가 동작한다', () => {

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { CookStep, DialogueLine, GameEventType, IngredientId, ReviewResult, SessionSnapshot } from '../contracts';
-import { createEventBus } from './event-bus';
-import { Game, type GameData } from './game';
-import { createRng } from './rng';
-import { createMemorySessionStore } from './session';
-import { syntheticData } from './synthetic-data';
+import type { CookStep, DialogueLine, GameEventType, IngredientId, ReviewResult, SessionSnapshot } from '../../contracts';
+import { createEventBus } from '../event-bus';
+import { Game, type GameData } from '../game';
+import { createRng } from '../rng';
+import { createMemorySessionStore } from '../session';
+import { syntheticData } from '../synthetic-data';
 
 const OUTPUT_EVENTS: readonly GameEventType[] = [
   'cook/step-advanced',

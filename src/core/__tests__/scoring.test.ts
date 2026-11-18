@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ReviewResult } from '../contracts';
-import { applySatisfaction, plateDeltas, sessionAverage, starsFromSatisfaction, START_SATISFACTION } from './scoring';
+import type { ReviewResult } from '../../contracts';
+import { applySatisfaction, plateDeltas, sessionAverage, starsFromSatisfaction, START_SATISFACTION } from '../scoring';
 
 const review = (stars: number): ReviewResult => ({ source: 'customer', stars, comment: '', personality: 'grandma' });
 
