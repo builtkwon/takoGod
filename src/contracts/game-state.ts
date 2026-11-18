@@ -31,7 +31,7 @@ export interface GameStateV2 {
   readonly phase: PhaseId;
   /** 길이 6. */
   readonly holes: readonly HoleStateV2[];
-  /** 트레이 표시 순서. 서빙 시점에 셔플된다(끌고 있으면 놓은 뒤). */
+  /** 트레이 표시 순서. core는 서빙 시점에 즉시 섞는다. 재료를 끌고 있는 중이면 화면 반영을 놓은 뒤로 미루는 것은 ui 책임이다. */
   readonly tray: readonly Ingredient[];
   /** 전역 타이밍 바 위치(0..1). 세션 내내 왕복한다(주기는 GDD §굽기). 굴리기 판정은 탭 순간의 이 값으로 한다. */
   readonly barPosition: number;
