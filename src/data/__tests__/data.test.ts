@@ -1,7 +1,8 @@
-// GDD §콘텐츠 수량 대조: 대사 성격당 10(총 40), 리뷰 코멘트 성격당 별점 구간 5×3, 튜토리얼 안내 9
+// GDD §콘텐츠 수량 대조: 대사 성격당 10(총 40), 리뷰 코멘트 성격당 별점 구간 5×3, 튜토리얼 안내 9(옛)·7(새), 맛보기 반응 40
 import { describe, expect, it } from 'vitest';
-import type { CookStep, Personality } from '../../contracts';
-import { dialogues, reviewComments, tutorialReviewComment, tutorialSteps } from '../index';
+import { readFileSync } from 'node:fs';
+import type { CookStep, Personality, TasteKind, TutorialStage } from '../../contracts';
+import { dialogues, reviewComments, tasteLines, tutorialReviewComment, tutorialSteps, tutorialStepsV2 } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 const STEPS: readonly CookStep[] = ['margarine', 'batter', 'cook-1', 'filling', 'cook-2', 'roll-1', 'roll-2', 'roll-3', 'done'];
@@ -26,5 +27,38 @@ describe('콘텐츠 수량(GDD §콘텐츠)', () => {
     expect(tutorialSteps.map((s) => s.target)).toEqual(STEPS);
     for (const s of tutorialSteps) expect(s.message.trim()).not.toBe('');
     expect(tutorialReviewComment.trim()).not.toBe('');
+  });
+});
+
+describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
+  const KINDS: readonly TasteKind[] = ['no-filling', 'trap', 'dark', 'roll-miss', 'perfect'];
+  const STAGES: readonly TutorialStage[] = ['margarine', 'batter', 'cook-wait', 'filling', 'roll-1', 'roll-2', 'fune'];
+
+  it('맛보기 반응은 성격 4 × 종류 5 × 2개, 모두 비어 있지 않고 서로 다르다', () => {
+    const all: string[] = [];
+    for (const p of PERSONALITIES) {
+      for (const k of KINDS) {
+        const list = tasteLines[p][k];
+        expect(list).toHaveLength(2);
+        for (const t of list) expect(t.trim()).not.toBe('');
+        all.push(...list);
+      }
+    }
+    expect(all).toHaveLength(40);
+    expect(new Set(all).size).toBe(40);
+  });
+
+  it('튜토리얼 안내문구는 7단계 각각 하나', () => {
+    expect(tutorialStepsV2.map((s) => s.stage)).toEqual(STAGES);
+    for (const s of tutorialStepsV2) expect(s.message.trim()).not.toBe('');
+  });
+
+  it('금지어가 없다(dialogue-banned-words.txt 기준)', () => {
+    const banned = readFileSync('harness/scripts/dialogue-banned-words.txt', 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l !== '' && !l.startsWith('#') && !l.startsWith('!'));
+    const texts = [...Object.values(tasteLines).flatMap((p) => Object.values(p).flat()), ...tutorialStepsV2.map((s) => s.message)];
+    for (const t of texts) for (const w of banned) expect(t.toLowerCase()).not.toContain(w.toLowerCase());
   });
 });
