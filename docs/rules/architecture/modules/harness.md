@@ -7,7 +7,7 @@
 | 경로 | 소유 |
 | --- | --- |
 | `harness/toolset.yaml` | integrator |
-| `.claude/**`, `harness/meta-skills/**`, `harness/proposals/**`, `harness/scripts/**` | harness-gardener |
+| `.claude/**`, `harness/meta-skills/**`, `harness/proposals/**`, `harness/scripts/**`, `harness/tsconfig.json` | harness-gardener |
 
 - 필수: `.claude/skills/INDEX.md`는 생성물이다. `pnpm tool harness.index`로만 갱신한다.
 - 소유 변경은 먼저 합의한다([implementation.md](../../collaboration/implementation.md#먼저-합의-vs-자율-진행)).
