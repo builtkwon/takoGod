@@ -43,7 +43,7 @@ describe('toolset 스키마', () => {
     const byId = Object.fromEntries(r.toolset.tools.map((t) => [t.id, t.status]));
     expect(byId).toMatchObject({
       'test.unit': 'active',
-      'test.e2e': 'planned',
+      'test.e2e': 'active',
       build: 'active',
       'lint.boundary': 'active',
       'render.snapshot': 'active',
