@@ -46,6 +46,72 @@ test('PWA: manifest 링크가 있고 서비스 워커가 등록된다', async ({
   expect(scope).toBe('http://localhost:4173/');
 });
 
+test('PWA: manifest 아이콘과 apple-touch-icon URL이 200을 돌려준다', async ({ page, request }) => {
+  await page.goto('/');
+  const manifest = await (await request.get('/manifest.webmanifest')).json();
+  expect(manifest.icons.map((i: { purpose: string }) => i.purpose)).toContain('maskable');
+  // manifest는 루트에 있어 상대 src는 '/' + src다.
+  const paths = [...manifest.icons.map((i: { src: string }) => `/${i.src}`), await page.locator('link[rel="apple-touch-icon"]').getAttribute('href')];
+  for (const p of paths) expect((await request.get(p as string)).status(), p as string).toBe(200);
+});
+
+test('PWA: 첫 방문 뒤 오프라인에서 새로고침해도 셸이 뜬다', async ({ page, context }) => {
+  await page.goto('/');
+  // 서비스 워커가 install(셸·자산 캐시)을 마치고 이 페이지를 제어할 때까지 기다린다.
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '타코야끼트럭' })).toBeVisible();
+  await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('PWA: 새 셸을 받으면 셸이 참조하지 않는 옛 해시 자산을 캐시에서 지운다', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  // 캐시 이름의 버전(takoyaki-vN)이 올라가도 깨지지 않도록 접두사로 찾는다.
+  const keys = () =>
+    page.evaluate(async () => {
+      const name = (await caches.keys()).find((k) => k.startsWith('takoyaki-'));
+      return name ? (await (await caches.open(name)).keys()).map((r) => new URL(r.url).pathname) : [];
+    });
+  await page.evaluate(async () => {
+    const name = (await caches.keys()).find((k) => k.startsWith('takoyaki-')) as string;
+    await (await caches.open(name)).put('/assets/index-OLDHASH.js', new Response('old'));
+  });
+  expect(await keys()).toContain('/assets/index-OLDHASH.js');
+  await page.reload(); // 내비게이션 → 네트워크 셸 → 정리
+  await expect.poll(keys).not.toContain('/assets/index-OLDHASH.js');
+  expect((await keys()).some((p) => /^\/assets\/index-.+\.js$/.test(p))).toBe(true); // 현재 자산은 남는다
+});
+
+test('PWA: install 중 셸 요청이 500이면 설치를 실패시키고 오류 페이지를 셸로 저장하지 않는다', async ({ page, context }) => {
+  // 페이지 내비게이션은 통과시키고, 그 외(서비스 워커의 fetch)의 '/' 요청만 500으로 바꾼다.
+  await context.route('**/', (route) =>
+    route.request().isNavigationRequest() ? route.continue() : route.fulfill({ status: 500, contentType: 'text/html', body: 'SERVER-ERROR' }),
+  );
+  // 첫 설치가 실패하면 등록 자체가 사라지므로, register() 시점에 워커 상태를 붙잡아 둔다(테스트 쪽 후킹, 게임 코드 변경 없음).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __swFinal?: Promise<string> };
+    const register = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+    navigator.serviceWorker.register = async (...args) => {
+      const reg = await register(...args);
+      const sw = reg.installing as ServiceWorker;
+      w.__swFinal = new Promise((resolve) => sw.addEventListener('statechange', () => ['activated', 'redundant'].includes(sw.state) && resolve(sw.state)));
+      return reg;
+    };
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => (window as unknown as { __swFinal?: unknown }).__swFinal !== undefined);
+  const state = await page.evaluate(() => (window as unknown as { __swFinal: Promise<string> }).__swFinal);
+  const cachedShell = await page.evaluate(async () => {
+    const name = (await caches.keys()).find((k) => k.startsWith('takoyaki-'));
+    const hit = name ? await (await caches.open(name)).match('/') : undefined;
+    return hit ? await hit.text() : null;
+  });
+  expect({ state, cachedShell }).toEqual({ state: 'redundant', cachedShell: null });
+});
+
 test('튜토리얼 한 판을 끝내면 5★ 리뷰가 저장된다', async ({ page }) => {
   const errors = collectErrors(page);
   await start(page);
