@@ -7,6 +7,7 @@ import {
   Float32BufferAttribute,
   Group,
   Mesh,
+  RingGeometry,
   SphereGeometry,
   TorusGeometry,
 } from 'three';
@@ -16,7 +17,8 @@ import type { CookStep, Doneness, IngredientId, Personality } from '../contracts
 import { ps1Material } from './ps1';
 import type { Textures } from './textures';
 
-type V3 = readonly [number, number, number];
+import { FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
+import type { V3 } from './layout';
 
 /** 변환 후 플랫 노멀 + 단색 버텍스 컬러를 입힌 파트. */
 function part(g: BufferGeometry, hex: number, at: V3 = [0, 0, 0], scale: V3 = [1, 1, 1], rot: V3 = [0, 0, 0]): BufferGeometry {
@@ -41,14 +43,7 @@ function merge(parts: BufferGeometry[]): BufferGeometry {
 
 // --- 철판 레이아웃 -----------------------------------------------------------
 
-/** 철판 윗면 높이. */
-export const PLATE_TOP = 0.3;
-/** 6구 위치: 3열 x 2행, 인덱스 0..5 = 행 우선. */
-export const HOLE_POS: readonly V3[] = Array.from({ length: 6 }, (_, i): V3 => [(i % 3 - 1) * 1.1, PLATE_TOP, (Math.floor(i / 3) - 0.5) * 1.1]);
-/** 트레이 슬롯 x 좌표(최대 6개). */
-export const TRAY_X: readonly number[] = Array.from({ length: 6 }, (_, i) => (i - 2.5) * 0.5);
-export const TRAY_TOP = 0.1;
-export const TRAY_Z = 2.1;
+export { FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z };
 export const CUSTOMER_POS: readonly V3[] = [
   [-1.5, 0, -2.3],
   [1.5, 0, -2.3],
@@ -76,8 +71,6 @@ export function buildStatic(tex: Textures): Group {
 
 // --- 후네(나룻배 모양 용기) ---------------------------------------------------
 
-/** 후네 중심 z. 철판·트레이 아래(화면 하단). */
-export const FUNE_Z = 3.5;
 const FUNE_FLOOR = 0.06;
 /** 후네에 담기는 타코야끼 반지름. 철판 위 완성품(0.42)보다 작게 줄여 6개가 2줄로 들어간다. */
 export const FUNE_BALL_R = 0.3;
@@ -129,6 +122,14 @@ export const DOUGH_LOOKS: Readonly<Record<CookStep, DoughLook | null>> = {
   'roll-3': { kind: 'ball', r: 0.41, h: 0.95, tex: 'crust' },
   done: { kind: 'ball', r: 0.42, h: 1, tex: 'sauce' },
 };
+
+/** 구멍 테두리 링(철판 위 수평). 색은 머티리얼 tint로 준다. */
+export const RIM_UNIT = part(new RingGeometry(0.455, 0.54, 12), 0xffffff, [0, 0, 0], [1, 1, 1], [-Math.PI / 2, 0, 0]);
+/** "속 없음" 표시: 얇은 X(바닥이 y=0). */
+export const NOFILL_MARK = merge([
+  part(new BoxGeometry(0.34, 0.03, 0.07), 0x8a8ae0, [0, 0, 0], [1, 1, 1], [0, Math.PI / 4, 0]),
+  part(new BoxGeometry(0.34, 0.03, 0.07), 0x8a8ae0, [0, 0, 0], [1, 1, 1], [0, -Math.PI / 4, 0]),
+]);
 
 export const DISC_UNIT = part(new CylinderGeometry(1, 1, 1, 10), 0xffffff);
 export const BALL_UNIT = part(new SphereGeometry(1, 8, 6), 0xffffff);

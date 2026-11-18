@@ -1,18 +1,22 @@
 // Three.js PS1 렌더러. GameState를 읽어 그리기만 한다(게임 규칙 없음).
 import {
   Color,
+  DataTexture,
   Group,
   Mesh,
   NearestFilter,
   OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
+  RGBAFormat,
   Scene,
+  ShaderMaterial,
+  UnsignedByteType,
   Vector3,
   WebGLRenderer,
   WebGLRenderTarget,
 } from 'three';
-import type { GameState, HoleState } from '../contracts';
+import type { GameState, GameStateV2, HoleState, HoleStateV2, ScenePicker } from '../contracts';
 import {
   BALL_UNIT,
   CUSTOMER_POS,
@@ -23,6 +27,8 @@ import {
   FUNE_SLOTS,
   HOLE_POS,
   MODEL_OF,
+  NOFILL_MARK,
+  RIM_UNIT,
   TRAY_TOP,
   TRAY_X,
   TRAY_Z,
@@ -33,6 +39,9 @@ import {
   doughTint,
 } from './models';
 import type { BakeStage, CustomerModel } from './models';
+import { CAMERA } from './layout';
+import { FACE_TINT, RIM_COLOR, holeTint, lookStepOf, rimOf, rimVisible, showsFilling, showsNoFilling } from './holes';
+import { createScenePicker } from './pick';
 import { RT_H, RT_W, postMaterial, ps1Material } from './ps1';
 import { createTextures } from './textures';
 
@@ -50,6 +59,14 @@ export interface RenderExtra {
 export interface Ps1Renderer {
   /** 상태를 그린다. 매 프레임 호출해도 된다(변경 없는 부분은 갱신하지 않는다). */
   render(state: GameState, extra?: RenderExtra): void;
+  /**
+   * 굽기 개편(GameStateV2)을 그린다. 구멍 9단계·속 없음·테두리(warn 깜빡임)·후네 내용·손님 얼굴 단계·트레이 표시 순서를 따른다.
+   * 들고 있는 구멍(holding)은 그리지 않는다(ui가 손가락 아래에 그린다). nowMs는 깜빡임 위상용이며 기본은 performance.now()다.
+   * 옛 render와 번갈아 부르지 않는다(구멍·손님 색조를 서로 덮어쓴다).
+   */
+  renderV2(state: GameStateV2, nowMs?: number): void;
+  /** 화면 좌표 ↔ 장면 대상(contracts ScenePicker). 마지막으로 그린 트레이 칸 수를 기준으로 한다. */
+  readonly picker: ScenePicker;
   dispose(): void;
 }
 
@@ -69,9 +86,9 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
   postScene.add(new Mesh(new PlaneGeometry(2, 2), postMat));
   const postCam = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-  const camera = new PerspectiveCamera(45, RT_W / RT_H, 0.1, 50);
-  camera.position.set(0, 7.5, 7.3); // 후네(z≈3.5)가 화면 하단에 들어오도록 철판 기준 카메라를 앞으로 밀었다.
-  camera.lookAt(0, 0.4, 0.5);
+  const camera = new PerspectiveCamera(CAMERA.fovDeg, CAMERA.aspect, 0.1, 50);
+  camera.position.set(...CAMERA.pos); // 카메라 값은 layout.ts(pick과 공유).
+  camera.lookAt(...CAMERA.target);
 
   const tex = createTextures();
   const scene = new Scene();
@@ -80,6 +97,11 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
   const doughTex = { butter: tex.butter, batter: tex.batter, crust: tex.crust, sauce: tex.sauce } as const;
   const fillMat = ps1Material(tex.grain);
 
+  const white = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, RGBAFormat, UnsignedByteType);
+  white.magFilter = NearestFilter;
+  white.minFilter = NearestFilter;
+  white.needsUpdate = true;
+
   const holes = HOLE_POS.map((p) => {
     const tint = new Vector3(1, 1, 1);
     const mat = ps1Material(tex.batter, tint, 0.00015);
@@ -87,12 +109,20 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
     const fill = new Mesh(FILLING_GEO.octopus, fillMat);
     const g = new Group();
     g.position.set(...p);
-    g.add(dough, fill);
+    // 테두리·속 없음 표시는 V2 전용. 옛 render는 항상 숨긴 채 둔다.
+    const rimTint = new Vector3(1, 1, 1);
+    const rim = new Mesh(RIM_UNIT, ps1Material(white, rimTint, 0.0002));
+    rim.position.y = 0.016;
+    rim.visible = false;
+    const mark = new Mesh(NOFILL_MARK, fillMat);
+    mark.visible = false;
+    g.add(dough, fill, rim, mark);
     scene.add(g);
-    return { dough, fill, mat, tint };
+    return { dough, fill, mat, tint, rim, rimTint, mark };
   });
 
-  const tray = TRAY_X.map((x) => {
+  let trayCount = 0;
+  const trayMeshes = TRAY_X.map((x) => {
     const m = new Mesh(FILLING_GEO.octopus, fillMat);
     m.position.set(x, TRAY_TOP, TRAY_Z);
     scene.add(m);
@@ -120,6 +150,9 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
     return models;
   });
 
+  /** 손님 그룹의 머리 머티리얼 tint(buildCustomer: children[1]이 머리). */
+  const faceTint = (g: Group): Vector3 => ((g.children[1] as Mesh).material as ShaderMaterial).uniforms.uTint!.value as Vector3;
+
   function updateHole(i: number, h: HoleState, stage: BakeStage | undefined): void {
     const v = holes[i];
     if (v === undefined) return;
@@ -141,6 +174,56 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
     }
   }
 
+  function updateHoleV2(i: number, h: HoleStateV2, held: boolean, nowMs: number): void {
+    const v = holes[i];
+    if (v === undefined) return;
+    const look = held ? null : DOUGH_LOOKS[lookStepOf(h.stage)];
+    v.dough.visible = look !== null;
+    v.mark.visible = false;
+    if (look !== null) {
+      v.dough.geometry = look.kind === 'disc' ? DISC_UNIT : BALL_UNIT;
+      v.mat.uniforms.uMap!.value = doughTex[look.tex];
+      const sy = look.kind === 'disc' ? look.h : look.r * look.h;
+      v.dough.scale.set(look.r, sy, look.r);
+      v.dough.position.y = look.kind === 'disc' ? sy / 2 + 0.012 : sy * 0.7;
+      v.tint.set(...holeTint(h));
+      if (showsNoFilling(h)) {
+        v.mark.visible = true;
+        v.mark.position.y = v.dough.position.y + sy + 0.03;
+      }
+    }
+    const filled = !held && showsFilling(h);
+    v.fill.visible = filled;
+    if (filled && h.filling !== null) {
+      v.fill.geometry = FILLING_GEO[h.filling];
+      v.fill.position.y = 0.09;
+    }
+    const rim = rimOf(h);
+    v.rim.visible = !held && rimVisible(h, nowMs);
+    if (rim !== null) v.rimTint.set(...RIM_COLOR[rim]);
+  }
+
+  function updateTrayFune(tray: GameState['tray'], funeStages: readonly (BakeStage | undefined)[]): void {
+    trayCount = tray.length;
+    funeBalls.forEach((b, i) => {
+      const stage = funeStages[i];
+      b.m.visible = stage !== undefined;
+      if (stage !== undefined) b.tint.set(...bakeTint(stage));
+    });
+    trayMeshes.forEach((m, i) => {
+      const ing = tray[i];
+      m.visible = ing !== undefined;
+      if (ing !== undefined) m.geometry = FILLING_GEO[ing.id];
+    });
+  }
+
+  function draw(): void {
+    renderer.setRenderTarget(rt);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    renderer.render(postScene, postCam);
+  }
+
   const fit = () => {
     const s = Math.min(container.clientWidth / RT_W, container.clientHeight / RT_H);
     if (s > 0) {
@@ -153,26 +236,30 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
   ro.observe(container);
 
   return {
+    picker: createScenePicker(canvas, () => trayCount),
     render(state, extra) {
       state.holes.forEach((h) => updateHole(h.index, h, extra?.stages?.[h.index]));
-      funeBalls.forEach((b, i) => {
-        const stage = extra?.fune?.[i];
-        b.m.visible = stage !== undefined;
-        if (stage !== undefined) b.tint.set(...bakeTint(stage));
-      });
-      tray.forEach((m, i) => {
-        const ing = state.tray[i];
-        m.visible = ing !== undefined;
-        if (ing !== undefined) m.geometry = FILLING_GEO[ing.id];
-      });
+      updateTrayFune(state.tray, extra?.fune ?? []);
       slots.forEach((models, i) => {
         const c = state.customers[i];
         for (const [kind, m] of Object.entries(models)) m.visible = c !== undefined && MODEL_OF[c.personality] === kind;
       });
-      renderer.setRenderTarget(rt);
-      renderer.render(scene, camera);
-      renderer.setRenderTarget(null);
-      renderer.render(postScene, postCam);
+      draw();
+    },
+    renderV2(state, nowMs = performance.now()) {
+      state.holes.forEach((h) => updateHoleV2(h.index, h, state.holding === h.index, nowMs));
+      updateTrayFune(
+        state.tray,
+        state.fune.map((f): BakeStage => (f.dark ? 'dark' : 'normal')),
+      );
+      slots.forEach((models, i) => {
+        const c = state.customers[i];
+        for (const [kind, m] of Object.entries(models)) {
+          m.visible = c !== undefined && MODEL_OF[c.personality] === kind;
+          if (c !== undefined) faceTint(m).set(...FACE_TINT[c.face]);
+        }
+      });
+      draw();
     },
     dispose() {
       ro.disconnect();
@@ -180,6 +267,7 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
         if (o instanceof Mesh) o.material.dispose();
       });
       tex.all.forEach((t) => t.dispose());
+      white.dispose();
       rt.dispose();
       postMat.dispose();
       renderer.dispose();
