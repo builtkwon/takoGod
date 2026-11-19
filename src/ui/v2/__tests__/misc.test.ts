@@ -4,6 +4,8 @@ import { barView } from '../bar';
 import { createSequencer, type Clock } from '../sequencer';
 import { deltaText, scoreText } from '../reveal';
 import { stateOf, stubPicker } from './helpers';
+import { iconPixels } from '../icons';
+import { LABEL_OFFSET_Y, trayLabelPlan } from '../tray-labels';
 
 describe('barView', () => {
   it('영역이 있으면 활성(굴릴 수 있는 구멍), W1은 step 1', () => {
@@ -94,5 +96,26 @@ describe('reveal 문구', () => {
     expect(deltaText(-10)).toBe('-10');
     expect(deltaText(0)).toBe('0');
     expect(scoreText(-20, 3.5)).toBe('만족도 -20 → ★★★½ (3.5)');
+  });
+});
+
+describe('트레이 이름표', () => {
+  it('칸 앵커 아래에 재료 이름, 앵커 없는 칸은 null, 섞이면 따라간다', () => {
+    const tray = [{ id: 'octopus', isTrap: false }, { id: 'wasabi', isTrap: true }, { id: 'chili', isTrap: true }] as const;
+    expect(trayLabelPlan(tray, stubPicker())).toEqual([
+      { text: '문어', at: { x: 50, y: 350 + LABEL_OFFSET_Y } },
+      { text: '와사비', at: { x: 150, y: 350 + LABEL_OFFSET_Y + 14 } },
+      null,
+    ]);
+    expect(trayLabelPlan([tray[1], tray[0]], stubPicker()).map((l) => l?.text)).toEqual(['와사비', '문어']);
+  });
+});
+
+describe('고스트 아이콘', () => {
+  it('속재료 6종·통·완성품 모두 그림이 있다', () => {
+    for (const ingredient of ['octopus', 'wasabi', 'raw-garlic', 'eraser', 'marshmallow', 'chili'] as const) {
+      expect(iconPixels({ kind: 'filling', ingredient }).length).toBeGreaterThan(0);
+    }
+    for (const kind of ['margarine', 'batter', 'done', 'dark', 'burnt'] as const) expect(iconPixels({ kind }).length).toBeGreaterThan(0);
   });
 });

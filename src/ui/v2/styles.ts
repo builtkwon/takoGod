@@ -13,9 +13,10 @@ export const CSS_V2 = `
 .ui-bucket-margarine{left:6px;background:#f2d56b;color:#442}
 .ui-bucket-batter{right:6px;background:#e9dfc0;color:#442}
 .ui-ghost,.ui-mark{position:fixed;left:0;top:0;pointer-events:none;z-index:10}
-.ui-ghost{min-width:44px;height:44px;padding:0 6px;box-sizing:border-box;border-radius:22px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#222;background:#fff}
-.ui-ghost-margarine{background:#f2d56b}.ui-ghost-batter{background:#e9dfc0}
-.ui-ghost-done{background:#d9993a}.ui-ghost-dark{background:#7a4a1a}.ui-ghost-burnt{background:#1a1a1a}
+.ui-ghost{width:44px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 2px #000a)}
+.ui-ghost svg{display:block}
+.ui-tray-label{position:fixed;left:0;top:0;pointer-events:none;z-index:5;padding:1px 6px;border-radius:8px;background:#000a;color:#fff;font-size:11px;line-height:14px;white-space:nowrap}
+.ui-tray-label[hidden]{display:none}
 .ui-mark{font-weight:700;font-size:18px;text-shadow:0 1px 2px #000}
 .ui-mark-good{color:#a5d6a7}.ui-mark-bad{color:#ef9a9a}.ui-mark-neutral{color:#fff}
 .ui-arrow{position:fixed;height:6px;margin-top:-3px;background:#ffeb3b;transform-origin:0 50%;pointer-events:none;animation:ui-pulse .7s infinite alternate}
