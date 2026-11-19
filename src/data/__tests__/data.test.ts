@@ -1,11 +1,10 @@
-// GDD §콘텐츠 수량 대조: 대사 성격당 10(총 40), 리뷰 코멘트 성격당 별점 구간 5×3, 튜토리얼 안내 9(옛)·7(새), 맛보기 반응 40
+// GDD §콘텐츠 수량 대조: 대사 성격당 10(총 40), 리뷰 코멘트 성격당 별점 구간 5×3, 튜토리얼 안내 7, 맛보기 반응 40
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import type { CookStep, Personality, TasteKind, TutorialStage } from '../../contracts';
-import { dialogues, reviewComments, tasteLines, tutorialReviewComment, tutorialSteps, tutorialStepsV2 } from '../index';
+import type { Personality, TasteKind, TutorialStage } from '../../contracts';
+import { dialogues, reviewComments, tasteLines, tutorialReviewComment, tutorialStepsV2 } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
-const STEPS: readonly CookStep[] = ['margarine', 'batter', 'cook-1', 'filling', 'cook-2', 'roll-1', 'roll-2', 'roll-3', 'done'];
 
 describe('콘텐츠 수량(GDD §콘텐츠)', () => {
   it('대사는 총 40문항, 성격당 10문항', () => {
@@ -23,9 +22,7 @@ describe('콘텐츠 수량(GDD §콘텐츠)', () => {
     }
   });
 
-  it('튜토리얼 안내문구는 굽기 9단계 각각 하나, 5★ 코멘트 1개', () => {
-    expect(tutorialSteps.map((s) => s.target)).toEqual(STEPS);
-    for (const s of tutorialSteps) expect(s.message.trim()).not.toBe('');
+  it('튜토리얼 5★ 코멘트가 있다', () => {
     expect(tutorialReviewComment.trim()).not.toBe('');
   });
 });
