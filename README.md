@@ -4,7 +4,7 @@
 
 ## 구현 상태
 
-5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 6단계 굽기 조작 개편을 통합하는 중이다. GDD 개정과 contracts v2(새 타입·이벤트, 옛 것은 deprecated)는 main에 있고, core·render·ui의 개편 구현을 병합해 `main.ts`를 V2 진입점(GameV2·renderV2·ScenePicker·mountUiV2)으로 전환한다. 옛 코드 파일은 후속 정리 작업에서 지운다.
+5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 6단계 굽기 조작 개편을 통합했고 후속 정리를 마쳤다. `main.ts`는 V2 진입점(GameV2·renderV2·ScenePicker·mountUiV2)을 쓰고, 옛 Game·옛 render 경로·옛 mountUi·도구바와 사용 중단된 contracts 타입·이벤트는 삭제했다. `sim.balance`는 V2 게임을 측정한다. contracts의 V2 접미사 타입(`GameStateV2`, `HoleStateV2`, `TutorialStepV2`)은 이름 변경이 따로 남아 있다.
 
 굽기 개편의 새 게임 규칙은 [GDD](docs/GDD.md)가 원본이다. 요약만 적는다.
 - 구멍마다 독립 상태로 진행하고, 재료는 끌어 놓고 구멍은 탭해 굴린다(§굽기).
@@ -19,11 +19,11 @@
 | 브랜치 | 내용 | 상태 |
 | --- | --- | --- |
 | main | GDD, 규칙 문서, contracts, 하네스, 병합된 구현과 조립(main.ts), PWA | 기준선. push 시 자동 배포 |
-| feat/core | src/core: 굽기 개편 구현(구멍 독립 상태기계, 후네 서빙, 인내·다시해줘·떠남, 튜토리얼 V2) | 6단계 통합으로 main에 병합. 정리(삭제)는 PM이 조율 |
-| feat/render | src/render: GameStateV2 렌더, ScenePicker, 후네 모델, 구멍 9상태·테두리·얼굴 색 | 6단계 통합으로 main에 병합. 정리(삭제)는 PM이 조율 |
-| feat/ui | src/ui, src/data: 끌어 놓기 조작·연출, 점수 공개, 맛보기 반응·튜토리얼 문구 | 6단계 통합으로 main에 병합. 정리(삭제)는 PM이 조율 |
+| feat/core-cleanup | src/core: 옛 Game·판정·시뮬레이터 삭제, V2 공개 API를 index로 내보냄, sim.balance가 V2 측정 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
+| feat/render-cleanup | src/render: 옛 render 경로·옛 sandbox 상태 삭제 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
+| feat/ui-cleanup | src/ui, src/data: 옛 mountUi·도구바·게이지·옛 튜토리얼 문구 삭제 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
 
-- 병합 전에 README를 최신화하고(그 변경이 병합 직전 main 커밋), 병합 뒤 브랜치는 로컬·원격 모두 삭제한다. 새 작업은 main에서 `feat/<모듈>-<주제>` 브랜치를 만든다(예: `feat/ui-drag`). 위 feat/core·render·ui는 6단계 병합 뒤 삭제하는 1회 예외이고 → [implementation.md](docs/rules/collaboration/implementation.md#병합).
+- 병합 전에 README를 최신화하고(그 변경이 병합 직전 main 커밋), 병합 뒤 브랜치는 로컬·원격 모두 삭제한다. 새 작업은 main에서 `feat/<모듈>-<주제>` 브랜치를 만든다(예: `feat/ui-drag`) → [implementation.md](docs/rules/collaboration/implementation.md#병합).
 
 ## 폴더 구조
 
@@ -52,10 +52,10 @@ harness/
   pre-commit         커밋 시 하네스 full 검사
 src/
   contracts/         core와 render·ui 사이 타입·이벤트
-  core/              순수 게임 로직(three·DOM 금지)
-  render/            Three.js PS1 렌더링
-  ui/                DOM 오버레이(iOS 설치 안내 포함)
-  data/              대사·리뷰 코멘트·튜토리얼 문구
+  core/              순수 게임 로직(GameV2, 시뮬레이터, three·DOM 금지)
+  render/            Three.js PS1 렌더링(renderV2, ScenePicker)
+  ui/                DOM 오버레이(v2/ 끌어 놓기 조작, iOS 설치 안내 포함)
+  data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구
   main.ts            조립·루프·서비스 워커 등록
   session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
   __tests__/         src 최상위 파일의 단위 테스트(모듈마다 자기 __tests__/)
