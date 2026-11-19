@@ -7,7 +7,8 @@
 5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 6단계 굽기 조작 개편을 통합했고 후속 정리를 마쳤다. `main.ts`는 V2 진입점(GameV2·renderV2·ScenePicker·mountUiV2)을 쓰고, 옛 Game·옛 render 경로·옛 mountUi·도구바와 사용 중단된 contracts 타입·이벤트는 삭제했다. `sim.balance`는 V2 게임을 측정한다. contracts의 V2 접미사 타입(`GameStateV2`, `HoleStateV2`, `TutorialStepV2`)은 이름 변경이 따로 남아 있다.
 
 굽기 개편의 새 게임 규칙은 [GDD](docs/GDD.md)가 원본이다. 요약만 적는다.
-- 구멍마다 독립 상태로 진행하고, 재료는 끌어 놓고 구멍은 탭해 굴린다(§굽기).
+- 구멍마다 독립 상태로 진행한다. 마가린·반죽은 통에서 끌어 손가락이 지나간 구멍마다 칠하고, 속재료는 구멍 하나에 놓으며, 굴리기는 구멍을 누르는 순간 타이밍 바 위치로 판정한다(§굽기).
+- 화면: 타이밍 바는 W1/W2 영역과 숫자를 보여 주고, 끌기 고스트는 재료 모양 아이콘이며 트레이 칸 아래에 재료 이름표가 붙는다. 배경은 밤 도로(남색 하늘, 가로등 빛, 보케)다.
 - 완성품은 후네에 담아 서빙한다. 후네 밖에 놓으면 떨어져 사라지고 탄 것은 항상 버린다(§굽기).
 - 손님마다 인내(얼굴 색 변화)가 있고, 별점이 낮으면 다시해줘 요청이나 0~1점 떠남이 있다(§손님 대화, §점수).
 - 점수는 비공개다. 서빙 직후 맛보기 반응 대사와 합산 결과를 보여 준다(§손님 대화).
@@ -22,6 +23,9 @@
 | feat/core-cleanup | src/core: 옛 Game·판정·시뮬레이터 삭제, V2 공개 API를 index로 내보냄, sim.balance가 V2 측정 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
 | feat/render-cleanup | src/render: 옛 render 경로·옛 sandbox 상태 삭제 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
 | feat/ui-cleanup | src/ui, src/data: 옛 mountUi·도구바·게이지·옛 튜토리얼 문구 삭제 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
+| feat/core-bar-zone | src/core: cooking·cooked도 본게임 W1 영역 표시 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
+| feat/render-night-bg | src/render: 밤 도로 배경(backdrop.ts) | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
+| feat/ui-touch-bar, feat/ui-ingredient-look | src/ui: 누르는 순간 판정, 끌어 칠하기, 타이밍 바 개선, 재료 아이콘·트레이 이름표 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
 
 - 병합 전에 README를 최신화하고(그 변경이 병합 직전 main 커밋), 병합 뒤 브랜치는 로컬·원격 모두 삭제한다. 새 작업은 main에서 `feat/<모듈>-<주제>` 브랜치를 만든다(예: `feat/ui-drag`) → [implementation.md](docs/rules/collaboration/implementation.md#병합).
 
@@ -53,8 +57,8 @@ harness/
 src/
   contracts/         core와 render·ui 사이 타입·이벤트
   core/              순수 게임 로직(GameV2, 시뮬레이터, three·DOM 금지)
-  render/            Three.js PS1 렌더링(renderV2, ScenePicker)
-  ui/                DOM 오버레이(v2/ 끌어 놓기 조작, iOS 설치 안내 포함)
+  render/            Three.js PS1 렌더링(renderV2, ScenePicker, backdrop.ts 밤 도로 배경)
+  ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, iOS 설치 안내 포함)
   data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구
   main.ts            조립·루프·서비스 워커 등록
   session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
