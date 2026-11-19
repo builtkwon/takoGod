@@ -38,7 +38,6 @@ import {
   accepts,
   inZone,
 } from './cooking-v2';
-import type { GameData, GameOptions } from './game';
 import { ANSWER_LIMIT_SEC, PHASES, REPLACEMENT_DELAY_SEC, SECOND_CUSTOMER_DELAY_SEC, TARGET_PLATES, nextPhase } from './phases';
 import { randomIndex, shuffle } from './rng';
 import { BAD_ANSWER, GOOD_ANSWER, START_SATISFACTION, TIMEOUT, applySatisfaction, sessionAverage, starsFromSatisfaction } from './scoring';
@@ -55,11 +54,22 @@ import {
 } from './scoring-v2';
 
 /** main이 src/data를 읽어 주입한다(core는 data를 import하지 않는다). 맛보기 대사는 TasteLines 포트로 받는다. */
-export interface GameDataV2 extends GameData {
+export interface GameDataV2 {
+  /** 성격마다 1개 이상 있어야 한다. */
+  readonly dialogues: readonly DialogueLine[];
+  /** 별점 구간(1~5, 0.5★는 내림)·성격별 후보. 하나를 무작위로 고른다. */
+  reviewComments(personality: Personality, bucket: 1 | 2 | 3 | 4 | 5): readonly string[];
+  readonly tutorialComment: string;
   readonly tasteLines: TasteLines;
 }
 
-export type GameOptionsV2 = Omit<GameOptions, 'data'> & { readonly data: GameDataV2 };
+export interface GameOptionsV2 {
+  readonly bus: EventBus;
+  readonly data: GameDataV2;
+  /** [0, 1) 난수. 시드를 고정해 재현한다. */
+  readonly rng: () => number;
+  readonly store: SessionStore;
+}
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 const TASTE_KINDS: readonly TasteKind[] = ['no-filling', 'trap', 'dark', 'roll-miss', 'perfect'];

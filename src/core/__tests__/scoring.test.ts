@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewResult } from '../../contracts';
-import { applySatisfaction, plateDeltas, sessionAverage, starsFromSatisfaction, START_SATISFACTION } from '../scoring';
+import { applySatisfaction, sessionAverage, starsFromSatisfaction, START_SATISFACTION } from '../scoring';
 
 const review = (stars: number): ReviewResult => ({ source: 'customer', stars, comment: '', personality: 'grandma' });
 
@@ -30,13 +30,5 @@ describe('scoring (GDD §점수)', () => {
   it('세션 점수 = 모든 리뷰 별점의 산술평균, 리뷰가 없으면 null', () => {
     expect(sessionAverage([])).toBeNull();
     expect(sessionAverage([review(5), review(4), review(3.5)])).toBeCloseTo(12.5 / 3, 12);
-  });
-
-  it('접시 변화: 완벽 +20, 덜익음/탐 -10, 함정 -20 (접시당 1회씩)', () => {
-    expect(plateDeltas({ perfect: true, hasBadDoneness: false, hasTrap: false })).toEqual([20]);
-    expect(plateDeltas({ perfect: false, hasBadDoneness: true, hasTrap: false })).toEqual([-10]);
-    expect(plateDeltas({ perfect: false, hasBadDoneness: false, hasTrap: true })).toEqual([-20]);
-    expect(plateDeltas({ perfect: false, hasBadDoneness: true, hasTrap: true })).toEqual([-10, -20]);
-    expect(plateDeltas({ perfect: false, hasBadDoneness: false, hasTrap: false })).toEqual([]);
   });
 });
