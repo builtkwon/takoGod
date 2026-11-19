@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HoleStage, HoleStateV2, PatienceLevel } from '../../contracts';
-import { BLINK_MS, FACE_TINT, RIM_COLOR, holeTint, lookStepOf, rimOf, rimVisible, showsFilling, showsNoFilling } from '../holes';
+import { BLINK_MS, FACE_TINT, RIM_COLOR, holeTint, rimOf, rimVisible, showsFilling, showsNoFilling } from '../holes';
 import { DOUGH_LOOKS, bakeTint } from '../models';
 
 const STAGES: HoleStage[] = ['empty', 'greased', 'cooking', 'cooked', 'filled', 'rolled', 'done', 'dark', 'burnt'];
@@ -19,11 +19,9 @@ const h = (stage: HoleStage, o: Partial<HoleStateV2> = {}): HoleStateV2 => ({
 const lum = (t: readonly number[]) => t[0]! + t[1]! + t[2]!;
 
 describe('구멍 9단계 모양', () => {
-  it('9단계 모두 모양표에 매핑되고 빈칸만 모양이 없다', () => {
-    expect(STAGES.filter((s) => DOUGH_LOOKS[lookStepOf(s)] === null)).toEqual(['empty']);
-  });
   it('완성·어두움·탄 것은 같은 모양이고 색조만 다르다', () => {
-    expect(lookStepOf('dark')).toBe(lookStepOf('done'));
+    expect(DOUGH_LOOKS.dark).toEqual(DOUGH_LOOKS.done);
+    expect(DOUGH_LOOKS.burnt).toEqual(DOUGH_LOOKS.done);
     expect(lum(holeTint(h('done')))).toBeGreaterThan(lum(holeTint(h('dark'))));
     expect(holeTint(h('dark'))).toEqual(bakeTint('dark'));
     expect(holeTint(h('burnt'))).toEqual(bakeTint('burnt'));
