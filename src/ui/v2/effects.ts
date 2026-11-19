@@ -1,6 +1,7 @@
 // 연출 DOM. 판정이 아니라 그리기만 한다(떨어짐·되돌아감·헛손질 표시).
 import { el } from '../dom';
 import { INGREDIENT_LABEL } from '../format';
+import { iconSvg, LOOK_ARIA } from './icons';
 import type { DragView, GhostLook, Pt } from './controller';
 
 export type MarkTone = 'good' | 'bad' | 'neutral';
@@ -13,10 +14,11 @@ const FLY_MS = 380;
 const FALL_MS = 650;
 const MARK_MS = 800;
 
-const LABEL: Readonly<Record<GhostLook['kind'], string>> = { margarine: '마가린', batter: '반죽', filling: '', done: '', dark: '', burnt: '' };
-
 function ghostEl(look: GhostLook): HTMLElement {
-  const e = el('div', `ui-ghost ui-ghost-${look.kind}`, look.ingredient ? INGREDIENT_LABEL[look.ingredient] : LABEL[look.kind]);
+  const e = el('div', `ui-ghost ui-ghost-${look.kind}`);
+  e.innerHTML = iconSvg(look);
+  e.setAttribute('role', 'img');
+  e.setAttribute('aria-label', look.ingredient ? INGREDIENT_LABEL[look.ingredient] : LOOK_ARIA[look.kind as Exclude<GhostLook['kind'], 'filling'>]);
   return e;
 }
 

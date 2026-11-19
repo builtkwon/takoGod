@@ -4,15 +4,25 @@ import { barView } from '../bar';
 import { createSequencer, type Clock } from '../sequencer';
 import { deltaText, scoreText } from '../reveal';
 import { stateOf, stubPicker } from './helpers';
+import { iconPixels } from '../icons';
+import { LABEL_OFFSET_Y, trayLabelPlan } from '../tray-labels';
 
 describe('barView', () => {
-  it('위치·영역을 퍼센트로, 익힘 완료 구멍이 있으면 활성', () => {
-    const s = stateOf(['empty', 'cooked'], { barPosition: 0.25, barZone: { from: 0.4, to: 0.6 } });
-    expect(barView(s)).toEqual({ markerPct: 25, zone: { leftPct: 40, widthPct: 20 }, active: true });
+  it('영역이 있으면 활성(굴릴 수 있는 구멍), W1은 step 1', () => {
+    const s = stateOf(['empty', 'filled'], { barPosition: 0.25, barZone: { from: 0.4, to: 0.6 } });
+    expect(barView(s)).toEqual({ markerPct: 25, zone: { leftPct: 40, widthPct: 20 }, active: true, step: 1 });
+  });
+  it('익힘 완료 구멍만 있고 영역이 없으면 비활성', () => {
+    expect(barView(stateOf(['cooked'], { barZone: null })).active).toBe(false);
+  });
+  it('W2 영역은 step 2', () => {
+    const z = { from: 0.42, to: 0.58 };
+    const base = stateOf(['rolled']);
+    expect(barView({ ...base, barZone: z, holes: [{ ...base.holes[0]!, rollZone: z }] }).step).toBe(2);
   });
   it('영역 없음·범위 밖·NaN', () => {
     const s = stateOf(['done'], { barPosition: Number.NaN, barZone: null });
-    expect(barView(s)).toEqual({ markerPct: 0, zone: null, active: false });
+    expect(barView(s)).toEqual({ markerPct: 0, zone: null, active: false, step: null });
     expect(barView(stateOf([], { barPosition: 2 })).markerPct).toBe(100);
   });
 });
@@ -86,5 +96,26 @@ describe('reveal 문구', () => {
     expect(deltaText(-10)).toBe('-10');
     expect(deltaText(0)).toBe('0');
     expect(scoreText(-20, 3.5)).toBe('만족도 -20 → ★★★½ (3.5)');
+  });
+});
+
+describe('트레이 이름표', () => {
+  it('칸 앵커 아래에 재료 이름, 앵커 없는 칸은 null, 섞이면 따라간다', () => {
+    const tray = [{ id: 'octopus', isTrap: false }, { id: 'wasabi', isTrap: true }, { id: 'chili', isTrap: true }] as const;
+    expect(trayLabelPlan(tray, stubPicker())).toEqual([
+      { text: '문어', at: { x: 50, y: 350 + LABEL_OFFSET_Y } },
+      { text: '와사비', at: { x: 150, y: 350 + LABEL_OFFSET_Y + 14 } },
+      null,
+    ]);
+    expect(trayLabelPlan([tray[1], tray[0]], stubPicker()).map((l) => l?.text)).toEqual(['와사비', '문어']);
+  });
+});
+
+describe('고스트 아이콘', () => {
+  it('속재료 6종·통·완성품 모두 그림이 있다', () => {
+    for (const ingredient of ['octopus', 'wasabi', 'raw-garlic', 'eraser', 'marshmallow', 'chili'] as const) {
+      expect(iconPixels({ kind: 'filling', ingredient }).length).toBeGreaterThan(0);
+    }
+    for (const kind of ['margarine', 'batter', 'done', 'dark', 'burnt'] as const) expect(iconPixels({ kind }).length).toBeGreaterThan(0);
   });
 });

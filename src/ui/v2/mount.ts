@@ -16,6 +16,7 @@ import { createHudV2 } from './hud';
 import { bindReveal } from './reveal';
 import { CSS_V2 } from './styles';
 import { createTimingBar } from './timing-bar';
+import { createTrayLabels } from './tray-labels';
 import { createTutorialView } from './tutorial-view';
 
 /** 장면 대상 주변을 답 버튼이 피할 반경(CSS px). 구멍·트레이 칸은 앵커 중심 기준이다. */
@@ -33,6 +34,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const buckets = createBuckets(controller);
   const bar = createTimingBar();
   const hud = createHudV2();
+  const trayLabels = createTrayLabels(layer, picker);
   const tutorial = createTutorialView(layer, bus, picker, { margarine: () => buckets.origin('margarine'), batter: () => buckets.origin('batter') }, disposers);
 
   const sceneObstacles = (): readonly Rect[] => {
@@ -77,6 +79,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     const state = getState();
     bar.update(state);
     hud.update(state);
+    trayLabels.update(state);
     dialogues.update(state);
     tutorial.update(state);
     raf = requestAnimationFrame(frame);
