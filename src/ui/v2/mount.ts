@@ -1,4 +1,4 @@
-// 굽기 조작 개편 UI 진입점(GDD §굽기). 옛 mountUi와 병행하며 main이 V2 Game으로 바뀔 때 교체한다.
+// UI 진입점(GDD §굽기).
 // core와는 EventBus·GameStateV2(읽기)·ScenePicker로만 통신한다. 판정은 하지 않는다.
 import type { EventBus, GameStateV2, ScenePicker } from '../../contracts';
 import { createDialogues } from '../dialogue';
@@ -45,7 +45,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       ...box(picker.anchor({ kind: 'fune' }), FUNE_R),
     ];
   };
-  const dialogues = createDialogues({ layer, bus, disposers }, [hud.root, bar.root, buckets.margarine, buckets.batter], null, Math.random, sceneObstacles);
+  const dialogues = createDialogues({ layer, bus, disposers }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
   layer.append(bar.root, hud.root, buckets.margarine, buckets.batter);
   root.append(style, layer);

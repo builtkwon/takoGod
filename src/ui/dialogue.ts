@@ -1,13 +1,11 @@
-import type { GameState } from '../contracts';
-import { el, type UiContext } from './dom';
+import type { EventBus, GameStateV2 } from '../contracts';
+import { el } from './dom';
 import { PERSONALITY_LABEL } from './format';
 import { placeAnswerButtons, type Rect } from './layout';
 
 const BTN = { w: 150, h: 52 };
 const BUBBLE_TOP = 120;
 const BUBBLE_STEP = 84; // 말풍선 높이(CSS 76px) + 간격
-/** 속재료 트레이가 도구바 위로 열리는 높이. 답 버튼은 이 영역도 피한다. */
-const TRAY_RESERVE = 64;
 
 interface Shown {
   readonly slot: number;
@@ -17,17 +15,15 @@ interface Shown {
 }
 
 export interface Dialogues {
-  update(state: Pick<GameState, 'activeDialogues'>): void;
+  update(state: Pick<GameStateV2, 'activeDialogues'>): void;
 }
 
-/** 말풍선과 랜덤 배치 답 버튼. fixed·toolbar: 이 요소들(도구바는 트레이 영역 포함)과 답 버튼은 겹치지 않는다. */
+/** 말풍선과 랜덤 배치 답 버튼. 답 버튼은 fixed 요소와 obstacles(layer 기준 좌표, 장면의 구멍·트레이·후네 등)와 겹치지 않는다. */
 export function createDialogues(
-  ctx: Pick<UiContext, 'layer' | 'bus' | 'disposers'>,
+  ctx: { readonly layer: HTMLElement; readonly bus: EventBus; readonly disposers: (() => void)[] },
   fixed: readonly HTMLElement[],
-  toolbar: HTMLElement | null,
+  obstacles: () => readonly Rect[],
   rng: () => number = Math.random,
-  /** layer 기준 좌표의 추가 장애물(장면의 구멍·트레이·후네 등). 말풍선을 놓을 때마다 부른다. */
-  extra: () => readonly Rect[] = () => [],
 ): Dialogues {
   const shown = new Map<string, Shown>();
 
@@ -57,14 +53,9 @@ export function createDialogues(
       bubble.append(el('b', '', PERSONALITY_LABEL[line.personality]), el('p', '', line.prompt), timer);
       ctx.layer.append(bubble);
 
-      const tb = toolbar ? rectOf(toolbar) : null;
-      const obstacles = [
-        ...[...fixed, bubble, ...[...shown.values()].flatMap((s) => [s.bubble, ...s.buttons])].map(rectOf),
-        ...(tb ? [{ ...tb, y: tb.y - TRAY_RESERVE, h: tb.h + TRAY_RESERVE }] : []),
-        ...extra(),
-      ];
+      const blocked = [...[...fixed, bubble, ...[...shown.values()].flatMap((s) => [s.bubble, ...s.buttons])].map(rectOf), ...obstacles()];
       const base = ctx.layer.getBoundingClientRect();
-      const spots = placeAnswerButtons({ w: base.width, h: base.height }, BTN, obstacles, rng);
+      const spots = placeAnswerButtons({ w: base.width, h: base.height }, BTN, blocked, rng);
       // 좋은 답과 나쁜 답이 어느 자리에 가는지도 섞는다.
       const answers = rng() < 0.5 ? (['good', 'bad'] as const) : (['bad', 'good'] as const);
       const buttons = answers.map((choice, i) => {
