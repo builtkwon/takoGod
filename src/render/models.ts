@@ -13,7 +13,7 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { DataTexture } from 'three';
-import type { CookStep, Doneness, IngredientId, Personality } from '../contracts';
+import type { HoleStage, IngredientId, Personality } from '../contracts';
 import { ps1Material } from './ps1';
 import type { Textures } from './textures';
 
@@ -110,17 +110,17 @@ export interface DoughLook {
   readonly tex: DoughTex;
 }
 
-/** HoleState.step은 "다음에 수행할 단계"라, 이미 끝난 작업의 결과가 보인다. */
-export const DOUGH_LOOKS: Readonly<Record<CookStep, DoughLook | null>> = {
-  margarine: null, // 아무것도 안 함: 빈 구멍
-  batter: { kind: 'disc', r: 0.32, h: 0.02, tex: 'butter' }, // 마가린만 바름
-  'cook-1': { kind: 'disc', r: 0.42, h: 0.06, tex: 'batter' }, // 반죽 부음
-  filling: { kind: 'disc', r: 0.42, h: 0.07, tex: 'batter' }, // 1차 익음 끝, 속재료 대기
-  'cook-2': { kind: 'disc', r: 0.42, h: 0.1, tex: 'batter' }, // 속재료 들어감
-  'roll-1': { kind: 'ball', r: 0.32, h: 0.55, tex: 'crust' },
-  'roll-2': { kind: 'ball', r: 0.37, h: 0.8, tex: 'crust' },
-  'roll-3': { kind: 'ball', r: 0.41, h: 0.95, tex: 'crust' },
+/** 구멍 단계별 반죽·볼 모양. 빈칸은 null. */
+export const DOUGH_LOOKS: Readonly<Record<HoleStage, DoughLook | null>> = {
+  empty: null,
+  greased: { kind: 'disc', r: 0.32, h: 0.02, tex: 'butter' }, // 마가린만 바름
+  cooking: { kind: 'disc', r: 0.42, h: 0.06, tex: 'batter' }, // 반죽 부음
+  cooked: { kind: 'disc', r: 0.42, h: 0.07, tex: 'batter' }, // 익힘 완료, 속재료 대기
+  filled: { kind: 'disc', r: 0.42, h: 0.1, tex: 'batter' }, // 속재료 들어감
+  rolled: { kind: 'ball', r: 0.32, h: 0.55, tex: 'crust' }, // 굴림 1
   done: { kind: 'ball', r: 0.42, h: 1, tex: 'sauce' },
+  dark: { kind: 'ball', r: 0.42, h: 1, tex: 'sauce' }, // 색조만 done과 다르다(holes.ts)
+  burnt: { kind: 'ball', r: 0.42, h: 1, tex: 'sauce' },
 };
 
 /** 구멍 테두리 링(철판 위 수평). 색은 머티리얼 tint로 준다. */
@@ -143,23 +143,6 @@ export type BakeStage = 'normal' | 'dark' | 'burnt';
 /** 소스 줄무늬 텍스처(205,140,64)에 곱하는 색조. 어두움은 진한 갈색, 탄 것은 거의 검정이 된다. */
 const BAKE_TINT: Readonly<Record<BakeStage, V3>> = { normal: [1, 1, 1], dark: [0.5, 0.4, 0.42], burnt: [0.14, 0.12, 0.12] };
 export const bakeTint = (stage: BakeStage): V3 => BAKE_TINT[stage];
-
-/** 구멍 상태에서 반죽 색조(곱셈)를 만든다. 익음 게이지는 cook 단계에서만 색으로 쓴다. stage는 완성 이후 색 단계다. */
-export function doughTint(step: CookStep, gauge: number, judgements: readonly Doneness[], stage: BakeStage = 'normal'): V3 {
-  let t: V3 = [1, 1, 1];
-  if (step === 'cook-1' || step === 'cook-2') {
-    const k = Math.min(Math.max(gauge, 0), 1);
-    t = [1 - 0.15 * k, 1 - 0.38 * k, 1 - 0.6 * k];
-  } else if (step === 'filling') {
-    t = [0.92, 0.8, 0.62];
-  }
-  // judgements 0~1은 익음 게이지, 2~4는 굴리기(GDD §굽기). 굴리기 실패는 시각 표시하지 않는다.
-  if (stage !== 'normal') {
-    const b = BAKE_TINT[stage];
-    return [t[0] * b[0], t[1] * b[1], t[2] * b[2]];
-  }
-  return judgements.slice(0, 2).includes('burnt') ? [t[0] * 0.45, t[1] * 0.45, t[2] * 0.45] : t;
-}
 
 // --- 속재료 ------------------------------------------------------------------
 

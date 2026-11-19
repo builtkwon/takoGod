@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { CookStep, IngredientId, Personality } from '../../contracts';
-import { BALL_UNIT, DISC_UNIT, DOUGH_LOOKS, FILLING_GEO, FUNE_SLOTS, HOLE_POS, MODEL_OF, bakeTint, doughTint } from '../models';
+import type { HoleStage, IngredientId, Personality } from '../../contracts';
+import { BALL_UNIT, DISC_UNIT, DOUGH_LOOKS, FILLING_GEO, FUNE_SLOTS, HOLE_POS, MODEL_OF, bakeTint } from '../models';
 import { MAX_TEX_SIZE, createTextures } from '../textures';
 
-const STEPS: CookStep[] = ['margarine', 'batter', 'cook-1', 'filling', 'cook-2', 'roll-1', 'roll-2', 'roll-3', 'done'];
+const STAGES: HoleStage[] = ['empty', 'greased', 'cooking', 'cooked', 'filled', 'rolled', 'done', 'dark', 'burnt'];
 const INGREDIENTS: IngredientId[] = ['octopus', 'wasabi', 'raw-garlic', 'eraser', 'marshmallow', 'chili'];
 const PERSONALITIES: Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 
@@ -23,17 +23,16 @@ describe('textures', () => {
 });
 
 describe('models', () => {
-  it('굽기 9단계 모두에 외형이 정의돼 있다(빈 구멍 = margarine만 null)', () => {
-    expect(STEPS.filter((s) => DOUGH_LOOKS[s] === null)).toEqual(['margarine']);
+  it('구멍 9단계 모두에 외형이 정의돼 있다(빈칸만 null)', () => {
+    expect(Object.keys(DOUGH_LOOKS).sort()).toEqual([...STAGES].sort());
+    expect(STAGES.filter((s) => DOUGH_LOOKS[s] === null)).toEqual(['empty']);
   });
-  it('볼은 roll-1 → done으로 갈수록 커진다', () => {
-    const size = (s: CookStep) => {
+  it('볼은 굴림 1 → 완성으로 갈수록 커진다', () => {
+    const size = (s: HoleStage) => {
       const l = DOUGH_LOOKS[s];
       return l === null ? 0 : l.r * l.h;
     };
-    expect(size('roll-1')).toBeLessThan(size('roll-2'));
-    expect(size('roll-2')).toBeLessThan(size('roll-3'));
-    expect(size('roll-3')).toBeLessThan(size('done'));
+    expect(size('rolled')).toBeLessThan(size('done'));
   });
   it('철판은 6구, 속재료 모델은 6종, 성격 4종 모두 손님 모델이 있다', () => {
     expect(HOLE_POS).toHaveLength(6);
@@ -47,46 +46,12 @@ describe('models', () => {
   });
 });
 
-describe('doughTint', () => {
-  it('익음 게이지가 오를수록 어두워진다(cook 단계)', () => {
-    const a = doughTint('cook-1', 0, []);
-    const b = doughTint('cook-1', 1, []);
-    expect(b[2]).toBeLessThan(a[2]);
-  });
-  it('게이지 범위 밖(-1, 2)은 0..1로 자른다', () => {
-    expect(doughTint('cook-2', 2, [])).toEqual(doughTint('cook-2', 1, []));
-    expect(doughTint('cook-2', -1, [])).toEqual(doughTint('cook-2', 0, []));
-  });
-  it('굴리기 단계는 게이지를 색에 쓰지 않는다(타이밍 값이라 깜빡임 방지)', () => {
-    expect(doughTint('roll-2', 0.9, [])).toEqual(doughTint('roll-2', 0, []));
-  });
-  it('탐 판정이 있으면 어두워지고 덜익음은 그대로다', () => {
-    expect(doughTint('done', 0, ['burnt'])[0]).toBeLessThan(doughTint('done', 0, [])[0]);
-    expect(doughTint('done', 0, ['under'])).toEqual(doughTint('done', 0, []));
-  });
-  it('익음 탐(judgements 0~1의 burnt)만 어둡게 한다', () => {
-    const plain = doughTint('done', 0, []);
-    expect(doughTint('done', 0, ['perfect', 'burnt'])[0]).toBeLessThan(plain[0]);
-    expect(doughTint('done', 0, ['burnt', 'perfect', 'perfect', 'perfect', 'perfect'])[0]).toBeLessThan(plain[0]);
-  });
-  it('굴리기 실패(judgements 2~4)는 어둡게 하지 않는다', () => {
-    const plain = doughTint('done', 0, []);
-    expect(doughTint('done', 0, ['perfect', 'perfect', 'burnt'])).toEqual(plain);
-    expect(doughTint('done', 0, ['perfect', 'perfect', 'perfect', 'burnt', 'under'])).toEqual(plain);
-  });
-});
-
 describe('굽기 색 단계·후네', () => {
   const lum = (t: readonly [number, number, number]) => t[0] + t[1] + t[2];
 
   it('색조는 보통 > 어두움 > 탄 것 순으로 어두워진다', () => {
     expect(lum(bakeTint('normal'))).toBeGreaterThan(lum(bakeTint('dark')));
     expect(lum(bakeTint('dark'))).toBeGreaterThan(lum(bakeTint('burnt')));
-  });
-
-  it('doughTint는 stage를 완성 색조에 곱한다', () => {
-    expect(doughTint('done', 0, [], 'normal')).toEqual([1, 1, 1]);
-    expect(doughTint('done', 0, [], 'burnt')).toEqual(bakeTint('burnt'));
   });
 
   it('후네 슬롯은 6개이고 2줄 x 3개다', () => {

@@ -1,36 +1,26 @@
 // V2 구멍·손님 표시 규칙(순수 함수). 규칙의 원본은 GDD §굽기(구멍 테두리)·§손님 대화(얼굴 단계)이고 여기는 그리기 매핑만 둔다.
-import type { CookStep, HoleStage, HoleStateV2, PatienceLevel } from '../contracts';
-import { bakeTint, doughTint } from './models';
+import type { HoleStateV2, PatienceLevel } from '../contracts';
+import { bakeTint } from './models';
 import type { V3 } from './layout';
 
 /** 익힘 시간(초). GDD §굽기(반죽을 놓으면 3초 뒤 익힘 완료). 색 진행률 계산에만 쓴다. */
 export const COOK_SEC = 3;
 
-/** 구멍 단계 → 옛 모양표(DOUGH_LOOKS)의 키. 9종 모양을 옛 9단계 외형과 맞춘다. */
-const LOOK_STEP: Readonly<Record<HoleStage, CookStep>> = {
-  empty: 'margarine',
-  greased: 'batter',
-  cooking: 'cook-1',
-  cooked: 'filling',
-  filled: 'cook-2',
-  rolled: 'roll-1',
-  done: 'done',
-  dark: 'done',
-  burnt: 'done',
-};
-export const lookStepOf = (s: HoleStage): CookStep => LOOK_STEP[s];
-
 /** 구멍 반죽 색조(곱셈). 익힘 중엔 경과로 점점 익고, 어두움·탄 것은 색 단계를 쓴다. */
 export function holeTint(h: HoleStateV2): V3 {
   switch (h.stage) {
-    case 'cooking':
-      return doughTint('cook-1', h.cookElapsedSec / COOK_SEC, []);
+    case 'cooking': {
+      const k = Math.min(h.cookElapsedSec / COOK_SEC, 1);
+      return [1 - 0.15 * k, 1 - 0.38 * k, 1 - 0.6 * k];
+    }
+    case 'cooked':
+      return [0.92, 0.8, 0.62];
     case 'dark':
       return bakeTint('dark');
     case 'burnt':
       return bakeTint('burnt');
     default:
-      return doughTint(LOOK_STEP[h.stage], 0, []);
+      return [1, 1, 1];
   }
 }
 
