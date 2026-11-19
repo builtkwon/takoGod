@@ -11,6 +11,8 @@ export interface TimingBar {
 export function createTimingBar(): TimingBar {
   const root = el('div', 'ui-bar');
   const zone = el('div', 'ui-bar-zone');
+  const label = el('span', 'ui-bar-label');
+  zone.append(label);
   const marker = el('div', 'ui-bar-marker');
   root.append(zone, marker);
   return {
@@ -23,6 +25,8 @@ export function createTimingBar(): TimingBar {
         zone.style.left = `${v.zone.leftPct}%`;
         zone.style.width = `${v.zone.widthPct}%`;
       }
+      root.dataset.step = String(v.step ?? 0);
+      label.textContent = v.step === null ? '' : String(v.step);
       marker.style.left = `${v.markerPct}%`;
     },
   };

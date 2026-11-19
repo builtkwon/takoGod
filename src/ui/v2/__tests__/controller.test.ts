@@ -52,6 +52,79 @@ describe('재료 끌어 놓기', () => {
   });
 });
 
+describe('굴리기 판정 시점', () => {
+  it.each(['cooking', 'cooked', 'filled', 'rolled'] as const)('%s 구멍은 누르는 순간 input/roll, 뗄 때 다시 보내지 않는다', (stage) => {
+    const { c, bus } = setup([stage]);
+    c.down(1, { x: 50, y: 150 });
+    expect(bus.sent).toEqual([{ type: 'input/roll', payload: { hole: 0 } }]);
+    c.up(1, { x: 50, y: 150 });
+    expect(bus.sent).toHaveLength(1);
+  });
+  it('굴린 뒤 끌어도 pick하지 않는다', () => {
+    const { c, bus } = setup(['filled']);
+    c.down(1, { x: 50, y: 150 });
+    c.move(1, { x: 50, y: 150 + DRAG_THRESHOLD * 3 });
+    c.up(1, { x: 50, y: 300 });
+    expect(bus.sent.map((e) => e.type)).toEqual(['input/roll']);
+  });
+  it('들 수 있는 구멍(done)은 누를 때 보내지 않고 탭이면 뗄 때 보낸다', () => {
+    const { c, bus } = setup(['done']);
+    c.down(1, { x: 50, y: 150 });
+    expect(bus.sent).toEqual([]);
+    c.up(1, { x: 50, y: 150 });
+    expect(bus.sent).toEqual([{ type: 'input/roll', payload: { hole: 0 } }]);
+  });
+});
+
+describe('마가린·반죽 끌어 칠하기', () => {
+  const BATTER = { material: { kind: 'batter' } as const, origin: { x: 10, y: 10 } };
+  const placed = (bus: ReturnType<typeof stubBus>) => bus.sent.filter((e) => e.type === 'input/place-material').map((e) => (e.payload as { hole: number }).hole);
+
+  it('지나간 empty 구멍마다 한 번씩, 다시 지나가도 중복 없음, 단계 안 맞는 구멍은 건너뜀', () => {
+    const { c, bus, view } = setup(['empty', 'cooked', 'empty', 'empty']);
+    c.down(1, { x: 10, y: 10 }, BUCKET);
+    c.move(1, { x: 50, y: 150 });
+    c.move(1, { x: 60, y: 150 });
+    c.move(1, { x: 150, y: 150 });
+    c.move(1, { x: 250, y: 150 });
+    c.move(1, { x: 50, y: 150 });
+    c.up(1, { x: 350, y: 150 });
+    expect(placed(bus)).toEqual([0, 2, 3]);
+    expect(view.calls.some((x) => x[0] === 'fly')).toBe(false);
+  });
+  it('반죽은 greased 구멍만', () => {
+    const { c, bus } = setup(['empty', 'greased', 'greased']);
+    c.down(1, { x: 10, y: 10 }, BATTER);
+    c.move(1, { x: 50, y: 150 });
+    c.move(1, { x: 150, y: 150 });
+    c.up(1, { x: 250, y: 150 });
+    expect(placed(bus)).toEqual([1, 2]);
+  });
+  it('하나도 못 채우고 놓으면 원위치로 날아간다', () => {
+    const { c, bus, view } = setup(['cooked']);
+    c.down(1, { x: 10, y: 10 }, BUCKET);
+    c.move(1, { x: 50, y: 150 });
+    c.up(1, { x: 50, y: 150 });
+    expect(bus.sent).toEqual([]);
+    expect(view.calls.at(-1)).toEqual(['fly', 'margarine', { x: 50, y: 150 }, { x: 10, y: 10 }]);
+  });
+  it('전부 거부되면(튜토리얼) 채운 것으로 세지 않고 원위치로 날아간다', () => {
+    const { c, bus, view } = setup(['empty']);
+    bus.on('input/place-material', ({ hole }) => bus.emit('cook/rejected', { hole, reason: 'tutorial-step' }));
+    c.down(1, { x: 10, y: 10 }, BUCKET);
+    c.up(1, { x: 50, y: 150 });
+    expect(view.calls.at(-1)).toEqual(['fly', 'margarine', { x: 50, y: 150 }, { x: 10, y: 10 }]);
+  });
+  it('속재료는 놓은 구멍 하나에만', () => {
+    const { c, bus } = setup(['cooked', 'cooked']);
+    c.down(1, { x: 50, y: 350 });
+    c.move(1, { x: 50, y: 150 });
+    c.move(1, { x: 150, y: 150 });
+    c.up(1, { x: 150, y: 150 });
+    expect(placed(bus)).toEqual([1]);
+  });
+});
+
 describe('구멍 탭·들기', () => {
   it('문턱 안 이동은 탭: input/roll', () => {
     const { c, bus } = setup();
@@ -84,12 +157,12 @@ describe('구멍 탭·들기', () => {
     expect(view.calls.at(-1)).toEqual(['fall', 'done', { x: 20, y: 400 }]);
   });
 
-  it('익힘 중인 구멍은 끌어도 pick을 보내지 않고 탭도 아니다', () => {
+  it('굴릴 수 있는 구멍은 누를 때 roll만 보내고 끌어도 pick을 보내지 않는다', () => {
     const { c, bus } = setup();
     c.down(1, { x: 250, y: 150 }); // cooked
     c.move(1, { x: 250, y: 250 });
     c.up(1, { x: 250, y: 250 });
-    expect(bus.sent).toEqual([]);
+    expect(bus.sent).toEqual([{ type: 'input/roll', payload: { hole: 2 } }]);
   });
 
   it('pick이 거부되면 들던 것이 구멍으로 돌아가고 이후 입력은 버린다', () => {

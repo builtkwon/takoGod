@@ -44,8 +44,8 @@ export interface Controller {
 export const DRAG_THRESHOLD = 10;
 
 type Active =
-  | { readonly type: 'material'; readonly id: number; readonly material: Material; readonly origin: Pt | (() => Pt | null); readonly look: GhostLook }
-  | { type: 'hole'; readonly id: number; readonly hole: number; readonly start: Pt; moved: boolean; picked: boolean; pos: Pt; look: GhostLook | null };
+  | { readonly type: 'material'; readonly id: number; readonly material: Material; readonly origin: Pt | (() => Pt | null); readonly look: GhostLook; readonly painted: Set<number>; accepted: number }
+  | { type: 'hole'; readonly id: number; readonly hole: number; readonly start: Pt; moved: boolean; rolled: boolean; picked: boolean; pos: Pt; look: GhostLook | null };
 
 /** 마지막으로 core에 보낸 조작. 거부·떨어짐 이벤트가 왔을 때 어디서 어디로 그릴지 정한다. */
 type Last =
@@ -53,6 +53,8 @@ type Last =
   | { readonly type: 'drop'; readonly hole: number; readonly look: GhostLook; readonly at: Pt };
 
 const HELD: ReadonlySet<string> = new Set(['done', 'dark', 'burnt']);
+/** 끌어 칠하는 재료가 들어가는 구멍 단계. */
+const PAINT_STAGE = { margarine: 'empty', batter: 'greased' } as const;
 const dist = (a: Pt, b: Pt): number => Math.hypot(a.x - b.x, a.y - b.y);
 const resolve = (p: Pt | (() => Pt | null)): Pt | null => (typeof p === 'function' ? p() : p);
 
@@ -77,6 +79,7 @@ export function createController(deps: {
       active = null;
       return;
     }
+    if (active?.type === 'material' && active.painted.has(hole)) active.accepted -= 1; // 칠하다 거부(튜토리얼 단계 등): 채운 것으로 세지 않는다
     if (last?.hole !== hole) return;
     if (last.type === 'place') {
       const to = resolve(last.origin);
@@ -91,6 +94,16 @@ export function createController(deps: {
     last = null;
   };
 
+  /** 마가린·반죽: 손가락이 지나간 구멍마다 한 번씩 보낸다. 단계가 안 맞는 구멍은 조용히 건너뛴다. */
+  const paint = (a: Extract<Active, { type: 'material' }>, at: Pt): void => {
+    if (a.material.kind !== 'margarine' && a.material.kind !== 'batter') return;
+    const t = picker.pick(at.x, at.y);
+    if (t?.kind !== 'hole' || a.painted.has(t.index) || getState().holes[t.index]?.stage !== PAINT_STAGE[a.material.kind]) return;
+    a.painted.add(t.index);
+    a.accepted += 1;
+    bus.emit('input/place-material', { hole: t.index, material: a.material });
+  };
+
   const offs = [bus.on('cook/rejected', onRejected), bus.on('cook/dropped', onDropped)];
 
   return {
@@ -99,7 +112,7 @@ export function createController(deps: {
       last = null;
       if (bucket) {
         const look = lookOf(bucket.material);
-        active = { type: 'material', id, material: bucket.material, origin: bucket.origin, look };
+        active = { type: 'material', id, material: bucket.material, origin: bucket.origin, look, painted: new Set(), accepted: 0 };
         view.ghostStart(look, at);
         return;
       }
@@ -114,16 +127,25 @@ export function createController(deps: {
           return slot < 0 ? null : picker.anchor({ kind: 'tray', slot });
         };
         const look = lookOf(material);
-        active = { type: 'material', id, material, origin, look };
+        active = { type: 'material', id, material, origin, look, painted: new Set(), accepted: 0 };
         view.ghostStart(look, at);
       } else if (t?.kind === 'hole') {
-        active = { type: 'hole', id, hole: t.index, start: at, moved: false, picked: false, pos: at, look: null };
+        active = { type: 'hole', id, hole: t.index, start: at, moved: false, rolled: false, picked: false, pos: at, look: null };
+        // 들 수 없는 구멍(굴릴 수 있는 단계 포함)은 누르는 순간 굴린다: 판정이 손가락을 뗄 때까지 늦으면 통과 구간(W1 약 0.12초)을 놓친다.
+        if (!HELD.has(getState().holes[t.index]?.stage ?? '')) {
+          bus.emit('input/roll', { hole: t.index });
+          active.rolled = true;
+        }
       }
     },
 
     move(id, at) {
       if (!active || active.id !== id) return;
-      if (active.type === 'material') return view.ghostMove(at);
+      if (active.type === 'material') {
+        view.ghostMove(at);
+        return paint(active, at);
+      }
+      if (active.rolled) return; // 이미 굴렸다: 그 뒤 끌어도 들지 않는다
       active.pos = at;
       if (active.picked) return view.ghostMove(at);
       if (dist(at, active.start) < DRAG_THRESHOLD) return;
@@ -140,20 +162,29 @@ export function createController(deps: {
     up(id, at) {
       const a = active;
       if (!a || a.id !== id) return;
-      active = null;
       if (a.type === 'material') {
         view.ghostEnd();
         const t = picker.pick(at.x, at.y);
-        if (t?.kind === 'hole') {
+        if (a.material.kind !== 'filling') {
+          paint(a, at);
+          active = null; // 거부 이벤트가 paint 안에서 동기로 오므로 그 뒤에 비운다
+          if (a.accepted <= 0) {
+            const to = resolve(a.origin);
+            if (to) view.fly(a.look, at, to);
+          }
+        } else if (t?.kind === 'hole') {
+          active = null;
           last = { type: 'place', hole: t.index, look: a.look, origin: a.origin };
           bus.emit('input/place-material', { hole: t.index, material: a.material });
         } else {
           // 구멍이 아니면 core에 알릴 것이 없다. 원위치 연출만 한다.
+          active = null;
           const to = resolve(a.origin);
           if (to) view.fly(a.look, at, to);
         }
         return;
       }
+      active = null;
       if (a.picked && a.look) {
         view.ghostEnd();
         const target = picker.pick(at.x, at.y)?.kind === 'fune' ? 'fune' : 'other';
@@ -161,7 +192,7 @@ export function createController(deps: {
         bus.emit('input/drop', { target });
         return;
       }
-      if (!a.moved) bus.emit('input/roll', { hole: a.hole });
+      if (!a.moved && !a.rolled) bus.emit('input/roll', { hole: a.hole });
     },
 
     cancel() {

@@ -6,13 +6,21 @@ import { deltaText, scoreText } from '../reveal';
 import { stateOf, stubPicker } from './helpers';
 
 describe('barView', () => {
-  it('위치·영역을 퍼센트로, 익힘 완료 구멍이 있으면 활성', () => {
-    const s = stateOf(['empty', 'cooked'], { barPosition: 0.25, barZone: { from: 0.4, to: 0.6 } });
-    expect(barView(s)).toEqual({ markerPct: 25, zone: { leftPct: 40, widthPct: 20 }, active: true });
+  it('영역이 있으면 활성(굴릴 수 있는 구멍), W1은 step 1', () => {
+    const s = stateOf(['empty', 'filled'], { barPosition: 0.25, barZone: { from: 0.4, to: 0.6 } });
+    expect(barView(s)).toEqual({ markerPct: 25, zone: { leftPct: 40, widthPct: 20 }, active: true, step: 1 });
+  });
+  it('익힘 완료 구멍만 있고 영역이 없으면 비활성', () => {
+    expect(barView(stateOf(['cooked'], { barZone: null })).active).toBe(false);
+  });
+  it('W2 영역은 step 2', () => {
+    const z = { from: 0.42, to: 0.58 };
+    const base = stateOf(['rolled']);
+    expect(barView({ ...base, barZone: z, holes: [{ ...base.holes[0]!, rollZone: z }] }).step).toBe(2);
   });
   it('영역 없음·범위 밖·NaN', () => {
     const s = stateOf(['done'], { barPosition: Number.NaN, barZone: null });
-    expect(barView(s)).toEqual({ markerPct: 0, zone: null, active: false });
+    expect(barView(s)).toEqual({ markerPct: 0, zone: null, active: false, step: null });
     expect(barView(stateOf([], { barPosition: 2 })).markerPct).toBe(100);
   });
 });
