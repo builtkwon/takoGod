@@ -59,7 +59,7 @@ export interface HoleStateV2 {
   readonly noFilling: boolean;
   /** 굴리기 1·2 적중 기록. null은 아직 굴리지 않음. 둘 다 true여야 굴리기 완벽이다. */
   readonly rollHits: readonly [boolean | null, boolean | null];
-  /** 이 구멍의 다음 굴리기에 적용되는 영역(W1은 'filled', W2는 'rolled'). 굴릴 수 없는 단계는 null. 바에 표시할 영역은 GameStateV2.barZone이다. */
+  /** 이 구멍의 다음 굴리기에 적용되는 영역(W1은 'cooking'·'cooked'(속재료 전 굴리기, 본게임)·'filled', W2는 'rolled'). 굴릴 수 없는 단계는 null. 바에 표시할 영역은 GameStateV2.barZone이다. */
   readonly rollZone: RollZone | null;
   /** core가 GDD §굽기 깜빡임 조건으로 정한다. render는 테두리 깜빡임에만 쓴다. */
   readonly warn: boolean;
