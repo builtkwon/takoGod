@@ -40,6 +40,7 @@ import {
 import type { BakeStage, CustomerModel } from './models';
 import { CAMERA } from './layout';
 import { FACE_TINT, RIM_COLOR, holeTint, rimOf, rimVisible, showsFilling, showsNoFilling } from './holes';
+import { buildBackdrop } from './backdrop';
 import { createScenePicker } from './pick';
 import { RT_H, RT_W, postMaterial, ps1Material } from './ps1';
 import { createTextures } from './textures';
@@ -60,7 +61,7 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
   const renderer = new WebGLRenderer({ antialias: false, powerPreference: 'low-power' });
   renderer.setPixelRatio(1); // ADR 0001: 업스케일 배율은 CSS 크기로 정한다.
   renderer.setSize(RT_W, RT_H, false);
-  renderer.setClearColor(new Color().setRGB(27 / 255, 20 / 255, 36 / 255)); // 셰이더가 sRGB 변환을 안 하므로 raw 값.
+  renderer.setClearColor(new Color().setRGB(10 / 255, 14 / 255, 38 / 255)); // 배경 바닥이 못 덮는 가장자리용 짙은 남색. 셰이더가 sRGB 변환을 안 하므로 raw 값.
   const canvas = renderer.domElement;
   canvas.style.imageRendering = 'pixelated';
   container.appendChild(canvas);
@@ -77,7 +78,7 @@ export function createRenderer(container: HTMLElement): Ps1Renderer {
 
   const tex = createTextures();
   const scene = new Scene();
-  scene.add(buildStatic(tex), buildFune(tex));
+  scene.add(buildBackdrop(tex.grain), buildStatic(tex), buildFune(tex));
 
   const doughTex = { butter: tex.butter, batter: tex.batter, crust: tex.crust, sauce: tex.sauce } as const;
   const fillMat = ps1Material(tex.grain);

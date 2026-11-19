@@ -21,7 +21,7 @@ import { FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout'
 import type { V3 } from './layout';
 
 /** 변환 후 플랫 노멀 + 단색 버텍스 컬러를 입힌 파트. */
-function part(g: BufferGeometry, hex: number, at: V3 = [0, 0, 0], scale: V3 = [1, 1, 1], rot: V3 = [0, 0, 0]): BufferGeometry {
+export function part(g: BufferGeometry, hex: number, at: V3 = [0, 0, 0], scale: V3 = [1, 1, 1], rot: V3 = [0, 0, 0]): BufferGeometry {
   const n = g.toNonIndexed();
   n.scale(...scale);
   n.rotateX(rot[0]);
@@ -35,7 +35,7 @@ function part(g: BufferGeometry, hex: number, at: V3 = [0, 0, 0], scale: V3 = [1
   return n;
 }
 
-function merge(parts: BufferGeometry[]): BufferGeometry {
+export function merge(parts: BufferGeometry[]): BufferGeometry {
   const g = mergeGeometries(parts);
   if (g === null) throw new Error('지오메트리 병합 실패');
   return g;
