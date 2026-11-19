@@ -1,14 +1,12 @@
 // EventBus 이벤트 목록. 모듈 간 통신은 이 목록에 있는 이벤트로만 한다.
 
-import type { CookStep, Doneness, DropTarget, FuneItem, IngredientId, Material, RejectReason } from './cooking';
-import type { AnswerChoice, AnswerOutcome, Customer, CustomerStatus, DialogueLine, PatienceLevel, PlateDefect, TasteKind } from './customer';
+import type { DropTarget, FuneItem, IngredientId, Material, RejectReason } from './cooking';
+import type { AnswerChoice, AnswerOutcome, CustomerStatus, DialogueLine, PatienceLevel, PlateDefect, TasteKind } from './customer';
 import type { PhaseId, TutorialStage } from './phase';
 import type { ReviewResult } from './review';
 
 export interface GameEvents {
   // 입력 (ui → core)
-  /** @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 input/place-material, input/roll, input/pick, input/drop. */
-  'input/cook': { readonly hole: number; readonly step: CookStep; readonly ingredient?: IngredientId };
   'input/answer': { readonly customerId: string; readonly choice: AnswerChoice };
   /** 재료를 구멍으로 끌어 놓았다. 받을 수 없는 상태면 core가 cook/rejected를 낸다. */
   'input/place-material': { readonly hole: number; readonly material: Material };
@@ -24,14 +22,6 @@ export interface GameEvents {
   'input/drop': { readonly target: DropTarget };
 
   // 굽기 (core → render·ui)
-  /** @deprecated 6단계 ui·render 전환 뒤 삭제. 구멍 상태는 GameStateV2.holes로 읽는다. */
-  'cook/step-advanced': { readonly hole: number; readonly step: CookStep };
-  /** @deprecated 6단계 ui·render 전환 뒤 삭제. */
-  'cook/judged': { readonly hole: number; readonly step: CookStep; readonly doneness: Doneness };
-  /** @deprecated 6단계 ui·render 전환 뒤 삭제. */
-  'cook/ingredient-added': { readonly hole: number; readonly ingredient: IngredientId };
-  /** @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 fune/added. */
-  'cook/completed': { readonly hole: number };
   /** 조작을 거부했다. hole은 대상 구멍이다. 재료는 출처(트레이)로, 완성품은 이 구멍으로 돌아간다. ui는 되돌리기만 한다(튜토리얼 거부도 이 이벤트를 낸다). */
   'cook/rejected': { readonly hole: number; readonly reason: RejectReason };
   /**
@@ -51,8 +41,6 @@ export interface GameEvents {
   'fune/added': { readonly hole: number; readonly item: FuneItem; readonly count: number };
 
   // 손님·대화 (core → render·ui)
-  /** @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 customer/entered. */
-  'customer/arrived': { readonly customer: Customer };
   /** 손님이 입장했다. 이후 상태는 GameStateV2.customers로 읽는다. */
   'customer/entered': { readonly customer: CustomerStatus };
   'customer/left': { readonly customerId: string };
@@ -88,8 +76,6 @@ export interface GameEvents {
   'review/issued': { readonly review: ReviewResult };
 
   // 튜토리얼 (core → ui)
-  /** @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 tutorial/invalid-action. */
-  'tutorial/invalid-tap': { readonly expected: CookStep };
   /** 현재 유도 단계가 아닌 조작을 했다. ui는 화살표를 흔든다(되돌리기는 cook/rejected 'tutorial-step'). */
   'tutorial/invalid-action': { readonly expected: TutorialStage };
   'tutorial/trap-warning': { readonly ingredient: IngredientId };

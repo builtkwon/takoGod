@@ -13,18 +13,6 @@ export interface DialogueLine {
   readonly bad: string;
 }
 
-/**
- * @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 CustomerStatus(만족도를 노출하지 않는다).
- */
-export interface Customer {
-  readonly id: string;
-  readonly personality: Personality;
-  /** 만족도. 시작값과 증감은 GDD §점수를 따른다. */
-  readonly satisfaction: number;
-  /** 발화 간격(초). PhaseConfig.dialogueIntervalsSec에서 온다. */
-  readonly dialogueIntervalSec: number;
-}
-
 // ── 굽기 조작 개편(GDD §손님 대화, 2026-11-18) ──
 
 /** 손님 얼굴 단계: 기본 → 주황 → 빨강. 단계 경계 비율은 GDD §손님 대화. 되돌아가지 않는다. */

@@ -1,30 +1,12 @@
 // 게임 상태 계약. core가 만들고 render·ui는 읽기만 한다.
 
-import type { FuneItem, HoleState, HoleStateV2, Ingredient, RollZone } from './cooking';
-import type { ActiveDialogue, Customer, CustomerStatus } from './customer';
+import type { FuneItem, HoleStateV2, Ingredient, RollZone } from './cooking';
+import type { ActiveDialogue, CustomerStatus } from './customer';
 import type { PhaseId, TutorialStage } from './phase';
 import type { ReviewResult } from './review';
 
 /**
- * @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 GameStateV2.
- */
-export interface GameState {
-  readonly phase: PhaseId;
-  /** 길이 6. */
-  readonly holes: readonly HoleState[];
-  /** 트레이 표시 순서. 매 판 셔플된다. */
-  readonly tray: readonly Ingredient[];
-  readonly customers: readonly Customer[];
-  readonly activeDialogues: readonly ActiveDialogue[];
-  /** 세션에서 받은 리뷰. 세션 점수는 이 목록의 별점 평균으로 계산한다. */
-  readonly reviews: readonly ReviewResult[];
-  /** reviews 별점의 산술평균. core가 계산한다. 리뷰가 없으면 null. */
-  readonly sessionAverage: number | null;
-  readonly tutorialCompleted: boolean;
-}
-
-/**
- * 게임 상태(굽기 조작 개편, GDD §굽기·§손님 대화). 옛 GameState와 병행하며 옛 것을 지울 때 V2를 뗀다.
+ * 게임 상태(굽기 조작 개편, GDD §굽기·§손님 대화). V2 접미사를 떼는 이름 변경은 따로 남아 있다.
  * 점수 비공개: 진행 중인 만족도는 담지 않는다. 서빙 뒤 'plate/scored' 이벤트와 reviews(발급된 리뷰)만 점수를 공개한다.
  */
 export interface GameStateV2 {

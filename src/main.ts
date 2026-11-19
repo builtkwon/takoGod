@@ -1,7 +1,6 @@
 // bootstrap: 루프·조립·PWA 등록. 게임 규칙은 core에 있다. 경계: docs/rules/architecture/modules/contracts.md#bootstrap
 import type { GameStateV2 } from './contracts';
-import { createEventBus, createRng } from './core';
-import { GameV2 } from './core/game-v2'; // core/index.ts가 GameV2를 export하지 않아 직접 import한다(후속: core 쪽 export).
+import { GameV2, createEventBus, createRng } from './core';
 import { dialogues, reviewComments, tasteLines, tutorialReviewComment } from './data';
 import { createRenderer } from './render';
 import { createBrowserSessionStore } from './session-store';

@@ -8,5 +8,5 @@
 ## 규칙
 
 - 필수: 그래픽 사양은 [GDD §제품](../../../GDD.md#제품)을 따른다.
-- 필수: core 상태는 contracts의 `GameState`와 `EventBus` 이벤트로만 받는다.
+- 필수: core 상태는 contracts의 `GameStateV2`와 `EventBus` 이벤트로만 받는다.
 - 필수: 도구 연결 — `src/render/sandbox.html`(쿼리 `?state=<name>`)과 `src/render/sandbox.states.json`을 둔다. json 모양은 `src/contracts/tooling.ts`의 `SandboxStates`.

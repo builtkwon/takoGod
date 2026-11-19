@@ -1,20 +1,5 @@
 // 굽기 관련 계약. 원본: docs/GDD.md §굽기
 
-/**
- * 굽기 단계. 옛 GDD 순서 1~9와 1:1 대응한다.
- * @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 HoleStage.
- */
-export type CookStep =
-  | 'margarine' // 1 마가린
-  | 'batter' // 2 반죽물
-  | 'cook-1' // 3 살짝 익음 (익음 게이지)
-  | 'filling' // 4 속재료 넣기
-  | 'cook-2' // 5 살짝 익음 (익음 게이지)
-  | 'roll-1' // 6 굴리기 1 (타이밍 판정)
-  | 'roll-2' // 7 굴리기 2 (타이밍 판정)
-  | 'roll-3' // 8 굴리기 3 (타이밍 판정)
-  | 'done'; // 9 완성
-
 export type IngredientId =
   | 'octopus'
   | 'wasabi'
@@ -29,41 +14,8 @@ export interface Ingredient {
   readonly isTrap: boolean;
 }
 
-/**
- * 익음·타이밍 판정 결과: 덜익음(빠름) / 적정 / 탐(늦음).
- * @deprecated 6단계 ui·render 전환 뒤 삭제. 덜익음 판정이 없어졌다(GDD §굽기).
- */
-export type Doneness = 'under' | 'perfect' | 'burnt';
-
-/**
- * 익음 게이지와 굴리기 타이밍을 판정한다.
- * gauge는 정규화 값(0..1)이다. 익음 단계(cook-1, cook-2)는 진입 후 0에서 시작해 증가하는 게이지이고,
- * 굴리기 단계(roll-1~3)는 왕복하는 타이밍 바 위치다(GDD §굽기).
- * 적정 구간 폭과 탐 판정 여부는 PhaseConfig.isTutorial에 따라 구현이 정한다.
- * @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 구멍 상태기계가 판정하고 contracts에 판정 인터페이스를 두지 않는다.
- */
-export interface DonenessJudge {
-  judge(step: CookStep, gauge: number): Doneness;
-}
-
-/**
- * 6구 철판의 구멍 하나. 구멍별로 독립 상태를 가진다.
- * @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 HoleStateV2.
- */
-export interface HoleState {
-  /** 0..5 */
-  readonly index: number;
-  /** 다음에 수행할 단계. 아직 시작 전이면 'margarine'. */
-  readonly step: CookStep;
-  /** 현재 단계의 값(0..1). 익음 단계는 증가하는 게이지, 굴리기 단계는 왕복하는 타이밍 바 위치, 그 외 단계는 0. */
-  readonly gauge: number;
-  readonly filling: IngredientId | null;
-  /** 이 구멍에서 지금까지 나온 판정 결과. */
-  readonly judgements: readonly Doneness[];
-}
-
-// ── 굽기 조작 개편(GDD §굽기, 2026-11-18). 옛 타입과 병행하며, 옛 것은 6단계 ui·render 전환 뒤 삭제한다. ──
-// V2 접미사는 옛 이름(HoleState, GameState)과 병행하는 동안만 쓴다. 옛 것을 지울 때 V2를 뗀다.
+// ── 굽기 조작 개편(GDD §굽기, 2026-11-18) ──
+// 옛 흐름 타입은 삭제했다. V2 접미사(HoleStateV2 등)를 떼는 이름 변경은 따로 남아 있다.
 
 /**
  * 구멍 상태(GDD §굽기 상태 흐름). 들고 있음은 상태가 아니라 GameStateV2.holding이다.
@@ -132,7 +84,7 @@ export type DropTarget =
   | 'fune'
   | 'other'
   | 'cancel'
-  /** @deprecated 'other'로 통합. 화면 밖에 놓아도 후네 밖과 같다(떨어져 사라진다). */
+  /** @deprecated 'other'로 통합. 화면 밖에 놓아도 후네 밖과 같다(떨어져 사라진다). core의 sim·테스트가 아직 쓰고 있어 core 정리 때 삭제한다. */
   | 'offscreen';
 
 /**
@@ -142,7 +94,5 @@ export type DropTarget =
 export type RejectReason =
   | 'invalid-stage' // 지금 상태에서 받을 수 없는 재료·조작
   | 'fune-full' // 후네가 가득 찼다(떨어뜨리지 않고 원래 구멍으로 되돌린다)
-  /** @deprecated 탄 것은 거부가 아니라 어디에 놓든 떨어져 사라진다(cook/dropped). 더 이상 내지 않는다. */
-  | 'burnt-item'
   | 'already-holding' // 들기는 동시에 1개
   | 'tutorial-step'; // 튜토리얼에서 현재 유도 단계가 아닌 조작(후네 밖 놓기 포함)

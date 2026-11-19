@@ -1,7 +1,5 @@
 // 진행 계약. 원본: docs/GDD.md §진행
 
-import type { CookStep } from './cooking';
-
 export type PhaseId = 'tutorial' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5';
 
 export interface PhaseConfig {
@@ -13,15 +11,6 @@ export interface PhaseConfig {
   readonly dialogueIntervalsSec: readonly number[];
   /** 이 단계의 리뷰를 세션 점수에 집계하는지. */
   readonly countsReviews: boolean;
-}
-
-/**
- * 튜토리얼 한 단계. target 단계의 버튼에 화살표를 띄우고 message를 상단에 표시한다.
- * @deprecated 6단계 ui·render 전환 뒤 삭제. 새 흐름은 TutorialStepV2.
- */
-export interface TutorialStep {
-  readonly target: CookStep;
-  readonly message: string;
 }
 
 /**
