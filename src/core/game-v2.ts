@@ -244,6 +244,8 @@ export class GameV2 {
   // ── 구멍 ──────────────────────────────────────────────
 
   private zoneOf(h: Hole): RollZone | null {
+    // 익힘·익힘 완료 탭도 W1로 판정한다(속재료 전 굴리기). 튜토리얼은 이 탭을 거부하므로 영역이 없다.
+    if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : W1;
     if (h.stage === 'filled') return this.phase === 'tutorial' ? FULL_ZONE : W1;
     if (h.stage === 'rolled') return this.phase === 'tutorial' ? FULL_ZONE : W2;
     return null;

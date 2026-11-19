@@ -258,9 +258,20 @@ describe('barZone: 마지막으로 만진 구멍의 영역', () => {
 
   it('굴릴 수 없는 구멍은 영역이 null이다', () => {
     const h = setupV2();
-    reach(h, 0, 3);
+    reach(h, 0, 1);
     expect(h.hole(0).rollZone).toBeNull();
-    reach(h, 1, 0);
     expect(h.hole(1).rollZone).toBeNull();
+  });
+
+  it('익힘·익힘 완료는 탭으로 굴리면 W1로 판정되므로 W1을 보여 준다', () => {
+    const h = setupV2();
+    const w1 = { from: 0.4, to: 0.6 };
+    reach(h, 0, 2);
+    expect(h.hole(0).stage).toBe('cooking');
+    expect(h.hole(0).rollZone).toEqual(w1);
+    reach(h, 1, 3);
+    expect(h.hole(1).stage).toBe('cooked');
+    expect(h.hole(1).rollZone).toEqual(w1);
+    expect(h.game.state.barZone).toEqual(w1);
   });
 });
