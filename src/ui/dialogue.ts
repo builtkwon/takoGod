@@ -71,7 +71,7 @@ export function createDialogues(
       bubble.append(el('b', '', PERSONALITY_LABEL[line.personality]), el('p', '', line.prompt), timer);
       ctx.layer.append(bubble);
 
-      const blocked = [...[...fixed, bubble, ...[...shown.values()].flatMap((s) => [s.bubble, ...s.buttons])].map(rectOf), ...obstacles()];
+      const blocked = [...[...fixed, bubble, ...[...fumed.values()].map((f) => f.bubble), ...[...shown.values()].flatMap((s) => [s.bubble, ...s.buttons])].map(rectOf), ...obstacles()];
       const base = ctx.layer.getBoundingClientRect();
       const spots = placeAnswerButtons({ w: base.width, h: base.height }, BTN, blocked, rng);
       // 좋은 답과 나쁜 답이 어느 자리에 가는지도 섞는다.
