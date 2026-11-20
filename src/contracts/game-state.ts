@@ -21,7 +21,7 @@ export interface GameStateV2 {
   readonly barZone: RollZone | null;
   /** 후네에 담긴 완성품. 가득 차면 가장 먼저 온 대기 손님에게 서빙된다(GDD §굽기). */
   readonly fune: readonly FuneItem[];
-  /** 후네가 6알로 차서 가쓰오부시 연출 후 서빙(또는 비우기)을 기다리는 1초 동안 true(GDD §굽기). render는 가쓰오부시를 얹는다. */
+  /** 후네가 6알로 차면 true가 되고 서빙(또는 손님 0명 페이즈의 비우기) 전까지 유지된다. 최소 1초(가쓰오부시 연출)이고 손님이 없으면 입장할 때까지 길어진다(GDD §굽기). render는 가쓰오부시를 얹는다. */
   readonly funeServing: boolean;
   /** 들고 있는 구멍의 인덱스. 없으면 null. 들기는 동시에 1개다. */
   readonly holding: number | null;

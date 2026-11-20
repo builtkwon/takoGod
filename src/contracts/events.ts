@@ -68,7 +68,7 @@ export interface GameEvents {
   'plate/scored': { readonly customerId: string; readonly delta: number; readonly stars: number };
   /** 손님이 다시해줘를 요청했다. 이 접시에는 리뷰를 발급하지 않는다. */
   'customer/redo-requested': { readonly customerId: string };
-  /** 손님 인내가 100%에 도달했다(한 번). ui는 화면 흔들림과 분노 대사, render는 그 손님 머리 위 분노 표시를 한다(GDD §손님 대화). */
+  /** 손님 인내가 100%에 도달했다(한 번). render는 화면(카메라) 흔들림과 그 손님 머리 위 분노 표시, ui는 분노 대사 말풍선을 띄운다(GDD §손님 대화). */
   'customer/fumed': { readonly customerId: string };
   /** 0~1점 떠남. stars(0~1)를 남기고 떠난다. 이어서 review/issued와 customer/left가 나온다. */
   'customer/walked-out': { readonly customerId: string; readonly stars: number };
