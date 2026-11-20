@@ -1,4 +1,5 @@
 import type { ReviewResult } from '../contracts';
+import { hudText } from '../data';
 import { el } from './dom';
 import { PERSONALITY_LABEL, sessionAverageText } from './format';
 import { starRow, starsLabel } from './v2/stars';
@@ -54,9 +55,14 @@ export function showReviewCard(layer: HTMLElement, review: ReviewResult): void {
 }
 
 /** 결과 화면. average는 GameState.sessionAverage(core 계산)이고 null이면 점수를 표시하지 않는다. */
-export function showResult(layer: HTMLElement, result: { readonly average: number | null; readonly reviews: readonly ReviewResult[] }): void {
+export function showResult(
+  layer: HTMLElement,
+  result: { readonly average: number | null; readonly reviews: readonly ReviewResult[]; readonly shopScore?: number; readonly newBest?: boolean },
+): void {
   const o = overlay(layer, 'ui-result');
   o.append(el('h2', '', '오늘의 결과'));
+  if (result.shopScore !== undefined) o.append(el('div', 'ui-shop-score', hudText.resultShopScore(result.shopScore)));
+  if (result.newBest) o.append(el('div', 'ui-new-best', hudText.resultNewBest));
   const text = sessionAverageText(result.average);
   if (result.average !== null && text !== null) o.append(el('div', 'ui-score', `${text}점`), starRow(result.average, `평균 ${starsLabel(result.average)}`));
   o.append(el('p', '', `받은 리뷰 ${result.reviews.length}개`));

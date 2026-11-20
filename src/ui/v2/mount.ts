@@ -29,11 +29,14 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const style = el('style', '', CSS + CSS_V2);
   const disposers: (() => void)[] = [];
 
+  // 결과 화면의 "최고 기록!" 표시용. 세션 종료 때 core가 한 번 내는 이벤트를 기억해 둔다.
+  let newBest = false;
+  disposers.push(bus.on('score/new-best', () => (newBest = true)));
   const fx = createEffects(layer);
   const controller = createController({ bus, picker, getState, view: fx });
   const buckets = createBuckets(controller);
   const bar = createTimingBar();
-  const hud = createHudV2();
+  const hud = createHudV2(bus, disposers);
   const trayLabels = createTrayLabels(layer, picker);
   const tutorial = createTutorialView(layer, bus, picker, { margarine: () => buckets.origin('margarine'), batter: () => buckets.origin('batter') }, disposers);
 
@@ -90,7 +93,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
 
   return {
     title: () => showIosInstall(layer).then(() => showTitle(layer)),
-    showResult: (result) => showResult(layer, result),
+    showResult: (result) => showResult(layer, { ...result, shopScore: getState().shopScore, newBest }),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);
