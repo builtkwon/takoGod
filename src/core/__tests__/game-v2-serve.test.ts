@@ -92,6 +92,44 @@ describe('후네와 서빙', () => {
     void finish;
   });
 
+  it('후네가 차고 1초가 지났는데 손님이 0명이면 후네를 유지하고, 다음 입장 때 바로 서빙한다', () => {
+    const h = setupV2();
+    toP2(h);
+    // 구멍 0~12를 한꺼번에 완성한다. 첫 접시(0~5)를 서빙하면 다음 손님은 2초 뒤 입장한다.
+    reachDone(h, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+    for (const i of [0, 1, 2, 3, 4, 5]) {
+      h.pick(i);
+      h.drop('fune');
+    }
+    h.tick(1);
+    expect(h.of('review/issued')).toHaveLength(1);
+    expect(h.game.state.customers).toHaveLength(0);
+    // 손님이 없는 2초 사이에 두 번째 접시(6~11)를 채운다.
+    for (const i of [6, 7, 8, 9, 10, 11]) {
+      h.pick(i);
+      h.drop('fune');
+    }
+    expect(h.game.state.funeServing).toBe(true);
+    h.tick(1);
+    expect(h.game.state.customers).toHaveLength(0);
+    expect(h.of('plate/tasted')).toHaveLength(1);
+    expect(h.game.state.fune).toHaveLength(6);
+    expect(h.game.state.funeServing).toBe(true);
+    // 놓기는 거부되고 탐 타이머는 멈춘 채다.
+    const burn = h.hole(12).burnElapsedSec;
+    h.pick(12);
+    h.drop('fune');
+    expect(h.of('cook/rejected').at(-1)).toEqual({ hole: 12, reason: 'fune-full' });
+    expect(h.hole(12).stage).toBe('done');
+    expect(h.hole(12).burnElapsedSec).toBe(burn);
+    // 다음 손님이 입장하면 같은 틱에 서빙한다.
+    h.tick(1.1);
+    expect(h.of('plate/tasted').map((e) => e.customerId)).toEqual(['c1', 'c2']);
+    expect(h.game.state.phase).toBe('P3'); // 두 번째 접시로 P2가 끝나 P3 첫 손님(c3)이 입장했다
+    expect(h.game.state.fune).toHaveLength(0);
+    expect(h.game.state.funeServing).toBe(false);
+  });
+
   it('서빙하면 후네만 비우고 철판에서 진행 중인 구멍은 그대로다', () => {
     const h = setupV2();
     toP2(h);

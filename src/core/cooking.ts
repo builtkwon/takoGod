@@ -6,7 +6,7 @@ export const EPS = 1e-9;
 
 const ROLL_PERIOD_SEC = 1.6;
 
-/** 타이밍 바 위치(0..1). 진입 시 0에서 시작해 1.2초 주기로 왕복한다. */
+/** 타이밍 바 위치(0..1). 진입 시 0에서 시작해 1.6초 주기로 왕복한다. */
 export function rollPosition(elapsedSec: number): number {
   const phase = (elapsedSec % ROLL_PERIOD_SEC) / ROLL_PERIOD_SEC;
   return phase < 0.5 ? phase * 2 : 2 - phase * 2;
