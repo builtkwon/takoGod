@@ -57,7 +57,7 @@ harness/
 src/
   contracts/         core와 render·ui 사이 타입·이벤트
   core/              순수 게임 로직(GameV2, 시뮬레이터, three·DOM 금지)
-  render/            Three.js PS1 렌더링(renderV2, ScenePicker, backdrop.ts 밤 도로 배경)
+  render/            Three.js 툰 셰이딩 렌더링(renderV2, ScenePicker, backdrop.ts 밤 도로 배경)
   ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, iOS 설치 안내 포함)
   data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구
   main.ts            조립·루프·서비스 워커 등록
