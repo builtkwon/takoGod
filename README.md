@@ -13,6 +13,13 @@
 - 손님마다 인내(얼굴 색 변화)가 있고, 별점이 낮으면 다시해줘 요청이나 0~1점 떠남이 있다(§손님 대화, §점수).
 - 점수는 비공개다. 서빙 직후 맛보기 반응 대사와 합산 결과를 보여 준다(§손님 대화).
 
+2차 개편(수치 원본은 GDD)도 반영했다.
+- 철판은 4×4 16구다. 튜토리얼은 1, 2, 5, 6, 9, 10번 6구만 열고 나머지는 덮개로 잠가 조작을 받지 않는다.
+- 타이밍 바 주기는 1.6초이고, W1·W2 영역은 구멍마다 무작위 위치에 놓인다(튜토리얼은 전 구간). 폭은 페이즈별로 다르고 영역이 바뀔 때 바가 번쩍인다.
+- 탐 타이머는 4초에 어두워지고 6초에 탄다.
+- 후네가 6알로 차면 가쓰오부시를 얹는 완성 연출 뒤 1초 기다렸다 서빙한다. 그동안 놓기는 거부된다.
+- 대화 결과 연출: 정답은 폭죽, 오답은 물음표 또는 빠직. 인내가 100%가 되면 화면이 흔들리고 분노 대사(`src/data/fumed-lines.ts`)가 말풍선 자리에 나온다.
+
 병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
 ## 브랜치
@@ -59,7 +66,7 @@ src/
   core/              순수 게임 로직(GameV2, 시뮬레이터, three·DOM 금지)
   render/            Three.js 툰 셰이딩 렌더링(renderV2, ScenePicker, backdrop.ts 밤 도로 배경)
   ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, iOS 설치 안내 포함)
-  data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구
+  data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구(fumed-lines.ts 분노 대사)
   main.ts            조립·루프·서비스 워커 등록
   session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
   __tests__/         src 최상위 파일의 단위 테스트(모듈마다 자기 __tests__/)
