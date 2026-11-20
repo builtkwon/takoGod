@@ -7,7 +7,7 @@
 | 작업 | 먼저 읽을 문서 |
 | --- | --- |
 | 게임 규칙·수치 구현 | [docs/GDD.md](docs/GDD.md), [modules/core.md](docs/rules/architecture/modules/core.md) |
-| 렌더링(src/render) | [modules/render.md](docs/rules/architecture/modules/render.md), [ADR 0001](docs/adr/0001-ps1-render-pipeline.md) |
+| 렌더링(src/render) | [modules/render.md](docs/rules/architecture/modules/render.md), [ADR 0003](docs/adr/0003-toon-render-pipeline.md) |
 | UI·대사 데이터(src/ui, src/data) | [modules/ui.md](docs/rules/architecture/modules/ui.md), [GDD §콘텐츠](docs/GDD.md#콘텐츠) |
 | contracts·main.ts 변경 | [modules/contracts.md](docs/rules/architecture/modules/contracts.md), [TODO-CONTRACT.md](TODO-CONTRACT.md) |
 | 모듈 경계·의존 | [architecture/overview.md](docs/rules/architecture/overview.md) |

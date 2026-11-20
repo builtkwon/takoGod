@@ -1,9 +1,9 @@
 # render (`src/render`)
 
 - 소유: render-dev
-- 역할: Three.js PS1 렌더링 어댑터.
+- 역할: Three.js 툰 셰이딩 렌더링 어댑터.
 - 계층 규칙: [overview.md](../overview.md#계층)
-- 렌더 파이프라인 결정: [ADR 0001](../../../adr/0001-ps1-render-pipeline.md)
+- 렌더 파이프라인 결정: [ADR 0003](../../../adr/0003-toon-render-pipeline.md)
 
 ## 규칙
 
