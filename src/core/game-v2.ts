@@ -1,6 +1,7 @@
 // 게임 본체(굽기 개편): 구멍별 독립 상태기계·후네 서빙·인내·다시해줘·떠남·튜토리얼. 규칙 원본은 docs/GDD.md.
 import type {
   ActiveDialogue,
+  BestScoreStore,
   CustomerStatus,
   DialogueLine,
   DropTarget,
@@ -51,7 +52,9 @@ import {
   commentBucket,
   darkCapRange,
   plateChanges,
+  isPerfectPlate,
   plateDefects,
+  shopPlateScore,
 } from './scoring-v2';
 
 /** main이 src/data를 읽어 주입한다(core는 data를 import하지 않는다). 맛보기 대사는 TasteLines 포트로 받는다. */
@@ -70,6 +73,8 @@ export interface GameOptionsV2 {
   /** [0, 1) 난수. 시드를 고정해 재현한다. */
   readonly rng: () => number;
   readonly store: SessionStore;
+  /** 최고 가게 점수 저장소(localStorage는 main이 조립, ADR 0004). */
+  readonly bestStore: BestScoreStore;
 }
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
@@ -133,6 +138,13 @@ export class GameV2 {
   private readonly data: GameDataV2;
   private readonly rng: () => number;
   private readonly store: SessionStore;
+  private readonly bestStore: BestScoreStore;
+  /** 판 시작 때 읽은 최고 가게 점수(진행 중 불변). */
+  private readonly best: number | null;
+  private shopScore = 0;
+  private combo = 0;
+  /** 후네 각 알의 굴리기 적중 수(0~2). fune과 같은 순서. */
+  private funeHits: number[] = [];
 
   private phase: PhaseId = 'tutorial';
   private holes: Hole[] = Array.from({ length: HOLE_COUNT }, newHole);
@@ -162,6 +174,8 @@ export class GameV2 {
     this.data = opts.data;
     this.rng = opts.rng;
     this.store = opts.store;
+    this.bestStore = opts.bestStore;
+    this.best = opts.bestStore.load();
     for (const p of PERSONALITIES) {
       if (!opts.data.dialogues.some((l) => l.personality === p)) throw new Error(`대사 데이터에 ${p} 문항이 없다`);
       for (const bucket of [1, 2, 3, 4, 5] as const) {
@@ -235,6 +249,9 @@ export class GameV2 {
       activeDialogues,
       reviews: [...this.reviews],
       sessionAverage: sessionAverage(this.reviews),
+      shopScore: this.shopScore,
+      bestShopScore: this.best,
+      combo: this.combo,
       tutorialCompleted: this.tutorialCompleted,
       tutorialStage: this.tutorialStage(),
     };
@@ -403,6 +420,7 @@ export class GameV2 {
       dark: hole.stage === 'dark',
     };
     this.fune.push(item);
+    this.funeHits.push(hole.rollHits.filter((x) => x === true).length);
     this.holes[index] = newHole();
     this.bus.emit('fune/added', { hole: index, item, count: this.fune.length });
     if (this.fune.length >= FUNE_SIZE) this.funeWait = FUNE_SERVE_DELAY_SEC;
@@ -429,6 +447,7 @@ export class GameV2 {
     this.reviews.push(review);
     this.tutorialCompleted = true;
     this.fune = [];
+    this.funeHits = [];
     this.store.save({ version: 1, tutorialCompleted: true, finished: false, reviews: [...this.reviews] });
     this.bus.emit('review/issued', { review });
     this.startPhase('P1');
@@ -446,8 +465,10 @@ export class GameV2 {
   private onFuneFull(): void {
     if (this.phase === 'tutorial') return this.finishTutorial();
     if (PHASES[this.phase].customerCount === 0) {
-      // 손님이 없는 페이즈(P1): 서빙 없이 후네를 비우고 전환한다.
+      // 손님이 없는 페이즈(P1): 서빙 없이 후네를 비우고 전환한다. 가게 점수 기본은 시작 만족도다.
+      this.scorePlate(null, START_SATISFACTION);
       this.fune = [];
+      this.funeHits = [];
       this.plates++;
       return this.afterPlate();
     }
@@ -492,6 +513,7 @@ export class GameV2 {
       return this.clearFune();
     }
 
+    this.scorePlate(g.id, sat);
     const finalStars = walkedOutStars ?? stars;
     const comments = this.data.reviewComments(g.personality, commentBucket(finalStars));
     const review: ReviewResult = {
@@ -514,7 +536,17 @@ export class GameV2 {
   /** 서빙하면 후네만 비운다(철판은 그대로). 서빙 시점에 트레이 위치를 셔플한다. */
   private clearFune(): void {
     this.fune = [];
+    this.funeHits = [];
     this.tray = shuffle(TRAY_SOURCE, this.rng);
+  }
+
+  /** 접시 가게 점수를 더하고 score/plate를 낸다(튜토리얼·다시해줘 첫 접시에는 부르지 않는다). */
+  private scorePlate(customerId: string | null, base: number): void {
+    const hits = this.funeHits.reduce((a, b) => a + b, 0);
+    const r = shopPlateScore(base, hits, isPerfectPlate(this.fune), this.combo);
+    this.combo = r.combo;
+    this.shopScore += r.points;
+    this.bus.emit('score/plate', { customerId, points: r.points, hits, combo: r.combo, multiplier: r.multiplier });
   }
 
   private afterPlate(): void {
@@ -529,6 +561,11 @@ export class GameV2 {
     this.guests = [];
     this.spawnTimers = [];
     this.store.save({ version: 1, tutorialCompleted: true, finished: true, reviews: [...this.reviews] });
+    // 최고 가게 점수는 세션 종료 때 한 번 갱신한다(점수 0은 기록하지 않는다).
+    if (this.shopScore > 0 && this.shopScore > (this.best ?? -1)) {
+      this.bestStore.save(this.shopScore);
+      this.bus.emit('score/new-best', { score: this.shopScore, previous: this.best });
+    }
   }
 
   private startPhase(id: PhaseId): void {
