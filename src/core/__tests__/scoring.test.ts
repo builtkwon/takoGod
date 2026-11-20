@@ -9,9 +9,11 @@ describe('scoring (GDD §점수)', () => {
     expect(START_SATISFACTION).toBe(80);
   });
 
-  it('변화마다 0~100으로 clamp', () => {
-    expect(applySatisfaction(95, 10)).toBe(100);
+  it('만족도는 0 아래로 내려가지 않고 100을 넘을 수 있다(상한 없음)', () => {
+    expect(applySatisfaction(95, 10)).toBe(105);
+    expect(applySatisfaction(110, 20)).toBe(130);
     expect(applySatisfaction(5, -10)).toBe(0);
+    expect(applySatisfaction(0, -20)).toBe(0);
     expect(applySatisfaction(50, -20)).toBe(30);
   });
 
@@ -25,6 +27,7 @@ describe('scoring (GDD §점수)', () => {
     expect(starsFromSatisfaction(94)).toBe(4.5); // 4.7 → 4.5
     expect(starsFromSatisfaction(95)).toBe(5); // 4.75 → 5.0
     expect(starsFromSatisfaction(100)).toBe(5);
+    expect(starsFromSatisfaction(130)).toBe(5); // 100을 넘어도 5★ 상한
   });
 
   it('세션 점수 = 모든 리뷰 별점의 산술평균, 리뷰가 없으면 null', () => {
