@@ -41,7 +41,7 @@ const base2: GameStateV2 = {
   holes: holes2(),
   tray: IDS.map(ing),
   barPosition: 0.5,
-  barZone: null,
+  barZones: { w1: null, w2: null },
   fune: [],
   funeServing: false,
   holding: null,
