@@ -14,7 +14,7 @@ export interface PhaseConfig {
 }
 
 /**
- * 튜토리얼 유도 단계(GDD §진행 튜토리얼). 단계마다 6구 모두에 같은 조작을 하게 한다.
+ * 튜토리얼 유도 단계(GDD §진행 튜토리얼). 단계마다 열린 6구(나머지 10구는 HoleStateV2.locked) 모두에 같은 조작을 하게 한다.
  * 순서: 마가린 → 반죽물 → 익힘 기다림 → 속재료 → 굴리기 1 → 굴리기 2 → 후네 담기.
  */
 export type TutorialStage = 'margarine' | 'batter' | 'cook-wait' | 'filling' | 'roll-1' | 'roll-2' | 'fune';
