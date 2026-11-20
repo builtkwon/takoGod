@@ -13,6 +13,14 @@ export interface Effects extends DragView {
 const FLY_MS = 380;
 const FALL_MS = 650;
 const MARK_MS = 800;
+/** 판정 글자(30px) 한 글자의 대략 폭. 화면 좌우로 잘리지 않게 가운데 x를 가두는 데 쓴다. */
+const MARK_CHAR_PX = 30;
+
+/** 글자 폭의 절반이 화면 안에 들어오도록 가운데 x를 가둔다. */
+export function clampMarkX(x: number, text: string, viewportW: number): number {
+  const half = (text.length * MARK_CHAR_PX) / 2 + 4;
+  return viewportW <= 2 * half ? viewportW / 2 : Math.min(viewportW - half, Math.max(half, x));
+}
 
 function ghostEl(look: GhostLook): HTMLElement {
   const e = el('div', `ui-ghost ui-ghost-${look.kind}`);
@@ -29,6 +37,7 @@ const place = (e: HTMLElement, p: Pt): void => {
 /** 놓인 곳(viewport 좌표) 기준으로 그리므로 요소는 position:fixed다. */
 export function createEffects(layer: HTMLElement): Effects {
   let ghost: HTMLElement | null = null;
+  let markEl: HTMLElement | null = null; // 판정 글자는 한 번에 하나만 보인다(인접 구멍을 연달아 눌러도 겹치지 않게)
 
   const animate = (e: HTMLElement, keyframes: Keyframe[], ms: number): void => {
     layer.append(e);
@@ -59,8 +68,11 @@ export function createEffects(layer: HTMLElement): Effects {
       animate(ghostEl(look), [{ transform: `${at(from)} rotate(0deg)`, opacity: 1 }, { transform: `${at(to)} rotate(200deg)`, opacity: 0.6 }], FALL_MS);
     },
     mark(text, p, tone) {
+      markEl?.remove();
       const e = el('div', `ui-mark ui-mark-${tone}`, text);
-      animate(e, [{ transform: `${at(p)} translateY(0)`, opacity: 1 }, { transform: `${at(p)} translateY(-56px)`, opacity: 0 }], MARK_MS);
+      const q = { x: clampMarkX(p.x, text, window.innerWidth), y: p.y };
+      markEl = e;
+      animate(e, [{ transform: `${at(q)} translateY(0)`, opacity: 1 }, { transform: `${at(q)} translateY(-56px)`, opacity: 0 }], MARK_MS);
     },
   };
 }
