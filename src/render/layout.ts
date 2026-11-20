@@ -1,5 +1,5 @@
 // 장면 배치 상수와 카메라. three에 의존하지 않는다(pick.ts가 three 없이 테스트되도록 분리).
-import { RT_H, RT_W } from './dims';
+import { VIEW_ASPECT } from './dims';
 
 export type V3 = readonly [number, number, number];
 
@@ -15,4 +15,4 @@ export const TRAY_Z = 2.1;
 export const FUNE_Z = 3.5;
 
 /** 렌더 카메라(후네가 화면 하단에 들어오도록 철판 기준으로 앞으로 밀었다). fov는 세로. */
-export const CAMERA = { pos: [0, 7.5, 7.3], target: [0, 0.4, 0.5], fovDeg: 45, aspect: RT_W / RT_H } as const;
+export const CAMERA = { pos: [0, 7.5, 7.3], target: [0, 0.4, 0.5], fovDeg: 45, aspect: VIEW_ASPECT } as const;

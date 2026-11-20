@@ -1,4 +1,4 @@
-// 로우폴리 모델: 철판·볼 단계별 상태·속재료 6종·손님. 모든 지오메트리는 플랫 셰이딩 + 버텍스 컬러.
+// 로우폴리 모델: 철판·볼 단계별 상태·속재료 6종·손님. 모든 지오메트리는 플랫 법선 + 버텍스 컬러이고 툰 머티리얼·외곽선으로 그린다.
 import {
   BoxGeometry,
   BufferGeometry,
@@ -12,9 +12,9 @@ import {
   TorusGeometry,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { DataTexture } from 'three';
+import type { DataTexture, ShaderMaterial } from 'three';
 import type { HoleStage, IngredientId, Personality } from '../contracts';
-import { ps1Material } from './ps1';
+import { addOutline, toon } from './toon';
 import type { Textures } from './textures';
 
 import { FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
@@ -55,17 +55,20 @@ const COUNTER_FRONT = 4.6;
 const COUNTER_DEPTH = COUNTER_FRONT - COUNTER_BACK;
 const COUNTER_Z = (COUNTER_FRONT + COUNTER_BACK) / 2;
 
-/** 정적 장면: 카운터·철판·구멍·트레이판·뒷벽. */
-export function buildStatic(tex: Textures): Group {
+/** 정적 장면: 카운터·철판·구멍·트레이판·뒷벽. 철판·트레이판에는 외곽선을 넣는다. */
+export function buildStatic(tex: Textures, outline: ShaderMaterial): Group {
   const g = new Group();
-  const add = (geo: BufferGeometry, map: DataTexture, bias = 0) => g.add(new Mesh(geo, ps1Material(map, undefined, bias)));
+  const add = (geo: BufferGeometry, map: DataTexture | null, line = false) => {
+    const m = new Mesh(geo, toon(map));
+    g.add(line ? addOutline(m, outline) : m);
+  };
   add(merge([part(new BoxGeometry(6, 0.2, COUNTER_DEPTH), 0xffffff, [0, -0.1, COUNTER_Z])]), tex.wood);
-  add(merge([part(new BoxGeometry(3.7, PLATE_TOP, 2.5), 0xffffff, [0, PLATE_TOP / 2, 0])]), tex.iron);
-  // 구멍 테두리·바닥은 철판 윗면 위 데칼이라 깊이 보정을 단계별로 준다.
-  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.52, 0.52, 0.012, 12), 0x55555c, [x, y + 0.004, z]))), tex.iron, 0.00005);
-  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.45, 0.45, 0.012, 12), 0x141416, [x, y + 0.01, z]))), tex.iron, 0.0001);
-  add(merge([part(new BoxGeometry(3.5, 0.1, 0.55), 0xffffff, [0, TRAY_TOP / 2, TRAY_Z])]), tex.wood);
-  add(merge([part(new BoxGeometry(6, 3, 0.2), 0xd8423a, [0, 1.5, -3.2])]), tex.fabric);
+  add(merge([part(new BoxGeometry(3.7, PLATE_TOP, 2.5), 0x6c7090, [0, PLATE_TOP / 2, 0])]), null, true);
+  // 구멍 테두리·바닥은 철판 윗면 위 얇은 원판이라 높이를 살짝 올려 겹친다.
+  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.52, 0.52, 0.012, 12), 0x3c3f58, [x, y + 0.004, z]))), null);
+  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.45, 0.45, 0.012, 12), 0x16131e, [x, y + 0.01, z]))), null);
+  add(merge([part(new BoxGeometry(3.5, 0.1, 0.55), 0xffffff, [0, TRAY_TOP / 2, TRAY_Z])]), tex.wood, true);
+  add(merge([part(new BoxGeometry(6, 3, 0.2), 0xff5a4e, [0, 1.5, -3.2])]), tex.fabric);
   return g;
 }
 
@@ -78,7 +81,7 @@ export const FUNE_BALL_R = 0.3;
 export const FUNE_SLOTS: readonly V3[] = Array.from({ length: 6 }, (_, i): V3 => [(i % 3 - 1) * 0.72, FUNE_FLOOR, FUNE_Z + (Math.floor(i / 3) - 0.5) * 0.62]);
 
 /** 6각형 바닥(양 끝이 뾰족한 배 모양) + 변마다 바깥으로 기울어진 옆판 6장. 나무 텍스처 1장. */
-export function buildFune(tex: Textures): Group {
+export function buildFune(tex: Textures, outline: ShaderMaterial): Group {
   const rx = 1.55;
   const rz = 0.75;
   const corner = (k: number): [number, number] => [rx * Math.cos((k * Math.PI) / 3), rz * Math.sin((k * Math.PI) / 3)];
@@ -94,13 +97,16 @@ export function buildFune(tex: Textures): Group {
     parts.push(part(new BoxGeometry(Math.hypot(dx, dz), 0.3, 0.06), k % 3 === 0 ? 0xd9a866 : 0xc8924f, [mx * 1.03, 0.16, FUNE_Z + mz * 1.03], [1, 1, 1], [lean, yaw, 0]));
   }
   const g = new Group();
-  g.add(new Mesh(merge(parts), ps1Material(tex.fune)));
+  g.add(addOutline(new Mesh(merge(parts), toon(tex.fune)), outline));
   return g;
 }
 
 // --- 볼(굽기 단계) ----------------------------------------------------------
 
 export type DoughTex = 'butter' | 'batter' | 'crust' | 'sauce';
+
+/** 반죽 단계별 기본색(곱셈 전). sauce만 텍스처(줄무늬)가 색을 정하므로 흰색이다. */
+export const DOUGH_BASE: Readonly<Record<DoughTex, V3>> = { butter: [1, 0.88, 0.38], batter: [1, 0.9, 0.6], crust: [0.98, 0.64, 0.26], sauce: [1, 1, 1] };
 
 /** 단계별 반죽·볼 모양. disc는 높이 h, ball은 y 눌림 비율 h. */
 export interface DoughLook {
@@ -140,7 +146,7 @@ export const BALL_UNIT = part(new SphereGeometry(1, 8, 6), 0xffffff);
  */
 export type BakeStage = 'normal' | 'dark' | 'burnt';
 
-/** 소스 줄무늬 텍스처(205,140,64)에 곱하는 색조. 어두움은 진한 갈색, 탄 것은 거의 검정이 된다. */
+/** 소스 줄무늬 텍스처에 곱하는 색조. 어두움은 진한 갈색, 탄 것은 거의 검정이 된다. */
 const BAKE_TINT: Readonly<Record<BakeStage, V3>> = { normal: [1, 1, 1], dark: [0.5, 0.4, 0.42], burnt: [0.14, 0.12, 0.12] };
 export const bakeTint = (stage: BakeStage): V3 => BAKE_TINT[stage];
 
@@ -178,7 +184,7 @@ export const MODEL_OF: Readonly<Record<Personality, CustomerModel>> = {
 
 const SKIN = 0xf0c8a0;
 
-/** 몸(옷감 텍스처)과 머리(알갱이 텍스처)를 나눠 만든 두 지오메트리. */
+/** 몸과 머리를 나눠 만든 두 지오메트리. */
 function customerGeos(kind: CustomerModel): { body: BufferGeometry; head: BufferGeometry } {
   const eyes = [-0.1, 0.1].map((x) => part(new BoxGeometry(0.05, 0.05, 0.03), 0x1a1a1a, [x, 1.34, 0.27]));
   if (kind === 'salaryman') {
@@ -217,9 +223,10 @@ function customerGeos(kind: CustomerModel): { body: BufferGeometry; head: Buffer
   };
 }
 
-export function buildCustomer(kind: CustomerModel, tex: Textures): Group {
+export function buildCustomer(kind: CustomerModel, outline: ShaderMaterial): Group {
   const { body, head } = customerGeos(kind);
   const g = new Group();
-  g.add(new Mesh(body, ps1Material(tex.fabric)), new Mesh(head, ps1Material(tex.grain)));
+  // children[1]이 머리다(renderer가 얼굴 tint를 material.color로 준다).
+  g.add(addOutline(new Mesh(body, toon()), outline), addOutline(new Mesh(head, toon()), outline));
   return g;
 }
