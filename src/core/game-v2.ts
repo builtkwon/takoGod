@@ -1,5 +1,4 @@
 // 게임 본체(굽기 개편): 구멍별 독립 상태기계·후네 서빙·인내·다시해줘·떠남·튜토리얼. 규칙 원본은 docs/GDD.md.
-// 옛 game.ts는 ui·main이 아직 쓰므로 그대로 두고, ui·render 전환 뒤 integrator 병합 때 이 파일로 대체한다.
 import type {
   ActiveDialogue,
   CustomerStatus,
@@ -31,12 +30,14 @@ import {
   COOK_SEC,
   DARK_AT_SEC,
   FULL_ZONE,
+  FUNE_SERVE_DELAY_SEC,
   FUNE_SIZE,
   HOLE_COUNT,
-  W1,
-  W2,
+  TUTORIAL_HOLES,
   accepts,
+  drawZone,
   inZone,
+  zoneWidths,
 } from './cooking-v2';
 import { ANSWER_LIMIT_SEC, PHASES, REPLACEMENT_DELAY_SEC, SECOND_CUSTOMER_DELAY_SEC, TARGET_PLATES, nextPhase } from './phases';
 import { randomIndex, shuffle } from './rng';
@@ -88,9 +89,21 @@ interface Hole {
   filling: IngredientId | null;
   noFilling: boolean;
   rollHits: [boolean | null, boolean | null];
+  /** 반죽을 놓을 때 뽑은 W1 영역과 굴리기 1 때 뽑은 W2 영역. 튜토리얼은 뽑지 않는다(전 구간). */
+  w1: RollZone | null;
+  w2: RollZone | null;
 }
 
-const newHole = (): Hole => ({ stage: 'empty', cookElapsed: 0, burnElapsed: 0, filling: null, noFilling: false, rollHits: [null, null] });
+const newHole = (): Hole => ({
+  stage: 'empty',
+  cookElapsed: 0,
+  burnElapsed: 0,
+  filling: null,
+  noFilling: false,
+  rollHits: [null, null],
+  w1: null,
+  w2: null,
+});
 
 interface Guest {
   readonly id: string;
@@ -109,7 +122,7 @@ interface Guest {
   awaitingRedo: boolean;
 }
 
-/** 튜토리얼 유도 순서. 각 단계는 6구가 minRank 이상이 되면 끝난다(순위: 빈칸 0 … 완성 6). */
+/** 튜토리얼 유도 순서. 각 단계는 열린 6구가 minRank 이상이 되면 끝난다(순위: 빈칸 0 … 완성 6). */
 const TUTORIAL_FLOW: readonly { readonly stage: TutorialStage; readonly minRank: number }[] = [
   { stage: 'margarine', minRank: 1 },
   { stage: 'batter', minRank: 2 },
@@ -130,6 +143,8 @@ export class GameV2 {
   private holes: Hole[] = Array.from({ length: HOLE_COUNT }, newHole);
   private tray: Ingredient[] = [...TRAY_SOURCE];
   private fune: FuneItem[] = [];
+  /** 후네가 찬 뒤 서빙(또는 비우기)까지 남은 초. 후네가 차 있는 동안만 의미가 있다. */
+  private funeWait = 0;
   private holding: number | null = null;
   private barTime = 0;
   /** 바에 영역을 보일 구멍: 마지막으로 재료를 놓거나 굴린 구멍. */
@@ -194,6 +209,7 @@ export class GameV2 {
     const running = this.holes.filter(timerRunning).length;
     const holes: HoleStateV2[] = this.holes.map((h, index) => ({
       index,
+      locked: this.isLocked(index),
       stage: h.stage,
       cookElapsedSec: h.stage === 'cooking' ? h.cookElapsed : 0,
       burnElapsedSec: h.stage === 'done' || h.stage === 'dark' || h.stage === 'burnt' ? h.burnElapsed : 0,
@@ -215,6 +231,7 @@ export class GameV2 {
       barPosition: rollPosition(this.barTime),
       barZone: touched === undefined ? null : this.zoneOf(touched),
       fune: [...this.fune],
+      funeServing: this.fune.length >= FUNE_SIZE,
       holding: this.holding,
       customers: this.guests.map(toStatus),
       activeDialogues,
@@ -238,6 +255,7 @@ export class GameV2 {
       this.tickPatience(g, dt);
     }
     this.tickSpawns(dt);
+    this.tickFune(dt); // 서빙·전환으로 새로 생긴 손님과 타이머에는 이번 dt를 흘리지 않는다
     this.advanceTutorial();
   }
 
@@ -245,15 +263,19 @@ export class GameV2 {
 
   private zoneOf(h: Hole): RollZone | null {
     // 익힘·익힘 완료 탭도 W1로 판정한다(속재료 전 굴리기). 튜토리얼은 이 탭을 거부하므로 영역이 없다.
-    if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : W1;
-    if (h.stage === 'filled') return this.phase === 'tutorial' ? FULL_ZONE : W1;
-    if (h.stage === 'rolled') return this.phase === 'tutorial' ? FULL_ZONE : W2;
+    if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : h.w1;
+    if (h.stage === 'filled') return this.phase === 'tutorial' ? FULL_ZONE : h.w1;
+    if (h.stage === 'rolled') return this.phase === 'tutorial' ? FULL_ZONE : h.w2;
     return null;
+  }
+
+  /** 튜토리얼에서 쓰지 않는 구멍은 잠긴다. 본게임은 모두 열려 있다. */
+  private isLocked(index: number): boolean {
+    return this.phase === 'tutorial' && !TUTORIAL_HOLES.includes(index);
   }
 
   private tickHoles(dt: number): void {
     // 후네가 가득 차 서빙을 기다리는 동안은 탐 타이머가 멈춘다. 튜토리얼에는 탐 타이머가 없다.
-    // 도달 불가: 구멍 6개, 익힘 3초가 교체 입장 2초보다 길다(방어 코드).
     const burnFrozen = this.fune.length >= FUNE_SIZE || this.phase === 'tutorial';
     this.holes.forEach((h, index) => {
       if (h.stage === 'cooking') {
@@ -290,6 +312,7 @@ export class GameV2 {
   private onPlace(e: GameEvents['input/place-material']): void {
     const hole = this.holes[e.hole];
     if (this.isFinished || hole === undefined) return;
+    if (this.isLocked(e.hole)) return this.reject(e.hole, 'invalid-stage');
     const m = e.material;
     if (this.phase === 'tutorial') {
       const wanted = { margarine: 'margarine', batter: 'batter', filling: 'filling' } as const;
@@ -307,6 +330,7 @@ export class GameV2 {
     else if (m.kind === 'batter') {
       hole.stage = 'cooking';
       hole.cookElapsed = 0;
+      if (this.phase !== 'tutorial') hole.w1 = drawZone(zoneWidths(this.phase).w1, this.rng);
     } else {
       hole.stage = 'filled';
       hole.filling = m.ingredient;
@@ -317,25 +341,28 @@ export class GameV2 {
   private onRoll(e: GameEvents['input/roll']): void {
     const hole = this.holes[e.hole];
     if (this.isFinished || hole === undefined) return;
+    if (this.isLocked(e.hole)) return this.reject(e.hole, 'invalid-stage');
     if (this.phase === 'tutorial') {
       const stage = this.tutorialStage();
       if (!((stage === 'roll-1' && hole.stage === 'filled') || (stage === 'roll-2' && hole.stage === 'rolled'))) return this.rejectTutorial(e.hole);
     }
     this.lastTouched = e.hole;
-    if (hole.stage === 'filled') return this.doRoll(e.hole, hole, 0, W1);
+    if (hole.stage === 'filled') return this.doRoll(e.hole, hole, 0);
     if (hole.stage === 'cooking' || hole.stage === 'cooked') {
       // 속재료 전 굴리기: 속 없음으로 고정되고 그 탭이 굴리기 1이다(판정은 W1).
       hole.noFilling = true;
       hole.cookElapsed = 0;
-      return this.doRoll(e.hole, hole, 0, W1);
+      return this.doRoll(e.hole, hole, 0);
     }
-    if (hole.stage === 'rolled') return this.doRoll(e.hole, hole, 1, W2);
+    if (hole.stage === 'rolled') return this.doRoll(e.hole, hole, 1);
     this.bus.emit('cook/tap-ignored', { hole: e.hole });
   }
 
-  private doRoll(index: number, hole: Hole, nth: 0 | 1, zone: RollZone): void {
-    const hit = this.phase === 'tutorial' || inZone(rollPosition(this.barTime), zone);
+  private doRoll(index: number, hole: Hole, nth: 0 | 1): void {
+    const zone = nth === 0 ? hole.w1 : hole.w2;
+    const hit = this.phase === 'tutorial' || (zone !== null && inZone(rollPosition(this.barTime), zone));
     hole.rollHits[nth] = hit;
+    if (nth === 0 && this.phase !== 'tutorial') hole.w2 = drawZone(zoneWidths(this.phase).w2, this.rng);
     hole.stage = nth === 0 ? 'rolled' : 'done';
     if (nth === 1) hole.burnElapsed = 0;
     this.bus.emit('cook/rolled', { hole: index, hit });
@@ -345,6 +372,7 @@ export class GameV2 {
   private onPick(e: GameEvents['input/pick']): void {
     const hole = this.holes[e.hole];
     if (this.isFinished || hole === undefined) return;
+    if (this.isLocked(e.hole)) return this.reject(e.hole, 'invalid-stage');
     if (this.holding !== null) return this.reject(e.hole, 'already-holding');
     if (this.phase === 'tutorial') {
       if (this.tutorialStage() !== 'fune' || hole.stage !== 'done') return this.rejectTutorial(e.hole);
@@ -367,7 +395,7 @@ export class GameV2 {
       this.bus.emit('cook/dropped', { hole: index, item: hole.stage === 'burnt' ? 'burnt' : hole.stage === 'dark' ? 'dark' : 'done' });
       return;
     }
-    // 도달 불가: 구멍 6개, 익힘 3초가 교체 입장 2초보다 길다(방어 코드).
+    // 후네가 차서 서빙을 기다리는 동안(연출 1초 포함)은 놓기를 거부하고 원래 구멍으로 되돌린다.
     if (this.fune.length >= FUNE_SIZE) return this.reject(index, 'fune-full');
     const item: FuneItem = {
       rolledPerfectly: hole.rollHits[0] === true && hole.rollHits[1] === true,
@@ -378,7 +406,7 @@ export class GameV2 {
     this.fune.push(item);
     this.holes[index] = newHole();
     this.bus.emit('fune/added', { hole: index, item, count: this.fune.length });
-    if (this.fune.length >= FUNE_SIZE) this.onFuneFull();
+    if (this.fune.length >= FUNE_SIZE) this.funeWait = FUNE_SERVE_DELAY_SEC;
   }
 
   // ── 튜토리얼 ──────────────────────────────────────────
@@ -392,7 +420,7 @@ export class GameV2 {
   private advanceTutorial(): void {
     if (this.phase !== 'tutorial') return;
     for (let step = TUTORIAL_FLOW[this.tutorialIndex]; step !== undefined; step = TUTORIAL_FLOW[this.tutorialIndex]) {
-      if (!this.holes.every((h) => RANK[h.stage] >= step.minRank)) return;
+      if (!TUTORIAL_HOLES.every((i) => RANK[(this.holes[i] as Hole).stage] >= step.minRank)) return;
       this.tutorialIndex++;
     }
   }
@@ -409,6 +437,13 @@ export class GameV2 {
 
   // ── 후네·서빙 ─────────────────────────────────────────
 
+  /** 후네가 찬 뒤 1초가 지나면 서빙(손님 0명 페이즈는 서빙 없이 비우고 전환)한다. */
+  private tickFune(dt: number): void {
+    if (this.fune.length < FUNE_SIZE || this.funeWait <= EPS) return;
+    this.funeWait = Math.max(0, this.funeWait - dt);
+    if (this.funeWait <= EPS) this.onFuneFull();
+  }
+
   private onFuneFull(): void {
     if (this.phase === 'tutorial') return this.finishTutorial();
     if (PHASES[this.phase].customerCount === 0) {
@@ -422,7 +457,7 @@ export class GameV2 {
 
   /** 가득 찬 후네를 손님에게 서빙한다. 다시해줘를 요청한 손님이 우선이고, 그 밖에는 먼저 온 손님이다. */
   private tryServe(): void {
-    if (this.fune.length < FUNE_SIZE) return;
+    if (this.fune.length < FUNE_SIZE || this.funeWait > EPS) return;
     const guest = this.guests.find((g) => g.awaitingRedo) ?? this.guests[0];
     if (guest !== undefined) this.serve(guest);
   }
@@ -561,6 +596,7 @@ export class GameV2 {
     if (ratio >= 1 && !g.patienceExpired) {
       g.patienceExpired = true; // 손님은 떠나지 않고 만족도 -20을 한 번만 받는다
       g.satisfaction = applySatisfaction(g.satisfaction, PATIENCE_EXPIRED);
+      this.bus.emit('customer/fumed', { customerId: g.id });
     }
   }
 

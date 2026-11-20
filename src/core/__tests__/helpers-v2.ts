@@ -1,5 +1,6 @@
 // GameV2 테스트 공용 도구. 시간은 h.tick으로만 흘린다(실제 타이머 없음).
-import type { DropTarget, GameEventType, GameEvents, HoleStateV2, IngredientId, Material } from '../../contracts';
+import type { DropTarget, GameEventType, GameEvents, HoleStateV2, IngredientId, Material, RollZone } from '../../contracts';
+import { FUNE_SERVE_DELAY_SEC } from '../cooking-v2';
 import { createEventBus } from '../event-bus';
 import { GameV2, type GameDataV2 } from '../game-v2';
 import { createRng } from '../rng';
@@ -19,6 +20,7 @@ export const OUTPUT_EVENTS: readonly GameEventType[] = [
   'dialogue/started',
   'dialogue/resolved',
   'customer/patience-changed',
+  'customer/fumed',
   'plate/tasted',
   'plate/scored',
   'customer/redo-requested',
@@ -62,6 +64,11 @@ export interface SetupOpts {
   /** true면 튜토리얼부터 시작한다. 기본은 튜토리얼 완료 저장값으로 P1부터. */
   readonly tutorial?: boolean;
   readonly data?: GameDataV2;
+  /**
+   * true면 영역 위치 뽑기(반죽 놓기·굴리기 1)도 rng에서 뽑는다(GDD §손님 대화 난수 순서).
+   * 기본은 난수 0.5로 고정해(영역이 바 가운데) rng 수열이 영역 뽑기에 밀리지 않게 하고 구멍들을 한꺼번에 굴릴 수 있게 한다.
+   */
+  readonly liveZones?: boolean;
 }
 
 export function setupV2(opts: SetupOpts = {}) {
@@ -79,7 +86,20 @@ export function setupV2(opts: SetupOpts = {}) {
           reviews: [{ source: 'tutorial', stars: 5, comment: 'tutorial 5 stars', personality: null }],
         },
   );
-  const game = new GameV2({ bus, data: opts.data ?? syntheticDataV2, rng: opts.rng ?? createRng(opts.seed ?? 1), store });
+  const baseRng = opts.rng ?? createRng(opts.seed ?? 1);
+  const zoneRng = (): number => 0.5; // 모든 구멍의 영역이 바 가운데에 같게 놓여 구멍들을 한꺼번에 굴릴 수 있다
+  let zoneDraw = false;
+  const rng = (): number => (zoneDraw && !opts.liveZones ? zoneRng() : baseRng());
+  const game = new GameV2({ bus, data: opts.data ?? syntheticDataV2, rng, store });
+  /** 영역 위치를 뽑는 입력(반죽 놓기, 굴리기 1)을 내는 동안만 zoneDraw를 켠다. */
+  const emitDrawing = (fn: () => void): void => {
+    zoneDraw = true;
+    try {
+      fn();
+    } finally {
+      zoneDraw = false;
+    }
+  };
   return {
     bus,
     game,
@@ -95,8 +115,17 @@ export function setupV2(opts: SetupOpts = {}) {
     of<K extends GameEventType>(type: K): GameEvents[K][] {
       return log.filter((r) => r.type === type).map((r) => r.payload as GameEvents[K]);
     },
-    place: (hole: number, material: Material) => bus.emit('input/place-material', { hole, material }),
-    roll: (hole: number) => bus.emit('input/roll', { hole }),
+    place: (hole: number, material: Material) => {
+      const emit = () => bus.emit('input/place-material', { hole, material });
+      if (material.kind === 'batter') emitDrawing(emit);
+      else emit();
+    },
+    roll: (hole: number) => {
+      const stage = game.state.holes[hole]?.stage;
+      const emit = () => bus.emit('input/roll', { hole });
+      if (stage === 'cooking' || stage === 'cooked' || stage === 'filled') emitDrawing(emit);
+      else emit();
+    },
     pick: (hole: number) => bus.emit('input/pick', { hole }),
     drop: (target: DropTarget) => bus.emit('input/drop', { target }),
     answer: (customerId: string, choice: 'good' | 'bad') => bus.emit('input/answer', { customerId, choice }),
@@ -110,11 +139,6 @@ export const MARGARINE: Material = { kind: 'margarine' };
 export const BATTER: Material = { kind: 'batter' };
 export const fill = (ingredient: IngredientId = 'octopus'): Material => ({ kind: 'filling', ingredient });
 
-/** 바 위치 구간(W1 40~60, W2 42~58 안쪽 / 두 영역 밖). */
-export const HIT1: readonly [number, number] = [0.45, 0.55];
-export const HIT2: readonly [number, number] = [0.47, 0.53];
-export const MISS: readonly [number, number] = [0.75, 1];
-
 /** 바 위치가 [lo, hi]에 들어올 때까지 1ms씩 진행한다. */
 export function tickUntilBar(h: H, [lo, hi]: readonly [number, number]): void {
   for (let i = 0; i < 3000; i++) {
@@ -125,6 +149,30 @@ export function tickUntilBar(h: H, [lo, hi]: readonly [number, number]): void {
   throw new Error(`바가 ${lo}~${hi}에 오지 않았다`);
 }
 
+/** 구멍의 현재 영역(영역은 구멍마다 무작위다). 영역이 없으면 던진다. */
+export function zoneOfHole(h: H, i: number): RollZone {
+  const z = h.hole(i).rollZone;
+  if (z === null) throw new Error(`구멍 ${i}에 영역이 없다(${h.hole(i).stage})`);
+  return z;
+}
+
+/** 바가 구멍 영역 안쪽(경계 0.01 안)에 오거나(hit) 영역 밖(경계 0.02 밖)에 올 때까지 진행한다. */
+export function tickUntilZone(h: H, i: number, hit = true): void {
+  const z = zoneOfHole(h, i);
+  for (let k = 0; k < 6000; k++) {
+    const p = h.game.state.barPosition;
+    if (hit ? p >= z.from + 0.01 && p <= z.to - 0.01 : p < z.from - 0.02 || p > z.to + 0.02) return;
+    h.tick(0.001);
+  }
+  throw new Error(`바가 구멍 ${i} 영역(${hit ? '안' : '밖'})에 오지 않았다`);
+}
+
+/** 구멍 하나를 영역 안(hit)이나 밖에서 굴린다. */
+export function rollHole(h: H, i: number, hit = true): void {
+  tickUntilZone(h, i, hit);
+  h.roll(i);
+}
+
 /** hole을 level까지 진행한다: 1 기름칠, 2 익힘, 3 익힘 완료, 4 속재료 후(문어), 5 굴림 1(적중). */
 export function reach(h: H, holes: number | readonly number[], level: number): void {
   const hs = typeof holes === 'number' ? [holes] : holes;
@@ -132,17 +180,21 @@ export function reach(h: H, holes: number | readonly number[], level: number): v
   if (level >= 2) for (const i of hs) h.place(i, BATTER);
   if (level >= 3) h.tick(3);
   if (level >= 4) for (const i of hs) h.place(i, fill());
-  if (level >= 5) {
-    tickUntilBar(h, HIT1);
-    for (const i of hs) h.roll(i);
-  }
+  if (level >= 5) rollGroup(h, hs, true);
 }
 
-/** holes를 함께 완성(done)까지 진행한다(굴리기 2회 적중). 모두 같은 시각에 완성된다. */
+/** 영역이 같은 구멍들을 같은 순간에 굴린다(기본 setupV2에서 영역은 모두 같다). liveZones에서는 구멍마다 rollHole을 쓴다. */
+export function rollGroup(h: H, holes: readonly number[], hit: boolean): void {
+  const first = holes[0];
+  if (first === undefined) return;
+  tickUntilZone(h, first, hit);
+  for (const i of holes) h.roll(i);
+}
+
+/** holes를 같은 시각에 완성(done)까지 진행한다(굴리기 2회 적중). */
 export function reachDone(h: H, ...holes: number[]): void {
   reach(h, holes, 5);
-  tickUntilBar(h, HIT2);
-  for (const i of holes) h.roll(i);
+  rollGroup(h, holes, true);
 }
 
 export interface HoleSpec {
@@ -154,14 +206,9 @@ export interface HoleSpec {
   readonly dark?: boolean;
 }
 
-function rollGroup(h: H, holes: readonly number[], zone: readonly [number, number]): void {
-  if (holes.length === 0) return;
-  tickUntilBar(h, zone);
-  for (const i of holes) h.roll(i);
-}
-
 /**
- * 6구를 완성품 6개로 구워 후네에 담는다(6개가 차면 서빙·비움이 일어난다).
+ * 구멍 6개(0~5)를 완성품 6개로 구워 후네에 담는다(6개가 차면 끝에 서빙·비움까지 1초 진행한다).
+ * 같은 순간에 굴려 한꺼번에 완성한다(어두운 것은 완성 뒤 4초를 기다려 담는다).
  * hold=true면 마지막 1개는 들고 멈추고, 돌려준 함수를 부르면 놓는다(들고 있는 동안 탐 타이머가 멈춘다).
  */
 export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold = false): () => void {
@@ -174,20 +221,21 @@ export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold
     if (f !== 'none') h.place(i, fill(f));
   }
   // 속 없음 구멍은 속재료 전에 굴린다(그 탭이 굴리기 1).
-  rollGroup(h, ALL.filter((i) => specOf(i).miss1), MISS);
-  rollGroup(h, ALL.filter((i) => !specOf(i).miss1), HIT1);
-  rollGroup(h, ALL.filter((i) => specOf(i).miss2), MISS);
-  rollGroup(h, ALL.filter((i) => !specOf(i).miss2), HIT2);
+  rollGroup(h, ALL.filter((i) => specOf(i).miss1), false);
+  rollGroup(h, ALL.filter((i) => !specOf(i).miss1), true);
+  rollGroup(h, ALL.filter((i) => specOf(i).miss2), false);
+  rollGroup(h, ALL.filter((i) => !specOf(i).miss2), true);
 
   const fresh = ALL.filter((i) => !specOf(i).dark);
   const dark = ALL.filter((i) => specOf(i).dark);
   const order = [...fresh, ...dark];
   for (let k = 0; k < order.length; k++) {
-    if (k === fresh.length && dark.length > 0) h.tick(3);
+    if (k === fresh.length && dark.length > 0) h.tick(4);
     h.pick(order[k] as number);
-    if (hold && k === order.length - 1) return () => h.drop('fune');
+    if (hold && k === order.length - 1) return () => { h.drop('fune'); h.tick(FUNE_SERVE_DELAY_SEC); };
     h.drop('fune');
   }
+  h.tick(FUNE_SERVE_DELAY_SEC); // 후네가 찬 뒤 서빙(또는 비움)까지 1초
   return () => {};
 }
 
