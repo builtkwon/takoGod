@@ -21,6 +21,11 @@
 - 후네가 6알로 차면 가쓰오부시를 얹는 완성 연출 뒤 1초 기다렸다 서빙한다. 그동안 놓기는 거부된다.
 - 대화 결과 연출: 정답은 폭죽, 오답은 물음표 또는 빠직. 인내가 100%가 되면 화면이 흔들리고 분노 대사(`src/data/fumed-lines.ts`)가 말풍선 자리에 나온다.
 
+4차 개편(가게 점수, 수치 원본은 GDD §가게 점수)도 반영했다.
+- HUD: 왼쪽 위 최고 가게 점수("최고 N", 기록이 없으면 "최고 -", 진행 중 넘으면 NEW), 가운데 단계와 그 아래 현재 가게 점수, 오른쪽 위 별 칸과 그 아래 작게 리뷰 수. 접시를 더하면 +N과 콤보 팝업이 뜬다.
+- 가게 점수 규칙: 별점과 별개의 상한 없는 점수다. 접시 점수 = round((만족도 + 굴리기 적중 × 5) × 콤보 배수). 연속 완벽 접시 n번째는 배수 1.0 + 0.2 × (n−1)(최대 2.0)이고 완벽이 아니면 ×1.0과 콤보 0이다. 튜토리얼 접시는 0점, 다시해줘를 부른 첫 접시는 더하지 않는다.
+- 최고 기록은 세션이 끝날 때(결과 화면) max로 갱신해 localStorage `takoyaki:best`에 영구 저장한다(`{version:1,best}`, 손상 값은 버림). 결과 화면은 가게 점수와, 갱신했으면 "최고 기록!"을 보인다 → [ADR 0004](docs/adr/0004-best-shop-score-storage.md).
+
 병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
 ## 브랜치
@@ -34,6 +39,7 @@
 | feat/render-toon | src/render: 툰 셰이딩 전환(toon.ts, ADR 0003) | 병합·삭제 완료 |
 | feat/contracts-batch2, feat/core-batch2, feat/render-batch2, feat/ui-batch2 | 2차 개편(16구, 튜토리얼 잠금, 타이밍·탐 수치, 서빙 대기, 대화 연출) | 병합·삭제 완료 |
 | feat/contracts-batch3, feat/core-batch3, feat/render-batch3, feat/ui-batch3 | 3차 수정(판 공용 타이밍 영역, 버터 표기, 별 칸, 튜토리얼 50%) | 병합·삭제 완료 |
+| feat/contracts-batch4, feat/core-batch4, feat/render-batch4, feat/ui-batch4 | 4차: 가게 점수·콤보, HUD 3열, 최고 기록 localStorage | 병합·삭제 완료 |
 
 지금 열려 있는 기능 브랜치는 없다.
 
@@ -47,7 +53,7 @@ CLAUDE.md            AGENTS.md를 가져오는 Claude Code 진입점
 TODO-CONTRACT.md     contracts 변경 제안함(역할별 섹션)
 docs/
   GDD.md             게임 규칙·수치 원본
-  adr/               기술 결정 기록(0001 PS1 렌더는 0003 툰 렌더로 대체됨, 0002 세션 저장)
+  adr/               기술 결정 기록(0001 PS1 렌더는 0003 툰 렌더로 대체됨, 0002 세션 저장, 0004 최고 가게 점수 저장)
   harness-design.md  하네스 설계 스냅샷(수정 금지)
   rules/
     architecture/    계층·경계, 모듈별 규칙
@@ -66,12 +72,13 @@ harness/
   pre-commit         커밋 시 하네스 full 검사
 src/
   contracts/         core와 render·ui 사이 타입·이벤트
-  core/              순수 게임 로직(GameV2, 시뮬레이터, three·DOM 금지)
+  core/              순수 게임 로직(GameV2, 시뮬레이터, scoring-v2.ts 접시 가게 점수·콤보, session.ts 메모리 저장소, three·DOM 금지)
   render/            Three.js 툰 셰이딩 렌더링(toon.ts 툰 재질·외곽선, effects.ts 폭죽·물음표·빠직, backdrop.ts 밤 도로 배경, slots.ts 손님 자리 id 고정, ADR 0003)
-  ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, v2/stars.ts 우상단 별 칸, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, iOS 설치 안내 포함)
-  data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구(fumed-lines.ts 분노 대사)
+  ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, v2/stars.ts 우상단 별 칸, v2/hud.ts HUD 3열, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, iOS 설치 안내 포함)
+  data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구(fumed-lines.ts 분노 대사, hud-text.ts HUD·점수 문구)
   main.ts            조립·루프·서비스 워커 등록
   session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
+  best-store.ts      브라우저 BestScoreStore(localStorage takoyaki:best, ADR 0004)
   __tests__/         src 최상위 파일의 단위 테스트(모듈마다 자기 __tests__/)
 e2e/                 Playwright 시나리오(game.spec.ts)
 playwright.config.ts E2E 설정(mobile 프로젝트, build 후 preview)
