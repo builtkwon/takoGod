@@ -6,8 +6,8 @@ export const GOOD_ANSWER = 10;
 export const BAD_ANSWER = -10;
 export const TIMEOUT = -10;
 
-/** 만족도는 변화마다 0~100으로 clamp한다. */
-export const applySatisfaction = (current: number, delta: number): number => Math.min(100, Math.max(0, current + delta));
+/** 만족도는 0 아래로 내려가지 않는다. 상한은 없다(100을 넘어도 별점은 5★ 상한, 가게 점수 기본은 그대로 쓴다). */
+export const applySatisfaction = (current: number, delta: number): number => Math.max(0, current + delta);
 
 /** clamp(만족도 / 20, 1, 5)를 0.5 단위로 반올림(0.25 경계는 올림). */
 export const starsFromSatisfaction = (satisfaction: number): number =>

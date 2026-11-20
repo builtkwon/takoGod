@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makePlate, playToEnd, playUntilPhase, scripted, setupV2 } from './helpers-v2';
+import { customerEnteredAt, makePlate, playToEnd, playUntilPhase, scripted, setupV2, tickTo } from './helpers-v2';
 
 const SAL = 0;
 
@@ -62,6 +62,37 @@ describe('가게 점수(GDD §가게 점수)', () => {
     expect([h.game.state.shopScore, h.game.state.combo]).toEqual([0, 0]);
     makePlate(h);
     expect(h.of('score/plate')[0]).toMatchObject({ combo: 1, multiplier: 1 });
+  });
+});
+
+describe('만족도 상한 없음', () => {
+  it('좋은 답이 100을 넘게 쌓이고 완벽 +20이 그 위에 더해져 가게 점수 기본이 120 이상이 된다', () => {
+    // 직장인, 인내 약 40초. 대화 12초 간격으로 좋은 답 3번: 80 → 90 → 100 → 110, 완벽 접시 +20 → 130.
+    const h = setupV2({ rng: scripted([SAL, 0.999]).rng });
+    playUntilPhase(h, 'P2');
+    const t0 = customerEnteredAt(h);
+    const finish = makePlate(h, {}, true);
+    for (const at of [12.05, 24.15, 36.3]) {
+      tickTo(h, t0 + at);
+      const d = h.game.state.activeDialogues[0];
+      expect(d).toBeDefined();
+      h.answer(d?.customerId ?? '', 'good');
+    }
+    finish();
+    expect(h.of('plate/scored')[0]).toMatchObject({ delta: 50, stars: 5 });
+    expect(h.of('score/plate').at(-1)).toMatchObject({ points: Math.round((130 + 12 * 5) * 1.2), combo: 2 });
+    expect(h.of('review/issued')[0]?.review.stars).toBe(5);
+  });
+
+  it('인내 초과 -20과 나쁜 답은 0 아래로 내려가지 않는다(하한 0 유지)', () => {
+    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 인내 20초
+    playUntilPhase(h, 'P2');
+    tickTo(h, h.now + 60); // 대화 시간초과 -10이 쌓이고 인내 초과 -20이 더해진다
+    makePlate(h, [{ filling: 'none' }, { filling: 'wasabi' }]); // 속 없음·함정 -40 더
+    const scored = h.of('plate/scored')[0];
+    expect(scored?.delta).toBe(-80); // 만족도 0에서 멈춘다(80 + (-80))
+    expect(scored?.stars).toBe(1);
+    expect(h.of('score/plate').at(-1)).toMatchObject({ combo: 0, multiplier: 1 });
   });
 });
 
