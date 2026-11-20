@@ -1,6 +1,7 @@
 // artifacts.archive: .artifacts/pm 최상위의 번호·시각이 붙은 일회성 산출물을 archive/<시각>.tar.gz 하나로 묶는다.
 //   - 보관 대상(패턴 일치)이 30개를 넘을 때만 동작한다. 넘으면 보호 대상이 아닌 것을 모두 묶는다.
-//   - 보호(절대 묶지 않음): 수정 24시간 미만, 0바이트, 진행 중 실행(<역할>.md에 "## <시각> (exit" 줄이 없음).
+//   - 보호(절대 묶지 않음): 수정 24시간 미만, 진행 중 실행(<역할>.md에 "## <시각> (exit" 줄이 없음),
+//     실행 파일(json·err)이 아닌 0바이트 파일. 끝난 실행의 0바이트 json·err는 묶는다.
 //     같은 실행의 json·err는 한 쌍이라 하나라도 보호면 둘 다 남긴다.
 //   - resume.md·state.md·*.sh·archive/는 어느 패턴에도 걸리지 않아 대상이 아니다.
 //   - 순서는 파일 이름의 번호·시각(자연 정렬)이다. mtime은 보호 판정에만 쓴다.
@@ -55,9 +56,10 @@ export function plan(dir: string, now: Date): { targets: Entry[]; kept: Entry[];
     return logs.get(role)!.includes(`## ${ts} (exit`);
   };
   const isProtected = (e: Entry): boolean => {
-    if (now.getTime() - e.mtimeMs < MIN_AGE_MS || e.size === 0) return true;
+    if (now.getTime() - e.mtimeMs < MIN_AGE_MS) return true;
     const m = RUN.exec(e.name);
-    return m !== null && !finished(m[1]!, m[2]!);
+    // 끝난 실행의 0바이트 err·json은 정상 결과라 묶는다(사용자 결정 2026-11-20).
+    return m === null ? e.size === 0 : !finished(m[1]!, m[2]!);
   };
   const stem = (e: Entry): string => (RUN.test(e.name) ? e.name.replace(/\.(json|err)$/, '') : e.name);
   const protectedStems = new Set(all.filter(isProtected).map(stem));

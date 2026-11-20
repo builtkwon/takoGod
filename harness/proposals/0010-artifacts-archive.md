@@ -10,7 +10,8 @@
 
 - ① 호출 방식: 상주 에이전트나 `/loop`를 만들지 않는다. PM이 `run-integrator.sh` 끝에서 1회 호출한다(스크립트 수정은 PM).
 - ② 보호 규칙: 보관 대상(이름 패턴 일치)이 30개를 넘을 때만 동작한다. 다음은 절대 묶지 않는다.
-  - 수정 24시간 미만, 0바이트, 진행 중 실행(`<역할>.md`에 `## <시각> (exit` 줄이 아직 없음)
+  - 수정 24시간 미만, 진행 중 실행(`<역할>.md`에 `## <시각> (exit` 줄이 아직 없음)
+  - 0바이트: prompt·log·verdicts만 보호한다. 실행 파일(json·err)은 끝난 실행(헤더 있음)이면 0바이트여도 묶는다(사용자 결정 2026-11-20 "끝난 실행은 묶음"). 성공한 실행의 .err는 보통 0바이트라서다.
   - 같은 실행의 json·err는 한 쌍이다. 하나라도 보호면 둘 다 남긴다.
   - resume.md, state.md, *.sh, archive/ 안의 파일은 패턴 밖이라 대상이 아니다.
   - "최근 10개 유지" 규칙은 없앴다. 순서는 mtime이 아니라 파일 이름의 번호·시각(자연 정렬)이다.
@@ -55,13 +56,14 @@ version: 4   # 3 → 4
 | # | 대상 | 변경 |
 | --- | --- | --- |
 | 1 | harness/scripts/archive-artifacts.ts | 보호 규칙, 이름 정렬, json·err 쌍, 목록 txt·INDEX, archive/ 흩어진 파일 묶기 제거 |
-| 2 | harness/scripts/__tests__/archive-artifacts.test.ts | 12건(tar 실행·검증 실패 시 원본 보존, INDEX 덧붙이기, 24시간 미만·0바이트, 쌍·진행 중, 이름 정렬, dry-run 무변경 등) |
+| 2 | harness/scripts/__tests__/archive-artifacts.test.ts | 13건(끝난 실행의 0바이트 json·err 묶기, tar 실행·검증 실패 시 원본 보존, INDEX 덧붙이기, 24시간 미만·0바이트, 쌍·진행 중, 이름 정렬, dry-run 무변경 등) |
 
 ## 7. 후속
 
 - integrator: §3 등록(version 3→4).
 - PM: `run-integrator.sh` 끝에 1회 호출 추가. 첫 실행 전 dry-run 확인.
-- 참고: 성공한 실행의 .err는 대부분 0바이트라, 규칙 ②대로면 그 쌍(json 포함)은 계속 남는다. 줄이려면 "0바이트 .err는 보호에서 뺀다"를 따로 결정한다.
+- 완료: integrator가 §3을 f66d2ed로 등록(toolset v4).
+- 처리됨: 끝난 실행의 0바이트 .err 때문에 쌍이 계속 남던 문제는 ②의 0바이트 규칙 조정으로 해소(사용자 결정 2026-11-20).
 
 ## 8. 독립 리뷰
 

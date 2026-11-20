@@ -92,7 +92,7 @@ describe('archive-artifacts', () => {
     put(dir, 'integrator-20261101T000000.json', '{}');
     put(dir, 'integrator-20261101T000000.err', 'warn');
     put(dir, 'integrator-20261102T000000.json', '{}');
-    put(dir, 'integrator-20261102T000000.err', '');
+    put(dir, 'integrator-20261102T000000.err', 'warn', new Date(NOW.getTime() - 3600 * 1000));
     put(dir, 'integrator-20261103T000000.json', '{}');
     put(dir, 'integrator-20261103T000000.err', 'warn');
     expect(runArchive(opts(dir))).toBe(0);
@@ -103,6 +103,17 @@ describe('archive-artifacts', () => {
       'integrator-20261103T000000.json',
       'integrator.md',
     ]);
+  });
+
+  it('끝난 실행의 0바이트 err·json은 묶고, 진행 중 실행의 0바이트 err는 쌍 모두 남긴다', () => {
+    const dir = setup(THRESHOLD + 1);
+    put(dir, 'ui.md', '\n## 20261101T000000 (exit 0)\n');
+    put(dir, 'ui-20261101T000000.json', '');
+    put(dir, 'ui-20261101T000000.err', '');
+    put(dir, 'ui-20261102T000000.json', '{}');
+    put(dir, 'ui-20261102T000000.err', '');
+    expect(runArchive(opts(dir))).toBe(0);
+    expect(top(dir)).toEqual(['ui-20261102T000000.err', 'ui-20261102T000000.json', 'ui.md']);
   });
 
   it('순서는 mtime이 아니라 파일 이름의 번호·시각이다', () => {
