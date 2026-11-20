@@ -24,6 +24,7 @@ import {
   FUNE_BALL_R,
   FUNE_SLOTS,
   HOLE_POS,
+  LOCK_UNIT,
   MODEL_OF,
   NOFILL_MARK,
   RIM_UNIT,
@@ -32,11 +33,14 @@ import {
   TRAY_Z,
   buildCustomer,
   buildFune,
+  buildKatsuobushi,
   bakeTint,
   buildStatic,
 } from './models';
 import type { BakeStage, CustomerModel } from './models';
-import { CAMERA } from './layout';
+import { CAMERA, TAKO_S } from './layout';
+import { createEffects } from './effects';
+import type { EffectKind, EffectOptions } from './effects';
 import { FACE_TINT, RIM_COLOR, holeTint, rimOf, rimVisible, showsFilling, showsNoFilling } from './holes';
 import { buildBackdrop } from './backdrop';
 import { createScenePicker } from './pick';
@@ -50,6 +54,12 @@ export interface ToonRenderer {
    * 들고 있는 구멍(holding)은 그리지 않는다(ui가 손가락 아래에 그린다). nowMs는 깜빡임 위상용이며 기본은 performance.now()다.
    */
   renderV2(state: GameStateV2, nowMs?: number): void;
+  /**
+   * 연출을 시작한다(판정과 무관). customerId는 GameStateV2.customers[].id이며 다음 renderV2에서 그 손님 자리에 붙는다(없으면 무시).
+   * firework 폭죽 약 1초 / confused 머리 위 물음표 또는 빠직 1.5초(opts.mark로 고정, 기본 무작위) / fumed 카메라 0.4초 흔들림 + 분노 표시.
+   * 시계는 renderV2의 nowMs와 같다. opts.startMs로 시작 시각, opts.seed로 모양을 고정할 수 있다(스냅샷·테스트용).
+   */
+  effect(kind: EffectKind, customerId: string, opts?: EffectOptions): void;
   /** 화면 좌표 ↔ 장면 대상(contracts ScenePicker). 마지막으로 그린 트레이 칸 수를 기준으로 한다. */
   readonly picker: ScenePicker;
   dispose(): void;
@@ -72,6 +82,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   const camera = new PerspectiveCamera(CAMERA.fovDeg, CAMERA.aspect, 0.1, 50);
   camera.position.set(...CAMERA.pos); // 카메라 값은 layout.ts(pick과 공유).
   camera.lookAt(...CAMERA.target);
+  camera.updateMatrixWorld();
 
   const tex = createTextures();
   const outline = createOutline();
@@ -81,6 +92,9 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   sun.position.set(-3, 8, 6);
   scene.add(new AmbientLight(0xffffff, Math.PI * 0.45), sun);
   scene.add(buildBackdrop(), buildStatic(tex, outline), buildFune(tex, outline));
+  const katsuo = buildKatsuobushi(outline);
+  scene.add(...katsuo);
+  const effects = createEffects(scene, camera, outline);
 
   const doughMap = { butter: null, batter: null, crust: null, sauce: tex.sauce } as const;
   const fillMat = toon();
@@ -95,11 +109,14 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
     const rim = new Mesh(RIM_UNIT, rimMat);
     rim.position.y = 0.02;
     rim.visible = false;
+    fill.scale.setScalar(TAKO_S);
     const mark = new Mesh(NOFILL_MARK, fillMat);
     mark.visible = false;
-    g.add(dough, fill, rim, mark);
+    const lock = new Mesh(LOCK_UNIT, toon());
+    lock.visible = false;
+    g.add(dough, fill, rim, mark, lock);
     scene.add(g);
-    return { dough, fill, mat, rim, rimMat, mark };
+    return { dough, fill, mat, rim, rimMat, mark, lock };
   });
 
   let trayCount = 0;
@@ -137,7 +154,8 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   function updateHoleV2(i: number, h: HoleStateV2, held: boolean, nowMs: number): void {
     const v = holes[i];
     if (v === undefined) return;
-    const look = held ? null : DOUGH_LOOKS[h.stage];
+    v.lock.visible = h.locked; // 잠긴 구멍은 뚜껑으로 어둡게 덮고 테두리·알은 그리지 않는다.
+    const look = held || h.locked ? null : DOUGH_LOOKS[h.stage];
     v.dough.visible = look !== null;
     v.mark.visible = false;
     if (look !== null) {
@@ -154,14 +172,14 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
         v.mark.position.y = v.dough.position.y + sy + 0.03;
       }
     }
-    const filled = !held && showsFilling(h);
+    const filled = !held && !h.locked && showsFilling(h);
     v.fill.visible = filled;
     if (filled && h.filling !== null) {
       setGeometry(v.fill, FILLING_GEO[h.filling]);
-      v.fill.position.y = 0.09;
+      v.fill.position.y = 0.09 * TAKO_S;
     }
     const rim = rimOf(h);
-    v.rim.visible = !held && rimVisible(h, nowMs);
+    v.rim.visible = !held && !h.locked && rimVisible(h, nowMs);
     if (rim !== null) v.rimMat.color.setRGB(...RIM_COLOR[rim]);
   }
 
@@ -179,6 +197,9 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
     });
   }
 
+  const katsuoY = katsuo.map((g) => g.position.y);
+  let customerIds: string[] = [];
+  const pending: { kind: EffectKind; id: string; opts: EffectOptions | undefined }[] = [];
   let drawn = false;
   function draw(): void {
     renderer.render(scene, camera);
@@ -212,7 +233,23 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
           if (c !== undefined) faceMat(m).color.setRGB(...FACE_TINT[c.face]);
         }
       });
+      // 후네가 찼을 때(서빙 대기 1초) 가쓰오부시를 얹고 살랑이게 한다.
+      katsuo.forEach((g, i) => {
+        g.visible = state.funeServing;
+        g.rotation.set(Math.sin(nowMs / 170 + i) * 0.1, g.rotation.y, Math.sin(nowMs / 140 + i * 1.7) * 0.12);
+        g.position.y = katsuoY[i]! + Math.sin(nowMs / 120 + i * 1.3) * 0.02;
+      });
+      customerIds = state.customers.map((c) => c.id);
+      for (const q of pending.splice(0)) {
+        const slot = customerIds.indexOf(q.id);
+        if (slot >= 0) effects.trigger(q.kind, slot, nowMs, q.opts);
+      }
+      const [dx, dy] = effects.update(nowMs);
+      camera.position.set(CAMERA.pos[0] + dx, CAMERA.pos[1] + dy, CAMERA.pos[2]);
       draw();
+    },
+    effect(kind, customerId, opts) {
+      pending.push({ kind, id: customerId, opts });
     },
     dispose() {
       ro.disconnect();

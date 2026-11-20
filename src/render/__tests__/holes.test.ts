@@ -14,6 +14,7 @@ const h = (stage: HoleStage, o: Partial<HoleStateV2> = {}): HoleStateV2 => ({
   rollHits: [null, null],
   rollZone: null,
   warn: false,
+  locked: false,
   ...o,
 });
 const lum = (t: readonly number[]) => t[0]! + t[1]! + t[2]!;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HoleStage, IngredientId, Personality } from '../../contracts';
+import { HOLE_COUNT, HOLE_SPACING, TAKO_S } from '../layout';
 import { BALL_UNIT, DISC_UNIT, DOUGH_LOOKS, FILLING_GEO, FUNE_SLOTS, HOLE_POS, MODEL_OF, bakeTint } from '../models';
 import { MAX_TEX_SIZE, createTextures } from '../textures';
 
@@ -34,8 +35,18 @@ describe('models', () => {
     };
     expect(size('rolled')).toBeLessThan(size('done'));
   });
-  it('철판은 6구, 속재료 모델은 6종, 성격 4종 모두 손님 모델이 있다', () => {
-    expect(HOLE_POS).toHaveLength(6);
+  it('철판은 4×4 16구이고 행 우선·0행이 위쪽(z 작은 쪽)이다', () => {
+    expect(HOLE_COUNT).toBe(16);
+    expect(HOLE_POS).toHaveLength(16);
+    expect(HOLE_POS[0]![0]).toBeLessThan(HOLE_POS[3]![0]);
+    expect(HOLE_POS[0]![2]).toBeLessThan(HOLE_POS[4]![2]);
+    expect(HOLE_POS[4]![2]).toBeCloseTo(HOLE_POS[7]![2], 6);
+  });
+  it('알은 이웃 구멍과 겹치지 않을 만큼 작다', () => {
+    for (const look of Object.values(DOUGH_LOOKS)) if (look !== null) expect(look.r * 2).toBeLessThan(HOLE_SPACING);
+    expect(TAKO_S).toBeLessThan(1);
+  });
+  it('속재료 모델은 6종, 성격 4종 모두 손님 모델이 있다', () => {
     expect(Object.keys(FILLING_GEO).sort()).toEqual([...INGREDIENTS].sort());
     for (const p of PERSONALITIES) expect(MODEL_OF[p]).toBeDefined();
   });

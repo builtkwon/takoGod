@@ -48,19 +48,19 @@ describe('pick/anchor 왕복', () => {
     const uv = anchorUv(proj, t, 6)!;
     expect(pickUv(proj, uv.u, uv.v, 4)).toBeNull();
     expect(anchorUv(proj, t, 4)).toBeNull();
-    expect(worldAnchor({ kind: 'hole', index: 6 }, 6)).toBeNull();
+    expect(worldAnchor({ kind: 'hole', index: 16 }, 6)).toBeNull();
   });
   it('트레이 slot 순서는 왼쪽부터이고 구멍 인덱스는 행 우선이다', () => {
     const x = (t: PickTarget) => anchorUv(proj, t, 6)!.u;
     expect(x({ kind: 'tray', slot: 0 })).toBeLessThan(x({ kind: 'tray', slot: 5 }));
-    expect(x({ kind: 'hole', index: 0 })).toBeLessThan(x({ kind: 'hole', index: 2 }));
-    expect(anchorUv(proj, { kind: 'hole', index: 0 }, 6)!.v).toBeLessThan(anchorUv(proj, { kind: 'hole', index: 3 }, 6)!.v);
+    expect(x({ kind: 'hole', index: 0 })).toBeLessThan(x({ kind: 'hole', index: 3 }));
+    expect(anchorUv(proj, { kind: 'hole', index: 0 }, 6)!.v).toBeLessThan(anchorUv(proj, { kind: 'hole', index: 12 }, 6)!.v);
   });
-  it('구멍 중심에서 반지름 0.4 안쪽을 눌러도 같은 구멍이다(8방향)', () => {
+  it('구멍 중심에서 반지름 0.3 안쪽을 눌러도 같은 구멍이다(8방향)', () => {
     const [px, , pz] = HOLE_POS[4]!;
     for (let k = 0; k < 8; k++) {
       const a = (k * Math.PI) / 4;
-      const uv = proj.project([px + Math.cos(a) * 0.4, 0.5, pz + Math.sin(a) * 0.4])!;
+      const uv = proj.project([px + Math.cos(a) * 0.3, 0.5, pz + Math.sin(a) * 0.3])!;
       expect(pickUv(proj, uv.u, uv.v, 6)).toEqual({ kind: 'hole', index: 4 });
     }
   });
