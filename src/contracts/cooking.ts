@@ -38,7 +38,7 @@ export type Material =
   | { readonly kind: 'batter' }
   | { readonly kind: 'filling'; readonly ingredient: IngredientId };
 
-/** 타이밍 바 영역(0..1). 위치는 구멍마다 무작위(GDD §굽기: 반죽 놓을 때 W1, 굴리기 1 때 W2를 뽑는다). 폭은 페이즈별 W1·W2. */
+/** 타이밍 바 영역(0..1). 판 공용 영역이고 위치는 무작위다(GDD §굽기: 페이즈 시작 시 W1·W2, 굴리기 1마다 W1, 굴리기 2마다 W2를 다시 뽑는다). 폭은 페이즈별 W1·W2. */
 export interface RollZone {
   readonly from: number;
   readonly to: number;
@@ -61,7 +61,7 @@ export interface HoleStateV2 {
   readonly noFilling: boolean;
   /** 굴리기 1·2 적중 기록. null은 아직 굴리지 않음. 둘 다 true여야 굴리기 완벽이다. */
   readonly rollHits: readonly [boolean | null, boolean | null];
-  /** 이 구멍의 다음 굴리기에 적용되는 영역(W1은 'cooking'·'cooked'(속재료 전 굴리기, 본게임)·'filled', W2는 'rolled'). 굴릴 수 없는 단계는 null. 바에 표시할 영역은 GameStateV2.barZone이다. */
+  /** 이 구멍을 지금 누르면 적용되는 공용 영역(W1 또는 W2). 굴릴 수 없는 단계는 null. */
   readonly rollZone: RollZone | null;
   /** core가 GDD §굽기 깜빡임 조건으로 정한다. render는 테두리 깜빡임에만 쓴다. */
   readonly warn: boolean;
