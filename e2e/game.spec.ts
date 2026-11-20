@@ -66,14 +66,17 @@ async function drag(page: Page, from: Pt, to: Pt): Promise<void> {
   await page.mouse.up();
 }
 
-/** 6구 모두에 같은 재료를 끌어 놓는다(튜토리얼은 단계별로 6구에 같은 조작을 하게 유도한다). */
+/** 튜토리얼에서 열린 6구(GDD §튜토리얼, 4×4의 1,2,5,6,9,10번). 나머지 10구는 잠겨 조작을 받지 않는다. */
+const OPEN = [1, 2, 5, 6, 9, 10];
+
+/** 열린 6구 모두에 같은 재료를 끌어 놓는다(튜토리얼은 단계별로 6구에 같은 조작을 하게 유도한다). */
 async function dragAll(page: Page, picker: ScenePicker, from: () => Promise<Pt>): Promise<void> {
-  for (let i = 0; i < 6; i++) await drag(page, await from(), at(picker, { kind: 'hole', index: i }));
+  for (const i of OPEN) await drag(page, await from(), at(picker, { kind: 'hole', index: i }));
 }
 
 /** 6구를 한 번씩 탭한다(굴리기). */
 async function tapAll(page: Page, picker: ScenePicker): Promise<void> {
-  for (let i = 0; i < 6; i++) {
+  for (const i of OPEN) {
     const p = at(picker, { kind: 'hole', index: i });
     await page.mouse.click(p.x, p.y);
   }
@@ -82,7 +85,7 @@ async function tapAll(page: Page, picker: ScenePicker): Promise<void> {
 /** 6구의 완성품을 하나씩 들어 후네에 놓는다. */
 async function funeAll(page: Page, picker: ScenePicker): Promise<void> {
   const fune = at(picker, { kind: 'fune' });
-  for (let i = 0; i < 6; i++) {
+  for (const i of OPEN) {
     const p = at(picker, { kind: 'hole', index: i });
     await page.mouse.move(p.x, p.y);
     await page.mouse.down();
@@ -103,6 +106,7 @@ async function playTutorial(page: Page): Promise<void> {
   await tapAll(page, picker); // 굴리기 1(튜토리얼은 바 전 구간 성공)
   await tapAll(page, picker); // 굴리기 2
   await funeAll(page, picker);
+  await page.clock.runFor(1200); // 후네가 차면 1초 기다린 뒤 서빙한다(GDD §굽기). 시계가 멈춰 있어 이 호출로만 흐른다.
 }
 
 test('부팅: 콘솔 에러 없이 캔버스와 타이틀이 뜬다', async ({ page }) => {

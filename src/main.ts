@@ -24,6 +24,9 @@ const getState = (): GameStateV2 => (game as GameV2).state; // 첫 호출은 아
 const renderer = createRenderer(stage);
 
 // 생성자가 즉시 이벤트를 내므로 UI 구독을 먼저 건다. UI는 render의 picker를 받는다.
+// 이펙트 구독도 GameV2 생성 전에 건다(생성자가 이벤트를 낼 수 있다).
+bus.on('dialogue/resolved', (e) => renderer.effect(e.outcome === 'good' ? 'firework' : 'confused', e.customerId));
+bus.on('customer/fumed', (e) => renderer.effect('fumed', e.customerId));
 const ui = mountUiV2(app, bus, getState, renderer.picker);
 game = new GameV2({
   bus,
