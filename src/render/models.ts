@@ -17,7 +17,7 @@ import type { HoleStage, IngredientId, Personality } from '../contracts';
 import { addOutline, toon } from './toon';
 import type { Textures } from './textures';
 
-import { FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
+import { CUSTOMER_POS, FUNE_S, FUNE_Z, HOLE_COUNT, HOLE_POS, PLATE_D, PLATE_TOP, PLATE_W, TAKO_S, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
 import type { V3 } from './layout';
 
 /** 변환 후 플랫 노멀 + 단색 버텍스 컬러를 입힌 파트. */
@@ -43,15 +43,11 @@ export function merge(parts: BufferGeometry[]): BufferGeometry {
 
 // --- 철판 레이아웃 -----------------------------------------------------------
 
-export { FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z };
-export const CUSTOMER_POS: readonly V3[] = [
-  [-1.5, 0, -2.3],
-  [1.5, 0, -2.3],
-];
+export { CUSTOMER_POS, FUNE_Z, HOLE_COUNT, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z };
 
-/** 카운터는 뒤쪽 끝(z=-2.5)을 고정하고 후네 앞까지 늘렸다. */
-const COUNTER_BACK = -2.5;
-const COUNTER_FRONT = 4.6;
+/** 카운터는 손님 뒤쪽 끝(z=-3.1)부터 후네 앞까지 늘렸다. */
+const COUNTER_BACK = -3.1;
+const COUNTER_FRONT = 5.1;
 const COUNTER_DEPTH = COUNTER_FRONT - COUNTER_BACK;
 const COUNTER_Z = (COUNTER_FRONT + COUNTER_BACK) / 2;
 
@@ -63,29 +59,29 @@ export function buildStatic(tex: Textures, outline: ShaderMaterial): Group {
     g.add(line ? addOutline(m, outline) : m);
   };
   add(merge([part(new BoxGeometry(6, 0.2, COUNTER_DEPTH), 0xffffff, [0, -0.1, COUNTER_Z])]), tex.wood);
-  add(merge([part(new BoxGeometry(3.7, PLATE_TOP, 2.5), 0x6c7090, [0, PLATE_TOP / 2, 0])]), null, true);
+  add(merge([part(new BoxGeometry(PLATE_W, PLATE_TOP, PLATE_D), 0x6c7090, [0, PLATE_TOP / 2, 0])]), null, true);
   // 구멍 테두리·바닥은 철판 윗면 위 얇은 원판이라 높이를 살짝 올려 겹친다.
-  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.52, 0.52, 0.012, 12), 0x3c3f58, [x, y + 0.004, z]))), null);
-  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.45, 0.45, 0.012, 12), 0x16131e, [x, y + 0.01, z]))), null);
+  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.52 * TAKO_S, 0.52 * TAKO_S, 0.012, 12), 0x3c3f58, [x, y + 0.004, z]))), null);
+  add(merge(HOLE_POS.map(([x, y, z]) => part(new CylinderGeometry(0.45 * TAKO_S, 0.45 * TAKO_S, 0.012, 12), 0x16131e, [x, y + 0.01, z]))), null);
   add(merge([part(new BoxGeometry(3.5, 0.1, 0.55), 0xffffff, [0, TRAY_TOP / 2, TRAY_Z])]), tex.wood, true);
-  add(merge([part(new BoxGeometry(6, 3, 0.2), 0xff5a4e, [0, 1.5, -3.2])]), tex.fabric);
+  add(merge([part(new BoxGeometry(6, 3, 0.2), 0xff5a4e, [0, 1.5, -3.8])]), tex.fabric);
   return g;
 }
 
 // --- 후네(나룻배 모양 용기) ---------------------------------------------------
 
 const FUNE_FLOOR = 0.06;
-/** 후네에 담기는 타코야끼 반지름. 철판 위 완성품(0.42)보다 작게 줄여 6개가 2줄로 들어간다. */
-export const FUNE_BALL_R = 0.3;
-/** 후네 슬롯 6개: 2줄(z) x 3개(x), 인덱스 = 행 우선. 바닥(y)은 포함하지 않는다. */
-export const FUNE_SLOTS: readonly V3[] = Array.from({ length: 6 }, (_, i): V3 => [(i % 3 - 1) * 0.72, FUNE_FLOOR, FUNE_Z + (Math.floor(i / 3) - 0.5) * 0.62]);
+/** 후네에 담기는 타코야끼 반지름(후네 배율 반영). 6개가 2줄로 들어간다. */
+export const FUNE_BALL_R = 0.3 * FUNE_S;
+/** 후네 슬롯 6개(월드 좌표): 2줄(z) x 3개(x), 인덱스 = 행 우선. y는 후네 바닥 위. */
+export const FUNE_SLOTS: readonly V3[] = Array.from({ length: 6 }, (_, i): V3 => [((i % 3) - 1) * 0.72 * FUNE_S, FUNE_FLOOR * FUNE_S, FUNE_Z + (Math.floor(i / 3) - 0.5) * 0.62 * FUNE_S]);
 
-/** 6각형 바닥(양 끝이 뾰족한 배 모양) + 변마다 바깥으로 기울어진 옆판 6장. 나무 텍스처 1장. */
+/** 6각형 바닥(양 끝이 뾰족한 배 모양) + 변마다 바깥으로 기울어진 옆판 6장. 나무 텍스처 1장. 원점 기준으로 만들고 위치·배율은 그룹에 준다. */
 export function buildFune(tex: Textures, outline: ShaderMaterial): Group {
   const rx = 1.55;
   const rz = 0.75;
   const corner = (k: number): [number, number] => [rx * Math.cos((k * Math.PI) / 3), rz * Math.sin((k * Math.PI) / 3)];
-  const parts = [part(new CylinderGeometry(1, 1, FUNE_FLOOR, 6), 0xa8743c, [0, FUNE_FLOOR / 2, FUNE_Z], [rz, 1, rx], [0, Math.PI / 2, 0])];
+  const parts = [part(new CylinderGeometry(1, 1, FUNE_FLOOR, 6), 0xa8743c, [0, FUNE_FLOOR / 2, 0], [rz, 1, rx], [0, Math.PI / 2, 0])];
   for (let k = 0; k < 6; k++) {
     const [ax, az] = corner(k);
     const [bx, bz] = corner(k + 1);
@@ -94,11 +90,35 @@ export function buildFune(tex: Textures, outline: ShaderMaterial): Group {
     const yaw = -Math.atan2(dz, dx);
     // 박스 로컬 +z가 월드에서 향하는 쪽(-dz, dx)이 바깥(중심→변 중점)이 되게 기울기 부호를 정한다.
     const lean = -dz * mx + dx * mz >= 0 ? 0.4 : -0.4;
-    parts.push(part(new BoxGeometry(Math.hypot(dx, dz), 0.3, 0.06), k % 3 === 0 ? 0xd9a866 : 0xc8924f, [mx * 1.03, 0.16, FUNE_Z + mz * 1.03], [1, 1, 1], [lean, yaw, 0]));
+    parts.push(part(new BoxGeometry(Math.hypot(dx, dz), 0.3, 0.06), k % 3 === 0 ? 0xd9a866 : 0xc8924f, [mx * 1.03, 0.16, mz * 1.03], [1, 1, 1], [lean, yaw, 0]));
   }
   const g = new Group();
   g.add(addOutline(new Mesh(merge(parts), toon(tex.fune)), outline));
+  g.position.set(0, 0, FUNE_Z);
+  g.scale.setScalar(FUNE_S);
   return g;
+}
+
+/** 가쓰오부시: 후네 6알 위에 얹는 얇은 조각 묶음 6개(슬롯마다 1개). 연한 갈색·분홍빛. 흔들림은 renderer가 시간으로 준다. */
+export function buildKatsuobushi(outline: ShaderMaterial): Group[] {
+  const colors = [0xe9bf94, 0xf2b4a6, 0xdca67a, 0xf6cdb8];
+  return FUNE_SLOTS.map((p, i) => {
+    const flakes = [0, 1, 2, 3].map((k) =>
+      part(
+        new BoxGeometry(0.2, 0.012, 0.11),
+        colors[(i + k) % colors.length]!,
+        [Math.cos(k * 1.9 + i) * 0.1, k * 0.05, Math.sin(k * 1.9 + i) * 0.1],
+        [1, 1, 1],
+        [Math.sin(k + i) * 0.5, k * 1.1 + i, Math.cos(k * 2 + i) * 0.5],
+      ),
+    );
+    const g = new Group();
+    g.add(addOutline(new Mesh(merge(flakes), toon()), outline));
+    g.scale.setScalar(FUNE_S * 1.3);
+    g.position.set(p[0], p[1] + FUNE_BALL_R * 1.55, p[2]);
+    g.visible = false;
+    return g;
+  });
 }
 
 // --- 볼(굽기 단계) ----------------------------------------------------------
@@ -119,22 +139,24 @@ export interface DoughLook {
 /** 구멍 단계별 반죽·볼 모양. 빈칸은 null. */
 export const DOUGH_LOOKS: Readonly<Record<HoleStage, DoughLook | null>> = {
   empty: null,
-  greased: { kind: 'disc', r: 0.32, h: 0.02, tex: 'butter' }, // 마가린만 바름
-  cooking: { kind: 'disc', r: 0.42, h: 0.06, tex: 'batter' }, // 반죽 부음
-  cooked: { kind: 'disc', r: 0.42, h: 0.07, tex: 'batter' }, // 익힘 완료, 속재료 대기
-  filled: { kind: 'disc', r: 0.42, h: 0.1, tex: 'batter' }, // 속재료 들어감
-  rolled: { kind: 'ball', r: 0.32, h: 0.55, tex: 'crust' }, // 굴림 1
-  done: { kind: 'ball', r: 0.42, h: 1, tex: 'sauce' },
-  dark: { kind: 'ball', r: 0.42, h: 1, tex: 'sauce' }, // 색조만 done과 다르다(holes.ts)
-  burnt: { kind: 'ball', r: 0.42, h: 1, tex: 'sauce' },
+  greased: { kind: 'disc', r: 0.32 * TAKO_S, h: 0.02, tex: 'butter' }, // 마가린만 바름
+  cooking: { kind: 'disc', r: 0.42 * TAKO_S, h: 0.06, tex: 'batter' }, // 반죽 부음
+  cooked: { kind: 'disc', r: 0.42 * TAKO_S, h: 0.07, tex: 'batter' }, // 익힘 완료, 속재료 대기
+  filled: { kind: 'disc', r: 0.42 * TAKO_S, h: 0.1, tex: 'batter' }, // 속재료 들어감
+  rolled: { kind: 'ball', r: 0.32 * TAKO_S, h: 0.55, tex: 'crust' }, // 굴림 1
+  done: { kind: 'ball', r: 0.42 * TAKO_S, h: 1, tex: 'sauce' },
+  dark: { kind: 'ball', r: 0.42 * TAKO_S, h: 1, tex: 'sauce' }, // 색조만 done과 다르다(holes.ts)
+  burnt: { kind: 'ball', r: 0.42 * TAKO_S, h: 1, tex: 'sauce' },
 };
 
 /** 구멍 테두리 링(철판 위 수평). 색은 머티리얼 tint로 준다. */
-export const RIM_UNIT = part(new RingGeometry(0.455, 0.54, 12), 0xffffff, [0, 0, 0], [1, 1, 1], [-Math.PI / 2, 0, 0]);
+export const RIM_UNIT = part(new RingGeometry(0.455 * TAKO_S, 0.54 * TAKO_S, 12), 0xffffff, [0, 0, 0], [1, 1, 1], [-Math.PI / 2, 0, 0]);
+/** 잠긴 구멍(튜토리얼) 뚜껑: 구멍 위를 덮는 어두운 원판. */
+export const LOCK_UNIT = part(new CylinderGeometry(0.56 * TAKO_S, 0.56 * TAKO_S, 0.04, 14), 0x23253a, [0, 0.02, 0]);
 /** "속 없음" 표시: 얇은 X(바닥이 y=0). */
 export const NOFILL_MARK = merge([
-  part(new BoxGeometry(0.34, 0.03, 0.07), 0x8a8ae0, [0, 0, 0], [1, 1, 1], [0, Math.PI / 4, 0]),
-  part(new BoxGeometry(0.34, 0.03, 0.07), 0x8a8ae0, [0, 0, 0], [1, 1, 1], [0, -Math.PI / 4, 0]),
+  part(new BoxGeometry(0.34 * TAKO_S, 0.03, 0.07), 0x8a8ae0, [0, 0, 0], [1, 1, 1], [0, Math.PI / 4, 0]),
+  part(new BoxGeometry(0.34 * TAKO_S, 0.03, 0.07), 0x8a8ae0, [0, 0, 0], [1, 1, 1], [0, -Math.PI / 4, 0]),
 ]);
 
 export const DISC_UNIT = part(new CylinderGeometry(1, 1, 1, 10), 0xffffff);
