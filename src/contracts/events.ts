@@ -66,6 +66,19 @@ export interface GameEvents {
    * 다시해줘를 부르는 접시에도 낸다.
    */
   'plate/scored': { readonly customerId: string; readonly delta: number; readonly stars: number };
+  /**
+   * 접시 가게 점수 확정(GDD §가게 점수). points는 이 접시가 더한 점수, hits는 굴리기 적중 수(0~12), combo는 이 접시 반영 뒤 연속 완벽 수, multiplier는 적용한 배수(1.0~2.0).
+   * 손님 없는 페이즈(P1)의 접시는 customerId가 null이다. 튜토리얼 접시와 다시해줘를 부른 첫 접시에는 내지 않는다.
+   */
+  'score/plate': {
+    readonly customerId: string | null;
+    readonly points: number;
+    readonly hits: number;
+    readonly combo: number;
+    readonly multiplier: number;
+  };
+  /** 세션 종료 때 최고 가게 점수를 갱신했다(한 번). previous는 이전 기록이고 없으면 null이다(GDD §가게 점수, ADR 0004). */
+  'score/new-best': { readonly score: number; readonly previous: number | null };
   /** 손님이 다시해줘를 요청했다. 이 접시에는 리뷰를 발급하지 않는다. */
   'customer/redo-requested': { readonly customerId: string };
   /** 손님 인내가 100%에 도달했다(한 번). render는 화면(카메라) 흔들림과 그 손님 머리 위 분노 표시, ui는 분노 대사 말풍선을 띄운다(GDD §손님 대화). */

@@ -17,3 +17,13 @@ export interface SessionStore {
   load(): SessionSnapshot | null;
   save(s: SessionSnapshot): void;
 }
+
+/**
+ * 최고 가게 점수 저장소 포트(localStorage `takoyaki:best`, 값 `{version: 1, best: number}`). 원본: docs/GDD.md §제품·§가게 점수, docs/adr/0004-best-shop-score-storage.md.
+ * 브라우저 구현은 main이 조립한다.
+ */
+export interface BestScoreStore {
+  /** 값이 없거나 파싱 실패·version 불일치·best가 유한한 0 이상의 수가 아니면 null. */
+  load(): number | null;
+  save(best: number): void;
+}
