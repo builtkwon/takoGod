@@ -31,6 +31,12 @@ export interface GameStateV2 {
   readonly reviews: readonly ReviewResult[];
   /** reviews 별점의 산술평균. core가 계산한다. 리뷰가 없으면 null. */
   readonly sessionAverage: number | null;
+  /** 현재 판 가게 점수(별점과 별개, 상한 없음, 튜토리얼 접시는 0). 접시마다 더한다(GDD §가게 점수). */
+  readonly shopScore: number;
+  /** 판 시작 때 저장소에서 읽은 최고 가게 점수. 기록이 없으면 null. 진행 중에는 바뀌지 않는다(GDD §제품). */
+  readonly bestShopScore: number | null;
+  /** 현재 연속 완벽 접시 수(0이면 연속 없음). 완벽이 아닌 접시가 나오면 0으로 돌아간다(GDD §가게 점수). */
+  readonly combo: number;
   readonly tutorialCompleted: boolean;
   /** 튜토리얼 중 현재 유도 단계. 튜토리얼이 아니면 null. */
   readonly tutorialStage: TutorialStage | null;
