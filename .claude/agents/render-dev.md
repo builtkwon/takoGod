@@ -1,8 +1,8 @@
 ---
 name: render-dev
-description: src/render의 Three.js PS1 렌더링 어댑터를 GDD §제품과 ADR 0001대로 구현한다.
+description: src/render의 Three.js 툰 셰이딩 렌더링 어댑터를 GDD §제품과 ADR 0003대로 구현한다.
 tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
-skills: [verify-and-report, ps1-visual-check, contract-proposal]
+skills: [verify-and-report, visual-check, contract-proposal]
 allowed_tools: [test.unit, build, lint.boundary, render.snapshot]
 owns: [src/render/**]
 ---
@@ -23,7 +23,7 @@ owns: [src/render/**]
 
 | 조건 | 스킬 |
 | --- | --- |
-| 모델·텍스처·셰이더·카메라 등 시각 변경 | ps1-visual-check |
+| 모델·텍스처·셰이더·카메라 등 시각 변경 | visual-check |
 | 필요한 contracts 타입·이벤트가 없다 | contract-proposal |
 | 모든 구현 작업의 마지막 | verify-and-report |
 
