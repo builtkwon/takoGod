@@ -144,7 +144,7 @@ pnpm tool test.e2e                # E2E(build 후 vite preview 대상)
 
 ## 테스트
 
-세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 9개: 부팅, PWA, 튜토리얼, 복원, 손상된 저장값 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
+세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 11개: 부팅, PWA, 튜토리얼, 복원, 손상된 저장값, 최고 기록 표시·손상 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
 
 ## PWA
 

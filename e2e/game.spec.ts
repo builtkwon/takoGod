@@ -4,6 +4,7 @@ import type { PickTarget, ScenePicker } from '../src/contracts';
 import { createScenePicker } from '../src/render/pick';
 
 const KEY = 'takoyaki:session';
+const BEST_KEY = 'takoyaki:best';
 
 /** 콘솔 에러와 페이지 예외를 모은다. */
 function collectErrors(page: Page): string[] {
@@ -209,8 +210,32 @@ test('튜토리얼 한 판을 끝내면 5★ 리뷰가 저장된다', async ({ p
   await page.reload();
   await page.clock.resume(); // 새로고침 뒤에도 시계가 멈춰 있어 rAF(HUD 갱신)가 돌도록 다시 흐르게 한다.
   await page.getByRole('button', { name: '시작' }).click();
-  await expect(page.locator('.ui-hud2')).toContainText('1단계');
+  await expect(page.locator('.ui-hud-best')).toHaveText('최고 -');
+  await expect(page.locator('.ui-hud-new')).toBeHidden();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  await expect(page.locator('.ui-hud-score')).toHaveText('0');
   expect(errors).toEqual([]);
+});
+
+/** 최고 기록 값을 넣고(키가 비어 있으면 한 번 방문해 origin을 연다) 새로고침해 시작 화면까지 간다. */
+async function startWithBest(page: Page, raw: string): Promise<void> {
+  await page.goto('/');
+  await page.evaluate(([k, v]) => localStorage.setItem(k as string, v as string), [BEST_KEY, raw]);
+  await page.evaluate((k) => sessionStorage.setItem(k, '{"version":1,"tutorialCompleted":true,"finished":false,"reviews":[]}'), KEY);
+  await page.reload();
+  await page.getByRole('button', { name: '시작' }).click();
+}
+
+test('최고 기록: 저장된 값이 HUD 왼쪽에 "최고 1234"로 보인다', async ({ page }) => {
+  await startWithBest(page, '{"version":1,"best":1234}');
+  await expect(page.locator('.ui-hud-left')).toContainText('최고 1234');
+  expect(await page.evaluate((k) => localStorage.getItem(k), BEST_KEY)).toBe('{"version":1,"best":1234}');
+});
+
+test('최고 기록: 손상 값이면 "최고 -"이고 키가 지워진다', async ({ page }) => {
+  await startWithBest(page, '{"version":1,"best":-5}');
+  await expect(page.locator('.ui-hud-left')).toContainText('최고 -');
+  expect(await page.evaluate((k) => localStorage.getItem(k), BEST_KEY)).toBeNull();
 });
 
 test('새로고침 복원: finished 저장값이면 결과 화면을 다시 보여준다', async ({ page }) => {

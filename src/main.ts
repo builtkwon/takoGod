@@ -1,4 +1,5 @@
 // bootstrap: 루프·조립·PWA 등록. 게임 규칙은 core에 있다. 경계: docs/rules/architecture/modules/contracts.md#bootstrap
+import { createBrowserBestStore } from './best-store';
 import type { GameStateV2 } from './contracts';
 import { GameV2, createEventBus, createRng } from './core';
 import { dialogues, reviewComments, tasteLines, tutorialReviewComment } from './data';
@@ -38,6 +39,7 @@ game = new GameV2({
   },
   rng: createRng(Date.now()),
   store: createBrowserSessionStore(),
+  bestStore: createBrowserBestStore(),
 });
 
 let resultShown = false;
