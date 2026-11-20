@@ -49,7 +49,9 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   };
   const dialogues = createDialogues({ layer, bus, disposers, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
-  layer.append(bar.root, hud.root, buckets.margarine, buckets.batter);
+  const top = el('div', 'ui-top');
+  top.append(hud.root, bar.root); // 타이밍 바는 점수판 바로 아래
+  layer.append(top, buckets.margarine, buckets.batter);
   root.append(style, layer);
   const prevTouch = root.style.touchAction;
   root.style.touchAction = 'none'; // 끌기 중 스크롤·확대 방지

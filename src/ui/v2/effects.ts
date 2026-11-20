@@ -60,7 +60,7 @@ export function createEffects(layer: HTMLElement): Effects {
     },
     mark(text, p, tone) {
       const e = el('div', `ui-mark ui-mark-${tone}`, text);
-      animate(e, [{ transform: `${at(p)} translateY(0)`, opacity: 1 }, { transform: `${at(p)} translateY(-36px)`, opacity: 0 }], MARK_MS);
+      animate(e, [{ transform: `${at(p)} translateY(0)`, opacity: 1 }, { transform: `${at(p)} translateY(-56px)`, opacity: 0 }], MARK_MS);
     },
   };
 }

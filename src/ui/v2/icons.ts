@@ -35,7 +35,7 @@ const OTHER: Readonly<Record<Exclude<GhostKind, 'filling'>, readonly Px[]>> = {
 };
 
 export const LOOK_ARIA: Readonly<Record<Exclude<GhostKind, 'filling'>, string>> = {
-  margarine: '마가린', batter: '반죽', done: '완성품', dark: '어두운 완성품', burnt: '탄 완성품',
+  margarine: '버터', batter: '반죽', done: '완성품', dark: '어두운 완성품', burnt: '탄 완성품',
 };
 
 export function iconPixels(look: GhostLook): readonly Px[] {

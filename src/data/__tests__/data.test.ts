@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Personality, TasteKind, TutorialStage } from '../../contracts';
-import { dialogues, fumedLines, reviewComments, tasteLines, tutorialReviewComment, tutorialStepsV2 } from '../index';
+import { dialogues, fumedLines, reviewComments, tasteLines, tutorialArrowHints, tutorialReviewComment, tutorialStepsV2 } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 
@@ -55,6 +55,11 @@ describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
   it('튜토리얼 안내문구는 7단계 각각 하나', () => {
     expect(tutorialStepsV2.map((s) => s.stage)).toEqual(STAGES);
     for (const s of tutorialStepsV2) expect(s.message.trim()).not.toBe('');
+  });
+
+  it('튜토리얼 화살표 동작 문구와 표기: 버터(마가린 표기 없음)', () => {
+    expect(tutorialArrowHints).toEqual({ margarine: '끌어서 바르기', batter: '끌어서 붓기', filling: '끌어서 넣기' });
+    for (const s of tutorialStepsV2) expect(s.message).not.toContain('마가린');
   });
 
   it('금지어가 없다(dialogue-banned-words.txt 기준)', () => {

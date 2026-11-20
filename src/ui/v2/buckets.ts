@@ -26,7 +26,7 @@ export function createBuckets(controller: Controller): Buckets {
     });
     return e;
   };
-  const margarine = make('margarine', '마가린');
+  const margarine = make('margarine', '버터');
   const batter = make('batter', '반죽');
   return { margarine, batter, origin: (k) => center(k === 'margarine' ? margarine : batter) };
 }

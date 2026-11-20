@@ -44,7 +44,7 @@ export interface Controller {
 export const DRAG_THRESHOLD = 10;
 
 type Active =
-  | { readonly type: 'material'; readonly id: number; readonly material: Material; readonly origin: Pt | (() => Pt | null); readonly look: GhostLook; readonly painted: Set<number>; accepted: number }
+  | { readonly type: 'material'; readonly id: number; readonly material: Material; readonly origin: Pt | (() => Pt | null); readonly look: GhostLook; readonly painted: Set<number>; accepted: number; prev: Pt }
   | { type: 'hole'; readonly id: number; readonly hole: number; readonly start: Pt; moved: boolean; rolled: boolean; picked: boolean; pos: Pt; look: GhostLook | null };
 
 /** 마지막으로 core에 보낸 조작. 거부·떨어짐 이벤트가 왔을 때 어디서 어디로 그릴지 정한다. */
@@ -53,6 +53,8 @@ type Last =
   | { readonly type: 'drop'; readonly hole: number; readonly look: GhostLook; readonly at: Pt };
 
 const HELD: ReadonlySet<string> = new Set(['done', 'dark', 'burnt']);
+/** 칠하기 검사 간격(CSS px). 화면의 구멍 지름보다 충분히 짧다. */
+const PAINT_STEP = 10;
 /** 끌어 칠하는 재료가 들어가는 구멍 단계. */
 const PAINT_STAGE = { margarine: 'empty', batter: 'greased' } as const;
 const dist = (a: Pt, b: Pt): number => Math.hypot(a.x - b.x, a.y - b.y);
@@ -95,7 +97,15 @@ export function createController(deps: {
   };
 
   /** 마가린·반죽: 손가락이 지나간 구멍마다 한 번씩 보낸다. 단계가 안 맞는 구멍은 조용히 건너뛴다. */
-  const paint = (a: Extract<Active, { type: 'material' }>, at: Pt): void => {
+  const paint = (a: Extract<Active, { type: 'material' }>, to: Pt): void => {
+    if (a.material.kind !== 'margarine' && a.material.kind !== 'batter') return;
+    // pointermove 사이가 멀면 사이 구멍을 건너뛴다: 이전 지점에서 현재 지점까지 구멍 지름보다 짧은 간격으로 검사한다.
+    const from = a.prev;
+    a.prev = to;
+    const n = Math.max(1, Math.ceil(dist(from, to) / PAINT_STEP));
+    for (let i = 1; i <= n; i++) paintAt(a, { x: from.x + ((to.x - from.x) * i) / n, y: from.y + ((to.y - from.y) * i) / n });
+  };
+  const paintAt = (a: Extract<Active, { type: 'material' }>, at: Pt): void => {
     if (a.material.kind !== 'margarine' && a.material.kind !== 'batter') return;
     const t = picker.pick(at.x, at.y);
     if (t?.kind !== 'hole' || a.painted.has(t.index)) return;
@@ -114,7 +124,7 @@ export function createController(deps: {
       last = null;
       if (bucket) {
         const look = lookOf(bucket.material);
-        active = { type: 'material', id, material: bucket.material, origin: bucket.origin, look, painted: new Set(), accepted: 0 };
+        active = { type: 'material', id, material: bucket.material, origin: bucket.origin, look, painted: new Set(), accepted: 0, prev: at };
         view.ghostStart(look, at);
         return;
       }
@@ -129,7 +139,7 @@ export function createController(deps: {
           return slot < 0 ? null : picker.anchor({ kind: 'tray', slot });
         };
         const look = lookOf(material);
-        active = { type: 'material', id, material, origin, look, painted: new Set(), accepted: 0 };
+        active = { type: 'material', id, material, origin, look, painted: new Set(), accepted: 0, prev: at };
         view.ghostStart(look, at);
       } else if (t?.kind === 'hole') {
         if (getState().holes[t.index]?.locked) return; // 잠긴 구멍(튜토리얼)은 조작 대상이 아니다
