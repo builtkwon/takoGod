@@ -1,8 +1,16 @@
 import type { ReviewResult } from '../contracts';
 import { el } from './dom';
-import { PERSONALITY_LABEL, sessionAverageText, starsText } from './format';
+import { PERSONALITY_LABEL, sessionAverageText } from './format';
+import { starRow, starsLabel } from './v2/stars';
 
 const TOAST_MS = 3000;
+
+/** 카드 우상단 별 칸. */
+function starCorner(stars: number): HTMLElement {
+  const e = el('div', 'ui-card-stars');
+  e.append(starRow(stars));
+  return e;
+}
 
 function overlay(layer: HTMLElement, cls: string): HTMLElement {
   const o = el('div', `ui-overlay ui-hit ${cls}`);
@@ -29,7 +37,7 @@ export function showTutorialComplete(layer: HTMLElement, review: ReviewResult): 
   const ok = el('button', 'ui-big', '확인');
   ok.addEventListener('click', () => o.remove());
   const card = el('div', 'ui-card');
-  card.append(el('div', 'ui-stars', starsText(review.stars)), el('p', '', review.comment));
+  card.append(starCorner(review.stars), el('p', '', review.comment));
   o.append(el('h2', '', '튜토리얼 완료!'), card, ok);
 }
 
@@ -40,7 +48,7 @@ export function showReviewCard(layer: HTMLElement, review: ReviewResult): void {
   if (!toasts) layer.append((toasts = el('div', 'ui-toasts')));
   const card = el('div', 'ui-card');
   const who = review.personality ? `${PERSONALITY_LABEL[review.personality]} ` : '';
-  card.append(el('div', 'ui-stars', `${who}${starsText(review.stars)}`), el('p', '', review.comment));
+  card.append(starCorner(review.stars), el('div', 'ui-stars', who.trim()), el('p', '', review.comment));
   toasts.append(card);
   setTimeout(() => card.remove(), TOAST_MS);
 }
@@ -50,6 +58,6 @@ export function showResult(layer: HTMLElement, result: { readonly average: numbe
   const o = overlay(layer, 'ui-result');
   o.append(el('h2', '', '오늘의 결과'));
   const text = sessionAverageText(result.average);
-  if (result.average !== null && text !== null) o.append(el('div', 'ui-score', `${text}점`), el('div', 'ui-stars', starsText(result.average)));
+  if (result.average !== null && text !== null) o.append(el('div', 'ui-score', `${text}점`), starRow(result.average, `평균 ${starsLabel(result.average)}`));
   o.append(el('p', '', `받은 리뷰 ${result.reviews.length}개`));
 }

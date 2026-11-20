@@ -125,6 +125,17 @@ describe('마가린·반죽 끌어 칠하기', () => {
   });
 });
 
+describe('끌어 칠하기 보간', () => {
+  it('pointermove 사이가 멀어도 사이의 구멍을 건너뛰지 않는다', () => {
+    const { c, bus } = setup(['empty', 'empty', 'empty', 'empty', 'empty']);
+    c.down(1, { x: 10, y: 10 }, BUCKET);
+    c.move(1, { x: 50, y: 150 });
+    c.move(1, { x: 450, y: 150 }); // 한 번에 구멍 4개를 지나는 빠른 쓸기
+    c.up(1, { x: 450, y: 150 });
+    expect(bus.sent.map((e) => (e.payload as { hole: number }).hole)).toEqual([0, 1, 2, 3, 4]);
+  });
+});
+
 describe('잠긴 구멍·후네 서빙 대기', () => {
   it('칠하며 잠긴 구멍을 지나가면 조용히 건너뛴다', () => {
     const { c, bus, setState } = setup();

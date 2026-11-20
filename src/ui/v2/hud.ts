@@ -1,6 +1,7 @@
 import type { GameStateV2 } from '../../contracts';
 import { el } from '../dom';
 import { PERSONALITY_LABEL, phaseLabel, sessionAverageText } from '../format';
+import { setStarRow, starRow, starsLabel } from './stars';
 
 export interface HudV2 {
   readonly root: HTMLElement;
@@ -11,11 +12,12 @@ export interface HudV2 {
 export function createHudV2(): HudV2 {
   const root = el('div', 'ui-hud2 ui-hit');
   const phase = el('span');
-  const average = el('span');
+  const average = starRow(0);
+  average.hidden = true;
   const reviews = el('span');
   const customers = el('div', 'ui-faces');
   const row = el('div', 'ui-hud-row');
-  row.append(phase, average, reviews);
+  row.append(phase, reviews, average); // 별 칸은 우상단
   root.append(row, customers);
 
   let facesKey = '';
@@ -24,7 +26,8 @@ export function createHudV2(): HudV2 {
     update(state) {
       phase.textContent = phaseLabel(state.phase);
       const avg = sessionAverageText(state.sessionAverage);
-      average.textContent = avg === null ? '' : `평균 ${avg}`;
+      average.hidden = avg === null;
+      if (state.sessionAverage !== null) setStarRow(average, state.sessionAverage, `평균 ${starsLabel(state.sessionAverage)}`);
       reviews.textContent = `리뷰 ${state.reviews.length}`;
       const key = state.customers.map((c) => `${c.id}:${c.face}:${c.awaitingRedo}`).join();
       if (key === facesKey) return;

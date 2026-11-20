@@ -1,5 +1,5 @@
 import type { EventBus, GameStateV2, ScenePicker } from '../../contracts';
-import { tutorialStepsV2 } from '../../data';
+import { tutorialArrowHints, tutorialStepsV2 } from '../../data';
 import { el } from '../dom';
 import { INGREDIENT_LABEL } from '../format';
 import { arrowGeometry, tutorialArrow } from './arrow';
@@ -22,10 +22,12 @@ export function createTutorialView(
   const guide = el('div', 'ui-guide ui-hit');
   const warning = el('div', 'ui-warning ui-hit');
   const arrow = el('div', 'ui-arrow');
+  const hint = el('div', 'ui-arrow-label');
+  hint.hidden = true;
   guide.hidden = true;
   warning.hidden = true;
   arrow.hidden = true;
-  layer.append(guide, warning, arrow);
+  layer.append(guide, warning, arrow, hint);
 
   let warningTimer: ReturnType<typeof setTimeout> | undefined;
   disposers.push(
@@ -53,6 +55,13 @@ export function createTutorialView(
       if (a) {
         const g = arrowGeometry(a.from, a.to);
         Object.assign(arrow.style, { left: `${g.x}px`, top: `${g.y}px`, width: `${g.length}px`, transform: `rotate(${g.angle}deg)` });
+      }
+      // 화살표 가운데 위에 동작 문구(끌어서 바르기 등). 문구가 없는 단계는 숨긴다.
+      const text = stage && a ? tutorialArrowHints[stage] : undefined;
+      hint.hidden = text === undefined;
+      if (text !== undefined && a) {
+        hint.textContent = text;
+        hint.style.transform = `translate(${(a.from.x + a.to.x) / 2}px, ${(a.from.y + a.to.y) / 2 - 24}px) translate(-50%, -50%)`;
       }
     },
   };

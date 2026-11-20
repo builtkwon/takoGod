@@ -1,8 +1,9 @@
 // 서빙 직후 점수 공개: 맛보기 반응 말풍선 → 별점·합산 → (다시해줘·떠남) → 리뷰 카드. 순서는 직렬 대기열로 보장한다.
 import type { EventBus, GameStateV2 } from '../../contracts';
 import { el } from '../dom';
-import { PERSONALITY_LABEL, starsText } from '../format';
+import { PERSONALITY_LABEL } from '../format';
 import { showReviewCard, showTutorialComplete } from '../screens';
+import { starRow, starsLabel } from './stars';
 import { createSequencer, type Clock } from './sequencer';
 
 const TASTE_MS = 1800;
@@ -14,9 +15,16 @@ export function deltaText(delta: number): string {
   return delta > 0 ? `+${delta}` : String(delta);
 }
 
-export function scoreText(delta: number, stars: number): string {
-  return `만족도 ${deltaText(delta)} → ${starsText(stars)} (${stars.toFixed(1)})`;
+export function scoreText(delta: number): string {
+  return `만족도 ${deltaText(delta)}`;
 }
+
+/** 카드 우상단 별 칸. */
+const cardStars = (stars: number): HTMLElement => {
+  const e = el('div', 'ui-card-stars');
+  e.append(starRow(stars, starsLabel(stars)));
+  return e;
+};
 
 export function bindReveal(layer: HTMLElement, bus: EventBus, getState: () => GameStateV2, clock?: Clock): () => void {
   const seq = createSequencer(clock);
@@ -50,7 +58,7 @@ export function bindReveal(layer: HTMLElement, bus: EventBus, getState: () => Ga
       const name = who(customerId);
       seq.push(() => {
         // 맛보기 말풍선이 열려 있으면 그 아래에 이어 붙인다.
-        (card ?? open(name)).append(el('div', 'ui-stars', scoreText(delta, stars)));
+        (card ?? open(name)).append(el('div', 'ui-stars', scoreText(delta)), cardStars(stars));
         return close;
       }, SCORE_MS);
     }),
@@ -64,7 +72,7 @@ export function bindReveal(layer: HTMLElement, bus: EventBus, getState: () => Ga
     bus.on('customer/walked-out', ({ customerId, stars }) => {
       const name = who(customerId);
       seq.push(() => {
-        open(name).append(el('p', 'ui-taste', '안 먹어! 갈래요!'), el('div', 'ui-stars', starsText(stars)));
+        open(name).append(el('p', 'ui-taste', '안 먹어! 갈래요!'), cardStars(stars));
         return close;
       }, NOTICE_MS);
     }),
