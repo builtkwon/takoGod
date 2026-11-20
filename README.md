@@ -27,12 +27,13 @@
 | 브랜치 | 내용 | 상태 |
 | --- | --- | --- |
 | main | GDD, 규칙 문서, contracts, 하네스, 병합된 구현과 조립(main.ts), PWA | 기준선. push 시 자동 배포 |
-| feat/core-cleanup | src/core: 옛 Game·판정·시뮬레이터 삭제, V2 공개 API를 index로 내보냄, sim.balance가 V2 측정 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
-| feat/render-cleanup | src/render: 옛 render 경로·옛 sandbox 상태 삭제 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
-| feat/ui-cleanup | src/ui, src/data: 옛 mountUi·도구바·게이지·옛 튜토리얼 문구 삭제 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
-| feat/core-bar-zone | src/core: cooking·cooked도 본게임 W1 영역 표시 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
-| feat/render-night-bg | src/render: 밤 도로 배경(backdrop.ts) | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
-| feat/ui-touch-bar, feat/ui-ingredient-look | src/ui: 누르는 순간 판정, 끌어 칠하기, 타이밍 바 개선, 재료 아이콘·트레이 이름표 | main에 병합. 병합 뒤 로컬 삭제, 원격 삭제는 PM |
+| feat/core-cleanup, feat/render-cleanup, feat/ui-cleanup | 옛 Game·옛 render 경로·옛 mountUi 삭제, V2 공개 API 정리 | 병합·삭제 완료 |
+| feat/core-bar-zone, feat/render-night-bg | cooking·cooked도 W1 영역 표시, 밤 도로 배경(backdrop.ts) | 병합·삭제 완료 |
+| feat/ui-touch-bar, feat/ui-ingredient-look | 누르는 순간 판정, 끌어 칠하기, 재료 아이콘·트레이 이름표 | 병합·삭제 완료 |
+| feat/render-toon | src/render: 툰 셰이딩 전환(toon.ts, ADR 0003) | 병합·삭제 완료 |
+| feat/contracts-batch2, feat/core-batch2, feat/render-batch2, feat/ui-batch2 | 2차 개편(16구, 튜토리얼 잠금, 타이밍·탐 수치, 서빙 대기, 대화 연출) | 병합·삭제 완료 |
+
+지금 열려 있는 기능 브랜치는 없다.
 
 - 병합 전에 README를 최신화하고(그 변경이 병합 직전 main 커밋), 병합 뒤 브랜치는 로컬·원격 모두 삭제한다. 새 작업은 main에서 `feat/<모듈>-<주제>` 브랜치를 만든다(예: `feat/ui-drag`) → [implementation.md](docs/rules/collaboration/implementation.md#병합).
 
@@ -44,7 +45,7 @@ CLAUDE.md            AGENTS.md를 가져오는 Claude Code 진입점
 TODO-CONTRACT.md     contracts 변경 제안함(역할별 섹션)
 docs/
   GDD.md             게임 규칙·수치 원본
-  adr/               기술 결정 기록(ADR)
+  adr/               기술 결정 기록(0001 PS1 렌더는 0003 툰 렌더로 대체됨, 0002 세션 저장)
   harness-design.md  하네스 설계 스냅샷(수정 금지)
   rules/
     architecture/    계층·경계, 모듈별 규칙
@@ -64,7 +65,7 @@ harness/
 src/
   contracts/         core와 render·ui 사이 타입·이벤트
   core/              순수 게임 로직(GameV2, 시뮬레이터, three·DOM 금지)
-  render/            Three.js 툰 셰이딩 렌더링(renderV2, ScenePicker, backdrop.ts 밤 도로 배경)
+  render/            Three.js 툰 셰이딩 렌더링(toon.ts 툰 재질·외곽선, effects.ts 폭죽·물음표·빠직, backdrop.ts 밤 도로 배경, ADR 0003)
   ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, iOS 설치 안내 포함)
   data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구(fumed-lines.ts 분노 대사)
   main.ts            조립·루프·서비스 워커 등록
@@ -101,7 +102,7 @@ public/              manifest, 아이콘(PNG), sw.js
 | 에이전트 | owns | 스킬 | 허용 도구 |
 | --- | --- | --- | --- |
 | core-dev | src/core/** | verify-and-report, tdd-game-rule, contract-proposal | test.unit, build, lint.boundary, sim.balance |
-| render-dev | src/render/** | verify-and-report, ps1-visual-check, contract-proposal | test.unit, build, lint.boundary, render.snapshot |
+| render-dev | src/render/** | verify-and-report, visual-check, contract-proposal | test.unit, build, lint.boundary, render.snapshot |
 | ui-dev | src/ui/**, src/data/** | verify-and-report, dialogue-authoring, contract-proposal | test.unit, build, lint.boundary, dialogue.lint |
 | integrator | src/*.ts, src/__tests__/**, src/contracts/**, docs/rules/**, docs/GDD.md, docs/adr/**, harness/toolset.yaml, TODO-CONTRACT.md, README.md, AGENTS.md, e2e/**, public/**, playwright.config.ts, 루트 설정 파일 | verify-and-report, merge-checklist, contract-apply | test.unit, test.e2e, build, lint.boundary, render.snapshot, sim.balance, dialogue.lint, harness.check, harness.index, harness.receipts |
 | harness-gardener | .claude/**, harness/meta-skills/**, harness/proposals/**, harness/scripts/**, .githooks/** | - | harness.check, harness.index, harness.receipts |
@@ -110,7 +111,7 @@ public/              manifest, 아이콘(PNG), sw.js
 ## 운영 방식
 
 - PM 세션(main 폴더)이 지시·검토·판정을 맡고, 사용자는 결정 표를 승인한다.
-- 대화형 작업자 tako-core, tako-render, tako-ui는 `claude --agent <역할>`로 저장소 밖 worktree(feat/core, feat/render, feat/ui)에서 실행되며 SendMessage로 소통한다.
+- 대화형 작업자 tako-core, tako-render, tako-ui는 `claude --agent <역할>`로 저장소 밖 worktree에서 작업마다 main에서 만든 `feat/<모듈>-<주제>` 브랜치로 실행되며 SendMessage로 소통한다.
 - integrator와 harness-gardener는 main 폴더에서 실행한다.
 - reviewer와 반박 검토는 PM의 하위 에이전트다.
 - 작업자 흐름: 에이전트 정의 → 착수 전 owns 대조(범위 밖 파일이 필요하면 착수하지 않고 보고) → AGENTS.md와 INDEX 자기 행 확인 → 독립 리뷰 여부 1줄 → 스킬 단계 → `pnpm tool` 실행 → 완료 보고와 영수증.
