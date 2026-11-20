@@ -29,11 +29,11 @@ import {
   BURN_AT_SEC,
   COOK_SEC,
   DARK_AT_SEC,
-  FULL_ZONE,
   FUNE_SERVE_DELAY_SEC,
   FUNE_SIZE,
   HOLE_COUNT,
   TUTORIAL_HOLES,
+  TUTORIAL_ZONE,
   accepts,
   drawZone,
   inZone,
@@ -89,9 +89,6 @@ interface Hole {
   filling: IngredientId | null;
   noFilling: boolean;
   rollHits: [boolean | null, boolean | null];
-  /** 반죽을 놓을 때 뽑은 W1 영역과 굴리기 1 때 뽑은 W2 영역. 튜토리얼은 뽑지 않는다(전 구간). */
-  w1: RollZone | null;
-  w2: RollZone | null;
 }
 
 const newHole = (): Hole => ({
@@ -101,8 +98,6 @@ const newHole = (): Hole => ({
   filling: null,
   noFilling: false,
   rollHits: [null, null],
-  w1: null,
-  w2: null,
 });
 
 interface Guest {
@@ -147,8 +142,9 @@ export class GameV2 {
   private funeWait = 0;
   private holding: number | null = null;
   private barTime = 0;
-  /** 바에 영역을 보일 구멍: 마지막으로 재료를 놓거나 굴린 구멍. */
-  private lastTouched: number | null = null;
+  /** 판 공용 영역(GDD §굽기). 굴리기 1용 W1과 굴리기 2용 W2. 튜토리얼은 고정. */
+  private zoneW1: RollZone = TUTORIAL_ZONE;
+  private zoneW2: RollZone = TUTORIAL_ZONE;
   private tutorialIndex = 0;
   private guests: Guest[] = [];
   /** 슬롯별 다음 입장까지 남은 초. null이면 입장 예약 없음. */
@@ -223,13 +219,15 @@ export class GameV2 {
     for (const g of this.guests) {
       if (g.dialogue) activeDialogues.push({ customerId: g.id, line: g.dialogue.line, remainingSec: g.dialogue.remaining });
     }
-    const touched = this.lastTouched === null ? undefined : this.holes[this.lastTouched];
+    const stageIs = (...stages: HoleStage[]) => this.holes.some((h) => stages.includes(h.stage));
+    // 각 영역은 그 영역으로 굴릴 수 있는 구멍이 있을 때만 보인다(튜토리얼은 속재료 전 굴리기를 받지 않는다).
+    const w1Stages: HoleStage[] = this.phase === 'tutorial' ? ['filled'] : ['cooking', 'cooked', 'filled'];
     return {
       phase: this.phase,
       holes,
       tray: [...this.tray],
       barPosition: rollPosition(this.barTime),
-      barZone: touched === undefined ? null : this.zoneOf(touched),
+      barZones: { w1: stageIs(...w1Stages) ? this.zoneW1 : null, w2: stageIs('rolled') ? this.zoneW2 : null },
       fune: [...this.fune],
       funeServing: this.fune.length >= FUNE_SIZE,
       holding: this.holding,
@@ -263,9 +261,9 @@ export class GameV2 {
 
   private zoneOf(h: Hole): RollZone | null {
     // 익힘·익힘 완료 탭도 W1로 판정한다(속재료 전 굴리기). 튜토리얼은 이 탭을 거부하므로 영역이 없다.
-    if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : h.w1;
-    if (h.stage === 'filled') return this.phase === 'tutorial' ? FULL_ZONE : h.w1;
-    if (h.stage === 'rolled') return this.phase === 'tutorial' ? FULL_ZONE : h.w2;
+    if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : this.zoneW1;
+    if (h.stage === 'filled') return this.zoneW1;
+    if (h.stage === 'rolled') return this.zoneW2;
     return null;
   }
 
@@ -325,12 +323,10 @@ export class GameV2 {
     } else if (!accepts(hole.stage, m)) {
       return this.reject(e.hole, 'invalid-stage');
     }
-    this.lastTouched = e.hole;
     if (m.kind === 'margarine') hole.stage = 'greased';
     else if (m.kind === 'batter') {
       hole.stage = 'cooking';
       hole.cookElapsed = 0;
-      if (this.phase !== 'tutorial') hole.w1 = drawZone(zoneWidths(this.phase).w1, this.rng);
     } else {
       hole.stage = 'filled';
       hole.filling = m.ingredient;
@@ -346,7 +342,6 @@ export class GameV2 {
       const stage = this.tutorialStage();
       if (!((stage === 'roll-1' && hole.stage === 'filled') || (stage === 'roll-2' && hole.stage === 'rolled'))) return this.rejectTutorial(e.hole);
     }
-    this.lastTouched = e.hole;
     if (hole.stage === 'filled') return this.doRoll(e.hole, hole, 0);
     if (hole.stage === 'cooking' || hole.stage === 'cooked') {
       // 속재료 전 굴리기: 속 없음으로 고정되고 그 탭이 굴리기 1이다(판정은 W1).
@@ -359,10 +354,14 @@ export class GameV2 {
   }
 
   private doRoll(index: number, hole: Hole, nth: 0 | 1): void {
-    const zone = nth === 0 ? hole.w1 : hole.w2;
-    const hit = this.phase === 'tutorial' || (zone !== null && inZone(rollPosition(this.barTime), zone));
+    // 판정은 누르는 순간의 공용 영역으로 하고, 그 뒤 쓴 영역을 새로 뽑는다(적중·빗나감 무관).
+    const hit = inZone(rollPosition(this.barTime), nth === 0 ? this.zoneW1 : this.zoneW2);
     hole.rollHits[nth] = hit;
-    if (nth === 0 && this.phase !== 'tutorial') hole.w2 = drawZone(zoneWidths(this.phase).w2, this.rng);
+    if (this.phase !== 'tutorial') {
+      const widths = zoneWidths(this.phase);
+      if (nth === 0) this.zoneW1 = drawZone(widths.w1, this.rng);
+      else this.zoneW2 = drawZone(widths.w2, this.rng);
+    }
     hole.stage = nth === 0 ? 'rolled' : 'done';
     if (nth === 1) hole.burnElapsed = 0;
     this.bus.emit('cook/rolled', { hole: index, hit });
@@ -537,6 +536,14 @@ export class GameV2 {
     this.plates = 0;
     this.guests = [];
     this.spawnTimers = PHASES[id].dialogueIntervalsSec.map((_, slot) => (slot === 0 ? 0 : SECOND_CUSTOMER_DELAY_SEC));
+    if (id === 'tutorial') {
+      this.zoneW1 = TUTORIAL_ZONE;
+      this.zoneW2 = TUTORIAL_ZONE;
+    } else {
+      const widths = zoneWidths(id);
+      this.zoneW1 = drawZone(widths.w1, this.rng);
+      this.zoneW2 = drawZone(widths.w2, this.rng);
+    }
     this.bus.emit('phase/changed', { phase: id });
     this.tickSpawns(0);
   }

@@ -16,16 +16,20 @@ const RANDOM_ACT_PROB = 0.2;
 const RANDOM_ANSWER_PROB = 0.02;
 
 /** 전정답 + 완벽 굽기: 영역 안에서만 굴리고, 완성품은 바로 후네에 담고, 대화는 좋은 답만 한다. */
-function perfectBot(bus: EventBus, s: GameStateV2): void {
+function perfectBot(bus: EventBus, game: GameV2): void {
+  let s = game.state;
   for (const d of s.activeDialogues) bus.emit('input/answer', { customerId: d.customerId, choice: 'good' });
-  for (const h of s.holes) {
-    if (h.locked) continue;
+  for (let i = 0; i < s.holes.length; i++) {
+    const h = s.holes[i];
+    if (h === undefined || h.locked) continue;
     const inZone = h.rollZone !== null && s.barPosition >= h.rollZone.from && s.barPosition <= h.rollZone.to;
     if (h.stage === 'empty') bus.emit('input/place-material', { hole: h.index, material: { kind: 'margarine' } });
     else if (h.stage === 'greased') bus.emit('input/place-material', { hole: h.index, material: { kind: 'batter' } });
     else if (h.stage === 'cooked') bus.emit('input/place-material', { hole: h.index, material: { kind: 'filling', ingredient: 'octopus' } });
-    else if ((h.stage === 'filled' || h.stage === 'rolled') && inZone) bus.emit('input/roll', { hole: h.index });
-    else if (h.stage === 'done') {
+    else if ((h.stage === 'filled' || h.stage === 'rolled') && inZone) {
+      bus.emit('input/roll', { hole: h.index });
+      s = game.state; // 굴리면 공용 영역이 바뀌므로 다음 구멍은 새 영역으로 본다
+    } else if (h.stage === 'done') {
       bus.emit('input/pick', { hole: h.index });
       bus.emit('input/drop', { target: 'fune' });
     }
@@ -91,7 +95,7 @@ export function playSessionV2(kind: BalanceScenario['kind'] | 'chaos', seed: num
   const botRng = createRng(seed ^ 0x9e3779b9);
   for (let i = 0; i < MAX_TICKS && !game.finished; i++) {
     const s = game.state;
-    if (kind === 'perfect' || s.phase === 'tutorial') perfectBot(bus, s);
+    if (kind === 'perfect' || s.phase === 'tutorial') perfectBot(bus, game);
     else if (kind === 'chaos') chaosBot(bus, s, botRng);
     else randomBot(bus, s, botRng);
     game.tick(DT);
