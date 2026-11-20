@@ -25,6 +25,13 @@ export function toon(map: DataTexture | null = null): MeshToonMaterial {
   return new MeshToonMaterial({ vertexColors: true, map, gradientMap: gradientMap() });
 }
 
+/** map이 null↔텍스처로 바뀌면 USE_MAP 셰이더 define이 달라지므로 재컴파일한다(같은 map이면 아무것도 안 한다). */
+export function setMap(mat: MeshToonMaterial, map: DataTexture | null): void {
+  if (mat.map === map) return;
+  mat.map = map;
+  mat.needsUpdate = true;
+}
+
 const VERT = /* glsl */ `
 uniform vec2 uRes;
 uniform float uPx;

@@ -45,7 +45,8 @@ import { FACE_TINT, RIM_COLOR, holeTint, rimOf, rimVisible, showsFilling, showsN
 import { buildBackdrop } from './backdrop';
 import { createScenePicker } from './pick';
 import { MAX_PIXEL_RATIO, VIEW_ASPECT } from './dims';
-import { addOutline, createOutline, setGeometry, setOutlineRes, toon } from './toon';
+import { addOutline, createOutline, setGeometry, setMap, setOutlineRes, toon } from './toon';
+import { assignSlots } from './slots';
 import { createTextures } from './textures';
 
 export interface ToonRenderer {
@@ -161,7 +162,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
     v.mark.visible = false;
     if (look !== null) {
       setGeometry(v.dough, look.kind === 'disc' ? DISC_UNIT : BALL_UNIT);
-      v.mat.map = doughMap[look.tex];
+      setMap(v.mat, doughMap[look.tex]);
       const sy = look.kind === 'disc' ? look.h : look.r * look.h;
       v.dough.scale.set(look.r, sy, look.r);
       v.dough.position.y = look.kind === 'disc' ? sy / 2 + 0.012 : sy * 0.7;
@@ -200,6 +201,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
 
   const katsuoY = katsuo.map((g) => g.position.y);
   let customerIds: string[] = [];
+  let slotIds: (string | null)[] = slots.map(() => null);
   const pending: { kind: EffectKind; id: string; opts: EffectOptions | undefined }[] = [];
   let drawn = false;
   function draw(): void {
@@ -227,8 +229,9 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
         state.tray,
         state.fune.map((f): BakeStage => (f.dark ? 'dark' : 'normal')),
       );
+      slotIds = assignSlots(slotIds, state.customers.map((c) => c.id));
       slots.forEach((models, i) => {
-        const c = state.customers[i];
+        const c = state.customers.find((x) => x.id === slotIds[i]);
         for (const [kind, m] of Object.entries(models)) {
           m.visible = c !== undefined && MODEL_OF[c.personality] === kind;
           if (c !== undefined) faceMat(m).color.setRGB(...FACE_TINT[c.face]);
@@ -245,7 +248,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
         // 이벤트 뒤 같은 틱에 손님이 이미 나갔으면 firework·confused는 버린다. fumed는 화면 흔들림이 손님과 무관해 id가 없어도 시작한다.
         if (admit(q.kind, customerIds.includes(q.id))) effects.trigger(q.kind, q.id, nowMs, q.opts);
       }
-      const [dx, dy] = effects.update(nowMs, (id) => customerIds.indexOf(id));
+      const [dx, dy] = effects.update(nowMs, (id) => slotIds.indexOf(id));
       camera.position.set(CAMERA.pos[0] + dx, CAMERA.pos[1] + dy, CAMERA.pos[2]);
       draw();
     },
