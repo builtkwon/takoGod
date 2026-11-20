@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Personality, TasteKind, TutorialStage } from '../../contracts';
-import { dialogues, fumedLines, reviewComments, tasteLines, tutorialArrowHints, tutorialReviewComment, tutorialStepsV2 } from '../index';
+import { dialogues, fumedLines, hudText, reviewComments, tasteLines, tutorialArrowHints, tutorialReviewComment, tutorialStepsV2 } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 
@@ -55,6 +55,14 @@ describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
   it('튜토리얼 안내문구는 7단계 각각 하나', () => {
     expect(tutorialStepsV2.map((s) => s.stage)).toEqual(STAGES);
     for (const s of tutorialStepsV2) expect(s.message.trim()).not.toBe('');
+  });
+
+  it('HUD 점수 문구: 콤보는 2 이상일 때만, 기록 없음은 "-"', () => {
+    expect(hudText.best(null)).toBe('최고 -');
+    expect(hudText.plateGain(45)).toBe('+45');
+    expect(hudText.combo(1, 1)).toBeNull();
+    expect(hudText.combo(3, 1.2)).toBe('콤보 ×1.2');
+    expect(hudText.resultNewBest).toBe('최고 기록!');
   });
 
   it('튜토리얼 화살표 동작 문구와 표기: 버터(마가린 표기 없음)', () => {

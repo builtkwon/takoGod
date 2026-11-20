@@ -4,6 +4,7 @@ import { barView } from '../bar';
 import { createSequencer, type Clock } from '../sequencer';
 import { deltaText, scoreText } from '../reveal';
 import { stateOf, stubPicker } from './helpers';
+import { hudView } from '../hud';
 import { iconPixels } from '../icons';
 import { starFills, starsLabel } from '../stars';
 import { LABEL_OFFSET_Y, trayLabelPlan } from '../tray-labels';
@@ -130,5 +131,17 @@ describe('고스트 아이콘', () => {
       expect(iconPixels({ kind: 'filling', ingredient }).length).toBeGreaterThan(0);
     }
     for (const kind of ['margarine', 'batter', 'done', 'dark', 'burnt'] as const) expect(iconPixels({ kind }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('hudView', () => {
+  it('최고 기록이 없으면 "최고 -", 0점은 NEW가 아니고 0 초과면 NEW', () => {
+    expect(hudView(stateOf([], { shopScore: 0 }))).toMatchObject({ best: '최고 -', isNew: false, score: '0' });
+    expect(hudView(stateOf([], { shopScore: 10 })).isNew).toBe(true);
+  });
+  it('기록이 있으면 넘었을 때만 NEW(같으면 아님), 단계·리뷰 수 표시', () => {
+    const s = stateOf([], { bestShopScore: 300, shopScore: 300, phase: 'P2' });
+    expect(hudView(s)).toMatchObject({ best: '최고 300', isNew: false, phase: '2단계', reviews: '리뷰 0' });
+    expect(hudView({ ...s, shopScore: 301 }).isNew).toBe(true);
   });
 });
