@@ -55,19 +55,36 @@ function angerGeo(): BufferGeometry {
   return merge(ps);
 }
 
+/** 화면 흔들림 오프셋(월드 단위): 0.4초 동안 줄어들며 떤다. */
+function fumedShake(t: number): [number, number] {
+  const k = 1 - t / DURATION.shake;
+  return [Math.sin(t * 110) * 0.1 * k, Math.cos(t * 95) * 0.07 * k];
+}
+
 interface Active {
   readonly kind: EffectKind;
-  readonly slot: number;
+  readonly id: string;
   readonly start: number;
   readonly mark: MarkKind;
   /** firework: 입자 속도(x,y,z) 반복. */
   readonly vel: readonly number[];
 }
 
+/**
+ * 대기 중이던 effect() 요청을 시작할지: 손님이 이미 나가 id가 없으면 firework·confused는 버리고,
+ * fumed는 화면 흔들림이 손님과 무관해 시작한다(분노 표시만 생략됨).
+ */
+export const admit = (kind: EffectKind, customerKnown: boolean): boolean => customerKnown || kind === 'fumed';
+
 export interface Effects {
-  trigger(kind: EffectKind, slot: number, nowMs: number, opts?: EffectOptions): void;
-  /** nowMs 기준으로 장면을 갱신하고 카메라 흔들림 오프셋(x,y)을 돌려준다. */
-  update(nowMs: number): readonly [number, number];
+  /** 손님 id에 붙는 이펙트를 시작한다. 같은 손님·같은 종류가 진행 중이면 새로 시작한다. */
+  trigger(kind: EffectKind, customerId: string, nowMs: number, opts?: EffectOptions): void;
+  /**
+   * nowMs 기준으로 장면을 갱신하고 카메라 흔들림 오프셋(x,y)을 돌려준다.
+   * slotOf는 손님 id의 현재 슬롯(없으면 -1)이다. 매 프레임 다시 찾아 따라가고, 손님이 사라지면 그 이펙트를 끝낸다.
+   * 예외: fumed의 화면 흔들림은 손님과 무관해서 손님이 없어도 0.4초 끝까지 간다(분노 표시만 생략).
+   */
+  update(nowMs: number, slotOf: (customerId: string) => number): readonly [number, number];
 }
 
 export function createEffects(scene: Scene, camera: Camera, outline: ShaderMaterial): Effects {
@@ -91,7 +108,7 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
   const dummy = new Object3D();
 
   return {
-    trigger(kind, slot, nowMs, opts = {}) {
+    trigger(kind, id, nowMs, opts = {}) {
       const rng = opts.seed === undefined ? Math.random : mulberry(opts.seed);
       const vel: number[] = [];
       if (kind === 'firework') {
@@ -103,11 +120,11 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
         }
       }
       const mark = opts.mark ?? (rng() < 0.5 ? 'question' : 'anger');
-      const i = active.findIndex((e) => e.kind === kind && e.slot === slot);
+      const i = active.findIndex((e) => e.kind === kind && e.id === id);
       if (i >= 0) active.splice(i, 1);
-      active.push({ kind, slot, start: opts.startMs ?? nowMs, mark: kind === 'fumed' ? 'anger' : mark, vel });
+      active.push({ kind, id, start: opts.startMs ?? nowMs, mark: kind === 'fumed' ? 'anger' : mark, vel });
     },
-    update(nowMs) {
+    update(nowMs, slotOf) {
       for (const s of slots) {
         s.fw.visible = false;
         s.question.visible = false;
@@ -123,8 +140,13 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
           continue;
         }
         if (t < 0) continue;
-        const s = slots[e.slot];
-        if (s === undefined) continue;
+        const s = slots[slotOf(e.id)];
+        if (s === undefined) {
+          // 손님이 사라졌다. fumed는 흔들림만 남기고, 나머지는 끝낸다.
+          if (e.kind === 'fumed' && t < DURATION.shake) shake = fumedShake(t);
+          else active.splice(n, 1);
+          continue;
+        }
         if (e.kind === 'firework') {
           s.fw.visible = true;
           const size = 0.075 * (1 - t / dur) + 0.01;
@@ -146,8 +168,7 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
           m.position.set(s.p[0], HEAD_Y + Math.sin(t * 9) * 0.04, s.p[2] + 0.25);
           m.quaternion.copy(camera.quaternion); // 항상 화면을 향한다.
           if (e.kind === 'fumed' && t < DURATION.shake) {
-            const k = 1 - t / DURATION.shake;
-            shake = [Math.sin(t * 110) * 0.1 * k, Math.cos(t * 95) * 0.07 * k];
+            shake = fumedShake(t);
           }
         }
       }
