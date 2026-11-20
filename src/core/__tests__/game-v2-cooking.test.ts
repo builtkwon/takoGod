@@ -232,134 +232,159 @@ describe('전역 타이밍 바(1.6초 주기 왕복)', () => {
   });
 });
 
-describe('영역 위치: 무작위(GDD §굽기·§손님 대화 난수 순서)', () => {
-  it('반죽을 놓을 때 W1 위치를 뽑는다: P1 폭 0.30, 난수 0 → 0~0.3, 난수 1 근처 → 0.7~1', () => {
-    for (const [r, from] of [
-      [0, 0],
-      [0.999999, 0.7 * 0.999999],
-    ] as const) {
-      const c = controlled(0.5);
-      const h = setupV2({ rng: c.rng, liveZones: true });
-      h.place(0, MARGARINE);
-      c.set(r);
-      h.place(0, BATTER);
-      c.set(null);
-      const z = h.hole(0).rollZone;
-      expect(z?.from).toBeCloseTo(from, 9);
-      expect((z?.to ?? 0) - (z?.from ?? 0)).toBeCloseTo(0.3, 9);
-      expect(z?.to).toBeLessThanOrEqual(1);
-    }
+describe('영역 위치: 판 공용 W1·W2(GDD §굽기·§손님 대화 난수 순서)', () => {
+  /** 난수 v 하나로 폭 w 영역의 시작 위치. */
+  const from = (v: number, w: number) => v * (1 - w);
+
+  it('페이즈 시작 시 W1 → W2 순으로 뽑는다(P1 폭 W1 0.30, W2 0.24)', () => {
+    const sc = scripted([0.2, 0.8], 0.5);
+    const h = setupV2({ rng: sc.rng, liveZones: true });
+    expect(sc.used()).toBe(2);
+    h.place(0, MARGARINE);
+    h.place(0, BATTER);
+    const w1 = h.hole(0).rollZone as RollZone;
+    expect(w1.from).toBeCloseTo(from(0.2, 0.3), 9);
+    expect(w1.to - w1.from).toBeCloseTo(0.3, 9);
+    expect(sc.used()).toBe(2); // 반죽 놓기는 뽑지 않는다
+    h.tick(3);
+    h.place(0, fill());
+    h.roll(0);
+    const w2 = h.hole(0).rollZone as RollZone;
+    expect(w2.from).toBeCloseTo(from(0.8, 0.24), 9);
+    expect(w2.to - w2.from).toBeCloseTo(0.24, 9);
   });
 
-  it('난수는 반죽 놓기마다 1개, 굴리기 1마다 1개를 뽑고 마가린·굴리기 2·속재료는 뽑지 않는다', () => {
+  it('굴리기 1마다 W1을, 굴리기 2마다 W2를 새로 뽑는다(적중·빗나감, 속 없음 굴리기 무관)', () => {
+    const sc = scripted([], 0.5);
+    const h = setupV2({ rng: sc.rng, liveZones: true });
+    reach(h, [0, 1, 2], 4);
+    h.place(3, MARGARINE);
+    h.place(3, BATTER);
+    const base = sc.used();
+    h.roll(0); // 적중 또는 빗나감과 무관하게 W1 1회
+    expect(sc.used()).toBe(base + 1);
+    h.roll(3); // 속재료 전 굴리기(속 없음)도 W1 1회
+    expect(sc.used()).toBe(base + 2);
+    h.roll(1);
+    expect(sc.used()).toBe(base + 3);
+    h.roll(0); // 굴리기 2: W2 1회
+    expect(sc.used()).toBe(base + 4);
+    h.roll(1);
+    expect(sc.used()).toBe(base + 5);
+  });
+
+  it('난수를 마가린·반죽·속재료·들기·후네에서는 뽑지 않는다', () => {
     const sc = scripted([], 0.5);
     const h = setupV2({ rng: sc.rng, liveZones: true });
     const base = sc.used();
-    h.place(0, MARGARINE);
+    reach(h, 0, 4);
     expect(sc.used()).toBe(base);
-    h.place(0, BATTER);
-    expect(sc.used()).toBe(base + 1);
-    h.tick(3);
-    h.place(0, fill());
-    expect(sc.used()).toBe(base + 1);
-    rollHole(h, 0);
-    expect(sc.used()).toBe(base + 2);
-    rollHole(h, 0);
-    expect(sc.used()).toBe(base + 2);
   });
 
-  it('W1 위치는 익힘·익힘 완료·속재료 후에 같은 값이고, W2는 굴리기 1에서 새로 뽑는다(P3 폭 W1 0.24, W2 0.20)', () => {
+  it('구멍이 아니라 판이 영역을 공유한다: 모든 구멍의 rollZone이 같은 W1이고 굴리기 1 뒤 W1이 바뀐다', () => {
+    const sc = scripted([0.1, 0.5, 0.9], 0.5);
+    const h = setupV2({ rng: sc.rng, liveZones: true });
+    reach(h, [0, 1], 4);
+    const before = h.hole(0).rollZone as RollZone;
+    expect(h.hole(1).rollZone).toEqual(before);
+    expect(before.from).toBeCloseTo(from(0.1, 0.3), 9);
+    h.roll(0); // 뽑는 값 0.9
+    const after = h.hole(1).rollZone as RollZone;
+    expect(after.from).toBeCloseTo(from(0.9, 0.3), 9);
+    expect(h.hole(0).rollZone).not.toEqual(after); // 구멍 0은 이제 W2
+  });
+
+  it('판정은 누르는 순간의 공용 영역이다: 앞 구멍을 굴려 W1이 바뀌면 뒤 구멍은 새 W1로 판정한다', () => {
     const c = controlled(0.5);
-    const h = setupV2({ rng: c.rng, liveZones: true });
+    const h = setupV2({ rng: c.rng, liveZones: true }); // 영역 가운데
+    reach(h, [0, 1], 4);
+    tickTo(h, 3.2 + 0.5 * 0.8); // 바 0.5: 가운데 영역 안
+    c.set(0); // 다음 W1은 0~0.3
+    h.roll(0);
+    expect(h.of('cook/rolled')).toEqual([{ hole: 0, hit: true }]);
+    c.set(null);
+    expect(h.game.state.barPosition).toBeCloseTo(0.5, 6);
+    h.roll(1); // 같은 위치지만 W1이 0~0.3으로 바뀌어 빗나감
+    expect(h.of('cook/rolled')[1]).toEqual({ hole: 1, hit: false });
+  });
+
+  it('폭: P3~P5는 W1 0.24·W2 0.20', () => {
+    const h = setupV2({ rng: () => 0.5, liveZones: true });
     playUntilPhase(h, 'P3');
-    c.set(0.25);
-    h.place(0, MARGARINE);
-    h.place(0, BATTER);
-    const w1 = h.hole(0).rollZone;
-    expect(w1?.from).toBeCloseTo(0.25 * 0.76, 9);
-    expect((w1?.to ?? 0) - (w1?.from ?? 0)).toBeCloseTo(0.24, 9);
-    h.tick(3);
-    expect(h.hole(0).rollZone).toEqual(w1);
-    h.place(0, fill());
-    expect(h.hole(0).rollZone).toEqual(w1);
-    c.set(0.75);
-    rollHole(h, 0);
-    const w2 = h.hole(0).rollZone;
-    expect(w2?.from).toBeCloseTo(0.75 * 0.8, 9);
-    expect((w2?.to ?? 0) - (w2?.from ?? 0)).toBeCloseTo(0.2, 9);
+    reach(h, 0, 4);
+    const z1 = h.hole(0).rollZone as RollZone;
+    expect(z1.to - z1.from).toBeCloseTo(0.24, 9);
+    h.roll(0);
+    const z2 = h.hole(0).rollZone as RollZone;
+    expect(z2.to - z2.from).toBeCloseTo(0.2, 9);
   });
 
-  it('폭: P2도 W1 0.30·W2 0.24(P1·P2 구간)', () => {
-    const h = setupV2();
+  it('페이즈가 바뀔 때마다 W1·W2를 다시 뽑는다', () => {
+    const sc = scripted([], 0.5);
+    const h = setupV2({ rng: sc.rng, liveZones: true });
+    expect(sc.used()).toBe(2);
+    const calls = () => sc.used();
     playUntilPhase(h, 'P2');
-    h.place(0, MARGARINE);
-    h.place(0, BATTER);
-    const z = h.hole(0).rollZone as RollZone;
-    expect(z.to - z.from).toBeCloseTo(0.3, 9);
+    // P1→P2 전환 시 W1·W2 2회(손님 입장 성격·인내 2회 포함)와 굴리기 12회
+    expect(h.of('phase/changed').map((e) => e.phase)).toEqual(['P1', 'P2']);
+    expect(calls()).toBe(2 + 6 + 6 + 2 + 2);
   });
 
-  it('구멍을 비우면(떨어짐) 영역도 지워진다', () => {
+  it('구멍을 비워도 공용 영역은 남는다', () => {
     const h = setupV2();
     reachDone(h, 0);
     h.pick(0);
     h.drop('other');
     expect(h.hole(0).rollZone).toBeNull();
-    h.place(0, MARGARINE);
-    expect(h.hole(0).rollZone).toBeNull();
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null });
   });
 });
 
-describe('barZone: 마지막으로 만진 구멍의 영역', () => {
-  it('처음에는 null', () => {
-    expect(setupV2().game.state.barZone).toBeNull();
-  });
-
-  it('속재료 후 구멍은 W1, 굴림 1 구멍은 W2(폭 0.30·0.24)', () => {
+describe('barZones: 판 공용 영역 표시(굴릴 수 있는 구멍이 있을 때만)', () => {
+  it('굴릴 수 있는 구멍이 없으면 둘 다 null', () => {
     const h = setupV2();
-    reach(h, 2, 4);
-    const w1 = h.game.state.barZone as RollZone;
-    expect(h.hole(2).rollZone).toEqual(w1);
-    expect(w1.to - w1.from).toBeCloseTo(0.3, 9);
-    rollHole(h, 2);
-    const w2 = h.game.state.barZone as RollZone;
-    expect(h.hole(2).rollZone).toEqual(w2);
-    expect(w2.to - w2.from).toBeCloseTo(0.24, 9);
-  });
-
-  it('다른 구멍을 만지면 그 구멍의 영역으로 바뀐다', () => {
-    const h = setupV2();
-    reach(h, 0, 4);
-    reach(h, 1, 1);
-    expect(h.game.state.barZone).toBeNull(); // 구멍 1은 기름칠이라 영역 없음
-    rollHole(h, 0);
-    expect(h.game.state.barZone).toEqual(h.hole(0).rollZone);
-    expect(h.game.state.barZone).not.toBeNull();
-  });
-
-  it('굴릴 수 없는 구멍은 영역이 null이다', () => {
-    const h = setupV2();
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null });
     reach(h, 0, 1);
-    expect(h.hole(0).rollZone).toBeNull();
-    expect(h.hole(1).rollZone).toBeNull();
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null });
   });
 
-  it('익힘·익힘 완료는 탭으로 굴리면 W1로 판정되므로 같은 W1을 보여 준다', () => {
+  it('익힘·익힘 완료·속재료 후 구멍이 있으면 W1, 굴림 1 구멍이 있으면 W2', () => {
     const h = setupV2();
     reach(h, 0, 2);
-    expect(h.hole(0).stage).toBe('cooking');
-    expect(h.hole(0).rollZone).not.toBeNull();
+    const w1 = h.game.state.barZones.w1 as RollZone;
+    expect(w1).not.toBeNull();
+    expect(h.game.state.barZones.w2).toBeNull();
+    expect(h.hole(0).rollZone).toEqual(w1);
+    expect(w1.to - w1.from).toBeCloseTo(0.3, 9);
     reach(h, 1, 3);
-    expect(h.hole(1).stage).toBe('cooked');
-    expect(h.hole(1).rollZone).not.toBeNull();
-    expect(h.game.state.barZone).toEqual(h.hole(1).rollZone);
+    expect(h.game.state.barZones.w1).toEqual(w1);
+    h.tick(0); // 시간이 흘러도(굴리기 전) 영역은 그대로
+    rollHole(h, 0);
+    const z = h.game.state.barZones;
+    expect(z.w1).not.toBeNull(); // 구멍 1이 아직 W1로 굴릴 수 있다
+    expect(z.w2).not.toBeNull();
+    expect(h.hole(0).rollZone).toEqual(z.w2);
+    expect((z.w2 as RollZone).to - (z.w2 as RollZone).from).toBeCloseTo(0.24, 9);
   });
 
-  it('표시 영역과 판정 영역이 같다: 표시된 영역 가장자리 안쪽은 적중, 바깥쪽은 빗나감', () => {
+  it('W1 구멍이 모두 굴림 1이 되면 W1은 사라지고 W2는 굴림 2가 되면 사라진다', () => {
+    const h = setupV2();
+    reach(h, 0, 4);
+    expect(h.game.state.barZones.w1).not.toBeNull();
+    rollHole(h, 0);
+    expect(h.game.state.barZones.w1).toBeNull();
+    expect(h.game.state.barZones.w2).not.toBeNull();
+    rollHole(h, 0);
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null });
+  });
+
+  it('표시 영역과 판정 영역이 같다: 영역 안쪽은 적중, 바깥쪽은 빗나감(속재료 전 굴리기 포함)', () => {
     const h = setupV2();
     reach(h, 0, 2);
     reach(h, 1, 2);
     tickUntilZone(h, 0, true);
     h.roll(0);
+    // 굴리기 1을 하면 W1이 다시 뽑힌다. 새 W1 기준으로 밖에서 굴린다.
     tickUntilZone(h, 1, false);
     h.roll(1);
     expect(h.of('cook/rolled')).toEqual([

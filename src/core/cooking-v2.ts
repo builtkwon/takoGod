@@ -16,16 +16,17 @@ export const COOK_SEC = 3;
 export const DARK_AT_SEC = 4;
 export const BURN_AT_SEC = 6;
 
-/** 영역 폭(바 전체 길이 1 기준). W2는 시작값이고 sim.balance 측정 뒤 조정한다(GDD §굽기). 튜토리얼은 전 구간이다. */
-export const FULL_ZONE: RollZone = { from: 0, to: 1 };
+/** 튜토리얼 영역: W1·W2 모두 폭 0.50, 가운데 고정(타이밍 연습). 난수를 쓰지 않는다. */
+export const TUTORIAL_ZONE: RollZone = { from: 0.25, to: 0.75 };
+/** 영역 폭(바 전체 길이 1 기준). W2는 시작값이고 sim.balance 측정 뒤 조정한다(GDD §굽기). */
 export function zoneWidths(phase: PhaseId): { readonly w1: number; readonly w2: number } {
   return phase === 'P1' || phase === 'P2' ? { w1: 0.3, w2: 0.24 } : { w1: 0.24, w2: 0.2 };
 }
 /** 영역 전체가 0..1 안에 들도록 시작 위치를 균등하게 뽑는다(난수 1회). */
-export const drawZone = (width: number, rng: () => number): RollZone => {
+export function drawZone(width: number, rng: () => number): RollZone {
   const from = rng() * (1 - width);
   return { from, to: from + width };
-};
+}
 
 export const inZone = (pos: number, zone: RollZone): boolean => pos >= zone.from - EPS && pos <= zone.to + EPS;
 

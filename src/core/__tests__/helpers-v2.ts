@@ -88,18 +88,9 @@ export function setupV2(opts: SetupOpts = {}) {
   );
   const baseRng = opts.rng ?? createRng(opts.seed ?? 1);
   const zoneRng = (): number => 0.5; // 모든 구멍의 영역이 바 가운데에 같게 놓여 구멍들을 한꺼번에 굴릴 수 있다
-  let zoneDraw = false;
-  const rng = (): number => (zoneDraw && !opts.liveZones ? zoneRng() : baseRng());
+  // 영역 위치 뽑기(drawZone 호출)만 zoneRng로 돌린다. 호출 위치를 스택에서 알아본다(테스트 전용).
+  const rng = (): number => (!opts.liveZones && new Error().stack?.includes('drawZone') ? zoneRng() : baseRng());
   const game = new GameV2({ bus, data: opts.data ?? syntheticDataV2, rng, store });
-  /** 영역 위치를 뽑는 입력(반죽 놓기, 굴리기 1)을 내는 동안만 zoneDraw를 켠다. */
-  const emitDrawing = (fn: () => void): void => {
-    zoneDraw = true;
-    try {
-      fn();
-    } finally {
-      zoneDraw = false;
-    }
-  };
   return {
     bus,
     game,
@@ -115,17 +106,8 @@ export function setupV2(opts: SetupOpts = {}) {
     of<K extends GameEventType>(type: K): GameEvents[K][] {
       return log.filter((r) => r.type === type).map((r) => r.payload as GameEvents[K]);
     },
-    place: (hole: number, material: Material) => {
-      const emit = () => bus.emit('input/place-material', { hole, material });
-      if (material.kind === 'batter') emitDrawing(emit);
-      else emit();
-    },
-    roll: (hole: number) => {
-      const stage = game.state.holes[hole]?.stage;
-      const emit = () => bus.emit('input/roll', { hole });
-      if (stage === 'cooking' || stage === 'cooked' || stage === 'filled') emitDrawing(emit);
-      else emit();
-    },
+    place: (hole: number, material: Material) => bus.emit('input/place-material', { hole, material }),
+    roll: (hole: number) => bus.emit('input/roll', { hole }),
     pick: (hole: number) => bus.emit('input/pick', { hole }),
     drop: (target: DropTarget) => bus.emit('input/drop', { target }),
     answer: (customerId: string, choice: 'good' | 'bad') => bus.emit('input/answer', { customerId, choice }),
