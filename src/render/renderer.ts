@@ -39,7 +39,7 @@ import {
 } from './models';
 import type { BakeStage, CustomerModel } from './models';
 import { CAMERA, TAKO_S } from './layout';
-import { createEffects } from './effects';
+import { admit, createEffects } from './effects';
 import type { EffectKind, EffectOptions } from './effects';
 import { FACE_TINT, RIM_COLOR, holeTint, rimOf, rimVisible, showsFilling, showsNoFilling } from './holes';
 import { buildBackdrop } from './backdrop';
@@ -55,7 +55,8 @@ export interface ToonRenderer {
    */
   renderV2(state: GameStateV2, nowMs?: number): void;
   /**
-   * 연출을 시작한다(판정과 무관). customerId는 GameStateV2.customers[].id이며 다음 renderV2에서 그 손님 자리에 붙는다(없으면 무시).
+   * 연출을 시작한다(판정과 무관). customerId는 GameStateV2.customers[].id이며 다음 renderV2에서 그 손님 자리에 붙고 매 프레임 id로 자리를 다시 찾는다(손님이 나가면 이펙트가 끝난다).
+   * 그 시점에 id가 없으면 firework·confused는 무시하고, fumed는 화면 흔들림만 하고 분노 표시는 생략한다.
    * firework 폭죽 약 1초 / confused 머리 위 물음표 또는 빠직 1.5초(opts.mark로 고정, 기본 무작위) / fumed 카메라 0.4초 흔들림 + 분노 표시.
    * 시계는 renderV2의 nowMs와 같다. opts.startMs로 시작 시각, opts.seed로 모양을 고정할 수 있다(스냅샷·테스트용).
    */
@@ -233,7 +234,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
           if (c !== undefined) faceMat(m).color.setRGB(...FACE_TINT[c.face]);
         }
       });
-      // 후네가 찼을 때(서빙 대기 1초) 가쓰오부시를 얹고 살랑이게 한다.
+      // funeServing(후네가 가득 찬 뒤 서빙 또는 비우기 전까지. 손님이 없으면 1초보다 길 수 있다) 동안 가쓰오부시를 얹고 살랑이게 한다.
       katsuo.forEach((g, i) => {
         g.visible = state.funeServing;
         g.rotation.set(Math.sin(nowMs / 170 + i) * 0.1, g.rotation.y, Math.sin(nowMs / 140 + i * 1.7) * 0.12);
@@ -241,10 +242,10 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
       });
       customerIds = state.customers.map((c) => c.id);
       for (const q of pending.splice(0)) {
-        const slot = customerIds.indexOf(q.id);
-        if (slot >= 0) effects.trigger(q.kind, slot, nowMs, q.opts);
+        // 이벤트 뒤 같은 틱에 손님이 이미 나갔으면 firework·confused는 버린다. fumed는 화면 흔들림이 손님과 무관해 id가 없어도 시작한다.
+        if (admit(q.kind, customerIds.includes(q.id))) effects.trigger(q.kind, q.id, nowMs, q.opts);
       }
-      const [dx, dy] = effects.update(nowMs);
+      const [dx, dy] = effects.update(nowMs, (id) => customerIds.indexOf(id));
       camera.position.set(CAMERA.pos[0] + dx, CAMERA.pos[1] + dy, CAMERA.pos[2]);
       draw();
     },
