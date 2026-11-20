@@ -33,6 +33,11 @@ describe('tutorialArrow', () => {
     const s = stateOf(['greased', 'empty']);
     expect(tutorialArrow('margarine', s, stubPicker(), buckets)).toEqual({ from: { x: 5, y: 5 }, to: { x: 150, y: 150 } });
   });
+  it('잠긴 구멍은 가리키지 않는다', () => {
+    const s = stateOf(['empty', 'empty']);
+    const locked = { ...s, holes: [{ ...s.holes[0]!, locked: true }, s.holes[1]!] };
+    expect(tutorialArrow('margarine', locked, stubPicker(), buckets)?.to).toEqual({ x: 150, y: 150 });
+  });
   it('속재료: 문어 칸 → 익힘 완료 구멍', () => {
     const s = stateOf(['cooking', 'cooked']);
     expect(tutorialArrow('filling', s, stubPicker(), buckets)).toEqual({ from: { x: 50, y: 350 }, to: { x: 150, y: 150 } });

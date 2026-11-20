@@ -98,7 +98,9 @@ export function createController(deps: {
   const paint = (a: Extract<Active, { type: 'material' }>, at: Pt): void => {
     if (a.material.kind !== 'margarine' && a.material.kind !== 'batter') return;
     const t = picker.pick(at.x, at.y);
-    if (t?.kind !== 'hole' || a.painted.has(t.index) || getState().holes[t.index]?.stage !== PAINT_STAGE[a.material.kind]) return;
+    if (t?.kind !== 'hole' || a.painted.has(t.index)) return;
+    const h = getState().holes[t.index];
+    if (!h || h.locked || h.stage !== PAINT_STAGE[a.material.kind]) return; // 잠긴 구멍·안 맞는 단계는 조용히 건너뛴다
     a.painted.add(t.index);
     a.accepted += 1;
     bus.emit('input/place-material', { hole: t.index, material: a.material });
@@ -130,6 +132,7 @@ export function createController(deps: {
         active = { type: 'material', id, material, origin, look, painted: new Set(), accepted: 0 };
         view.ghostStart(look, at);
       } else if (t?.kind === 'hole') {
+        if (getState().holes[t.index]?.locked) return; // 잠긴 구멍(튜토리얼)은 조작 대상이 아니다
         active = { type: 'hole', id, hole: t.index, start: at, moved: false, rolled: false, picked: false, pos: at, look: null };
         // 들 수 없는 구멍(굴릴 수 있는 단계 포함)은 누르는 순간 굴린다: 판정이 손가락을 뗄 때까지 늦으면 통과 구간(W1 약 0.12초)을 놓친다.
         if (!HELD.has(getState().holes[t.index]?.stage ?? '')) {

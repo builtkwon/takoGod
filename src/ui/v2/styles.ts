@@ -4,6 +4,7 @@ export const CSS_V2 = `
 .ui-bar-zone{position:absolute;top:4px;bottom:4px;background:#6d8fb0;border:2px solid #fff;border-radius:4px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;text-shadow:0 1px 2px #000}
 .ui-bar[data-step="2"] .ui-bar-zone{border-style:dashed}
 .ui-bar.active .ui-bar-zone{background:#2ee04d;border-color:#eaffea;color:#052;text-shadow:none;box-shadow:0 0 12px #2ee04d}
+.ui-bar-flash{animation:ui-bar-flash .5s ease-out}
 .ui-bar-marker{position:absolute;top:0;bottom:0;width:8px;margin-left:-4px;background:#ffeb3b;border:2px solid #000;box-sizing:border-box;border-radius:2px;box-shadow:0 0 6px #fff}
 .ui-hud2{position:absolute;top:46px;left:0;right:0;padding:6px 12px;background:#000a;font-size:14px}
 .ui-faces{display:flex;gap:6px;margin-top:4px}
@@ -24,6 +25,7 @@ export const CSS_V2 = `
 .ui-arrow.ui-shake{animation:ui-arrow-shake .4s}
 .ui-reveal{position:absolute;top:144px;left:12px;right:12px;max-width:none;text-align:left}
 .ui-reveal p{margin:4px 0}
+@keyframes ui-bar-flash{0%{background:#fff;box-shadow:0 0 0 6px #fff,0 0 18px 6px #ffeb3b;transform:scaleY(1.25)}60%{background:#ffeb3b}100%{transform:scaleY(1)}}
 @keyframes ui-pulse{to{opacity:.45}}
 @keyframes ui-arrow-shake{25%{translate:-8px 0}75%{translate:8px 0}}
 `;

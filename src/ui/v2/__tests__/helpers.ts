@@ -21,13 +21,13 @@ export function stubBus(): EventBus & { readonly sent: { type: GameEventType; pa
 }
 
 export const hole = (index: number, stage: HoleStage = 'empty'): HoleStateV2 => ({
-  index, stage, cookElapsedSec: 0, burnElapsedSec: 0, filling: null, noFilling: false, rollHits: [null, null], rollZone: null, warn: false,
+  index, locked: false, stage, cookElapsedSec: 0, burnElapsedSec: 0, filling: null, noFilling: false, rollHits: [null, null], rollZone: null, warn: false,
 });
 
 export function stateOf(stages: readonly HoleStage[], over: Partial<GameStateV2> = {}): GameStateV2 {
   return {
     phase: 'P1', holes: stages.map((s, i) => hole(i, s)), tray: [{ id: 'octopus', isTrap: false }, { id: 'wasabi', isTrap: true }],
-    barPosition: 0.5, barZone: null, fune: [], holding: null, customers: [], activeDialogues: [], reviews: [], sessionAverage: null,
+    barPosition: 0.5, barZone: null, fune: [], funeServing: false, holding: null, customers: [], activeDialogues: [], reviews: [], sessionAverage: null,
     tutorialCompleted: true, tutorialStage: null, ...over,
   };
 }

@@ -13,7 +13,7 @@ export function arrowGeometry(from: Pt, to: Pt): ArrowGeometry {
   return { x: from.x, y: from.y, length: Math.hypot(to.x - from.x, to.y - from.y), angle: (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI };
 }
 
-/** 각 튜토리얼 단계에서 조작할 구멍의 상태. 이 상태인 첫 구멍을 가리킨다(6구 모두 같은 조작: GDD §진행 튜토리얼). */
+/** 각 튜토리얼 단계에서 조작할 구멍의 상태. 이 상태인 첫 구멍을 가리킨다(열린 6구 모두 같은 조작, 잠긴 구멍은 건너뜀: GDD §진행 튜토리얼). */
 const HOLE_STAGE: Readonly<Record<TutorialStage, string | null>> = {
   margarine: 'empty',
   batter: 'greased',
@@ -38,7 +38,7 @@ export function tutorialArrow(
   buckets: { readonly margarine: () => Pt | null; readonly batter: () => Pt | null },
 ): { readonly from: Pt; readonly to: Pt } | null {
   const want = HOLE_STAGE[stage];
-  const hole = want ? state.holes.find((h) => h.stage === want) : undefined;
+  const hole = want ? state.holes.find((h) => !h.locked && h.stage === want) : undefined;
   const holePt = hole ? picker.anchor({ kind: 'hole', index: hole.index }) : null;
   if (!holePt) return null;
   let from: Pt | null = null;
