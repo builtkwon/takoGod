@@ -47,7 +47,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       ...box(picker.anchor({ kind: 'fune' }), FUNE_R),
     ];
   };
-  const dialogues = createDialogues({ layer, bus, disposers }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
+  const dialogues = createDialogues({ layer, bus, disposers, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
   layer.append(bar.root, hud.root, buckets.margarine, buckets.batter);
   root.append(style, layer);

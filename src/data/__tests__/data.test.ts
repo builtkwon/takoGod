@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Personality, TasteKind, TutorialStage } from '../../contracts';
-import { dialogues, reviewComments, tasteLines, tutorialReviewComment, tutorialStepsV2 } from '../index';
+import { dialogues, fumedLines, reviewComments, tasteLines, tutorialReviewComment, tutorialStepsV2 } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 
@@ -45,6 +45,13 @@ describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
     expect(new Set(all).size).toBe(40);
   });
 
+  it('분노 대사는 성격 4 × 2개, 비어 있지 않고 서로 다르다', () => {
+    const all = PERSONALITIES.flatMap((p) => [...fumedLines[p]]);
+    expect(all).toHaveLength(8);
+    for (const t of all) expect(t.trim()).not.toBe('');
+    expect(new Set(all).size).toBe(8);
+  });
+
   it('튜토리얼 안내문구는 7단계 각각 하나', () => {
     expect(tutorialStepsV2.map((s) => s.stage)).toEqual(STAGES);
     for (const s of tutorialStepsV2) expect(s.message.trim()).not.toBe('');
@@ -55,7 +62,7 @@ describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
       .split('\n')
       .map((l) => l.trim())
       .filter((l) => l !== '' && !l.startsWith('#') && !l.startsWith('!'));
-    const texts = [...Object.values(tasteLines).flatMap((p) => Object.values(p).flat()), ...tutorialStepsV2.map((s) => s.message)];
+    const texts = [...Object.values(fumedLines).flat(), ...Object.values(tasteLines).flatMap((p) => Object.values(p).flat()), ...tutorialStepsV2.map((s) => s.message)];
     for (const t of texts) for (const w of banned) expect(t.toLowerCase()).not.toContain(w.toLowerCase());
   });
 });

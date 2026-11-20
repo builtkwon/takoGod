@@ -10,6 +10,7 @@ export const CSS = `
 .ui-shake{animation:ui-shake .4s}
 .ui-bubble{position:absolute;height:76px;box-sizing:border-box;overflow:hidden;left:12px;right:12px;padding:8px 12px;background:#fff;color:#222;border-radius:12px;font-size:15px}
 .ui-bubble p{margin:2px 0}
+.ui-fumed{background:#ffe0dc;color:#7a1008;font-weight:700;pointer-events:none}
 .ui-timer{position:absolute;right:10px;top:6px;font-size:12px;color:#c62828}
 .ui-answer{position:absolute;box-sizing:border-box;font-size:14px}
 .ui-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000c;text-align:center}

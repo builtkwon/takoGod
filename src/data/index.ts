@@ -3,3 +3,4 @@ export { dialogues } from './dialogues';
 export { reviewComments, tutorialReviewComment } from './review-comments';
 export { tutorialStepsV2 } from './tutorial';
 export { tasteLines } from './taste-lines';
+export { fumedLines } from './fumed-lines';

@@ -125,6 +125,35 @@ describe('마가린·반죽 끌어 칠하기', () => {
   });
 });
 
+describe('잠긴 구멍·후네 서빙 대기', () => {
+  it('칠하며 잠긴 구멍을 지나가면 조용히 건너뛴다', () => {
+    const { c, bus, setState } = setup();
+    const s = stateOf(['empty', 'empty']);
+    setState({ ...s, holes: [{ ...s.holes[0]!, locked: true }, s.holes[1]!] });
+    c.down(1, { x: 10, y: 10 }, BUCKET);
+    c.move(1, { x: 50, y: 150 });
+    c.up(1, { x: 150, y: 150 });
+    expect(bus.sent.map((e) => (e.payload as { hole: number }).hole)).toEqual([1]);
+  });
+  it('잠긴 구멍을 눌러도 roll을 보내지 않는다', () => {
+    const { c, bus, setState } = setup();
+    const s = stateOf(['filled']);
+    setState({ ...s, holes: [{ ...s.holes[0]!, locked: true }] });
+    c.down(1, { x: 50, y: 150 });
+    c.up(1, { x: 50, y: 150 });
+    expect(bus.sent).toEqual([]);
+  });
+  it('후네 서빙 대기 중 후네에 놓아 거부되면 놓은 곳에서 원래 구멍으로 되돌린다', () => {
+    const { c, bus, view, setState } = setup();
+    setState(stateOf(['empty', 'done'], { funeServing: true }));
+    c.down(1, { x: 150, y: 150 });
+    c.move(1, { x: 150, y: 150 + DRAG_THRESHOLD });
+    c.up(1, { x: 200, y: 520 });
+    bus.emit('cook/rejected', { hole: 1, reason: 'fune-full' });
+    expect(view.calls.at(-1)).toEqual(['fly', 'done', { x: 200, y: 520 }, { x: 150, y: 150 }]);
+  });
+});
+
 describe('구멍 탭·들기', () => {
   it('문턱 안 이동은 탭: input/roll', () => {
     const { c, bus } = setup();
