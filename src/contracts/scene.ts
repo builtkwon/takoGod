@@ -1,12 +1,12 @@
 // 장면 좌표 판정 포트. 원본: docs/GDD.md §굽기 조작(끌어 놓기·구멍 탭)
-// render가 구현하고 ui가 쓴다. 연결은 main.ts 조립 시 한다(Ps1Renderer 확장 위치·mountUi 인자는 여기에 적지 않는다).
+// render가 구현하고 ui가 쓴다. 연결은 main.ts 조립 시 한다(ToonRenderer 확장 위치·mountUi 인자는 여기에 적지 않는다).
 
 /**
  * 화면의 3D 장면에서 ui가 조작 대상으로 삼는 것.
  * 마가린 통·반죽 주전자는 ui DOM이라 여기에 없다.
  */
 export type PickTarget =
-  /** 철판 구멍. index는 HoleStateV2.index(0..5)와 같다. */
+  /** 철판 구멍. index는 HoleStateV2.index(0..15)와 같다. */
   | { readonly kind: 'hole'; readonly index: number }
   /** 속재료 트레이 칸. slot은 GameStateV2.tray의 표시 순서 인덱스와 같은 기준이다. */
   | { readonly kind: 'tray'; readonly slot: number }

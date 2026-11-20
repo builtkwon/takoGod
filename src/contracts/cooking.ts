@@ -38,7 +38,7 @@ export type Material =
   | { readonly kind: 'batter' }
   | { readonly kind: 'filling'; readonly ingredient: IngredientId };
 
-/** 타이밍 바 영역(0..1, 가운데 정렬). 영역 폭은 GDD §굽기(W1·W2). */
+/** 타이밍 바 영역(0..1). 위치는 구멍마다 무작위(GDD §굽기: 반죽 놓을 때 W1, 굴리기 1 때 W2를 뽑는다). 폭은 페이즈별 W1·W2. */
 export interface RollZone {
   readonly from: number;
   readonly to: number;
@@ -46,8 +46,10 @@ export interface RollZone {
 
 /** 구멍 하나의 상태(새 흐름). 구멍별로 독립 상태를 가진다. */
 export interface HoleStateV2 {
-  /** 0..5 (내부용. 화면에는 번호를 보이지 않는다) */
+  /** 0..15(4×4, 행 우선 index = 행*4 + 열, 0행이 화면 위쪽). 내부용이며 화면에는 번호를 보이지 않는다. */
   readonly index: number;
+  /** 튜토리얼에서 쓰지 않는 구멍이다(GDD §튜토리얼). 잠긴 구멍은 모든 조작을 거부하고 render는 어둡게 그린다. 본게임에서는 항상 false. */
+  readonly locked: boolean;
   readonly stage: HoleStage;
   /** 익힘 경과(초). 'cooking'에서만 증가하고 정해진 시간에 'cooked'로 넘어간다(GDD §굽기). 그 밖의 단계는 0. */
   readonly cookElapsedSec: number;
