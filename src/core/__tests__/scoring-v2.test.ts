@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FuneItem } from '../../contracts';
-import { commentBucket, darkCapRange, isPerfectPlate, plateChanges, plateDefects } from '../scoring-v2';
+import { commentBucket, darkCapRange, isPerfectPlate, plateChanges, plateDefects, shopPlateScore } from '../scoring-v2';
 
 const good: FuneItem = { rolledPerfectly: true, filling: 'octopus', noFilling: false, dark: false };
 const plate = (...over: Partial<FuneItem>[]): FuneItem[] =>
@@ -77,5 +77,29 @@ describe('리뷰 코멘트 구간', () => {
     [0, 1],
   ] as const)('별점 %f → 구간 %i(0.5는 내림, 0~1점은 1 구간)', (stars, bucket) => {
     expect(commentBucket(stars)).toBe(bucket);
+  });
+});
+
+describe('접시 가게 점수(GDD §가게 점수)', () => {
+  it('완벽 접시 연속 1·2·3번째: (100 + 12×5) × 1.0·1.2·1.4 = 160·192·224', () => {
+    const a = shopPlateScore(100, 12, true, 0);
+    expect(a).toEqual({ points: 160, multiplier: 1, combo: 1 });
+    const b = shopPlateScore(100, 12, true, a.combo);
+    expect(b).toEqual({ points: 192, multiplier: 1.2, combo: 2 });
+    expect(shopPlateScore(100, 12, true, b.combo)).toEqual({ points: 224, multiplier: 1.4, combo: 3 });
+  });
+
+  it('배수는 최대 2.0이다(n=6부터)', () => {
+    expect(shopPlateScore(100, 12, true, 4)).toMatchObject({ multiplier: 1.8, combo: 5, points: 288 });
+    expect(shopPlateScore(100, 12, true, 5)).toMatchObject({ multiplier: 2, combo: 6, points: 320 });
+    expect(shopPlateScore(100, 12, true, 9)).toMatchObject({ multiplier: 2, combo: 10, points: 320 });
+  });
+
+  it('완벽이 아니면 ×1.0이고 콤보가 0으로 돌아간다', () => {
+    expect(shopPlateScore(80, 9, false, 4)).toEqual({ points: 125, multiplier: 1, combo: 0 });
+  });
+
+  it('반올림한다', () => {
+    expect(shopPlateScore(83, 11, true, 1)).toMatchObject({ points: Math.round((83 + 55) * 1.2) });
   });
 });

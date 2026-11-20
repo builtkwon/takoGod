@@ -4,7 +4,7 @@ import { FUNE_SERVE_DELAY_SEC } from '../cooking-v2';
 import { createEventBus } from '../event-bus';
 import { GameV2, type GameDataV2 } from '../game-v2';
 import { createRng } from '../rng';
-import { createMemorySessionStore } from '../session';
+import { createMemoryBestStore, createMemorySessionStore } from '../session';
 import { syntheticDataV2 } from '../synthetic-data-v2';
 
 export const OUTPUT_EVENTS: readonly GameEventType[] = [
@@ -21,6 +21,8 @@ export const OUTPUT_EVENTS: readonly GameEventType[] = [
   'dialogue/resolved',
   'customer/patience-changed',
   'customer/fumed',
+  'score/plate',
+  'score/new-best',
   'plate/tasted',
   'plate/scored',
   'customer/redo-requested',
@@ -69,6 +71,8 @@ export interface SetupOpts {
    * 기본은 난수 0.5로 고정해(영역이 바 가운데) rng 수열이 영역 뽑기에 밀리지 않게 하고 구멍들을 한꺼번에 굴릴 수 있게 한다.
    */
   readonly liveZones?: boolean;
+  /** 판 시작 때 저장소에 있던 최고 가게 점수. 기본은 기록 없음. */
+  readonly best?: number | null;
 }
 
 export function setupV2(opts: SetupOpts = {}) {
@@ -76,6 +80,7 @@ export function setupV2(opts: SetupOpts = {}) {
   const log: Rec[] = [];
   let t = 0;
   for (const type of OUTPUT_EVENTS) bus.on(type, (payload) => log.push({ type, payload, t }));
+  const bestStore = createMemoryBestStore(opts.best ?? null);
   const store = createMemorySessionStore(
     opts.tutorial
       ? null
@@ -90,11 +95,12 @@ export function setupV2(opts: SetupOpts = {}) {
   const zoneRng = (): number => 0.5; // 모든 구멍의 영역이 바 가운데에 같게 놓여 구멍들을 한꺼번에 굴릴 수 있다
   // 영역 위치 뽑기(drawZone 호출)만 zoneRng로 돌린다. 호출 위치를 스택에서 알아본다(테스트 전용).
   const rng = (): number => (!opts.liveZones && new Error().stack?.includes('drawZone') ? zoneRng() : baseRng());
-  const game = new GameV2({ bus, data: opts.data ?? syntheticDataV2, rng, store });
+  const game = new GameV2({ bus, data: opts.data ?? syntheticDataV2, rng, store, bestStore });
   return {
     bus,
     game,
     store,
+    bestStore,
     log,
     get now(): number {
       return t;
@@ -233,3 +239,9 @@ export function tickTo(h: H, abs: number): void {
 }
 
 export const customerEnteredAt = (h: H, index = 0): number => h.log.filter((r) => r.type === 'customer/entered')[index]?.t ?? NaN;
+
+/** 세션이 끝날 때까지 완벽 접시를 만든다(손님 대화·인내는 신경 쓰지 않는다). */
+export function playToEnd(h: H): void {
+  for (let i = 0; i < 30 && !h.game.finished; i++) makePlate(h);
+  if (!h.game.finished) throw new Error('세션이 끝나지 않았다');
+}

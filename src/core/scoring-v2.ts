@@ -50,3 +50,18 @@ export function darkCapRange(count: number): { readonly min: number; readonly ma
 
 /** 리뷰 코멘트 구간(1~5). 0.5 단위는 내림하고 0~1점은 1 구간을 쓴다. */
 export const commentBucket = (stars: number): 1 | 2 | 3 | 4 | 5 => Math.min(5, Math.max(1, Math.floor(stars))) as 1 | 2 | 3 | 4 | 5;
+
+/** 굴리기 적중 1회당 가게 점수 보너스. */
+export const HIT_BONUS = 5;
+const COMBO_STEP = 0.2;
+const COMBO_MAX_MULTIPLIER = 2;
+
+/**
+ * 접시 가게 점수(GDD §가게 점수): round((기본 + 적중 × 5) × 배수). 배수는 연속 완벽 n번째에 1.0 + 0.2 × (n − 1)(최대 2.0)이고
+ * 완벽이 아니면 ×1.0과 콤보 0이다. prevCombo는 이 접시 전의 연속 완벽 수다.
+ */
+export function shopPlateScore(base: number, hits: number, perfect: boolean, prevCombo: number): { points: number; multiplier: number; combo: number } {
+  const combo = perfect ? prevCombo + 1 : 0;
+  const multiplier = perfect ? Math.min(COMBO_MAX_MULTIPLIER, Math.round((1 + COMBO_STEP * (combo - 1)) * 10) / 10) : 1;
+  return { points: Math.round((base + hits * HIT_BONUS) * multiplier), multiplier, combo };
+}

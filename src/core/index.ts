@@ -2,5 +2,5 @@
 export { GameV2, type GameDataV2, type GameOptionsV2 } from './game-v2';
 export { BalanceSimulatorV2 } from './sim';
 export { createEventBus } from './event-bus';
-export { createMemorySessionStore } from './session';
+export { createMemoryBestStore, createMemorySessionStore } from './session';
 export { createRng } from './rng';

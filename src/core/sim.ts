@@ -4,7 +4,7 @@ import type { BalanceScenario, BalanceSimulator as BalanceSimulatorPort, EventBu
 import { createEventBus } from './event-bus';
 import { GameV2 } from './game-v2';
 import { createRng, randomIndex } from './rng';
-import { createMemorySessionStore } from './session';
+import { createMemoryBestStore, createMemorySessionStore } from './session';
 import { syntheticDataV2 } from './synthetic-data-v2';
 
 const DT = 0.05;
@@ -85,13 +85,15 @@ export interface SessionResultV2 {
   readonly reviews: readonly ReviewResult[];
   readonly average: number | null;
   readonly saved: SessionSnapshot | null;
+  /** 이번 판 가게 점수(참고용, 밸런스 목표 없음). */
+  readonly shopScore: number;
 }
 
 /** 세션 하나를 끝까지 돌린다. 튜토리얼은 안내를 따라가야 하므로 두 봇 모두 정석대로 진행한다. */
 export function playSessionV2(kind: BalanceScenario['kind'] | 'chaos', seed: number): SessionResultV2 {
   const bus = createEventBus();
   const store = createMemorySessionStore();
-  const game = new GameV2({ bus, data: syntheticDataV2, rng: createRng(seed), store });
+  const game = new GameV2({ bus, data: syntheticDataV2, rng: createRng(seed), store, bestStore: createMemoryBestStore() });
   const botRng = createRng(seed ^ 0x9e3779b9);
   for (let i = 0; i < MAX_TICKS && !game.finished; i++) {
     const s = game.state;
@@ -102,7 +104,7 @@ export function playSessionV2(kind: BalanceScenario['kind'] | 'chaos', seed: num
   }
   if (!game.finished) throw new Error(`세션이 ${MAX_TICKS}틱 안에 끝나지 않았다(${kind}, seed ${seed})`);
   const s = game.state;
-  return { finished: true, reviews: s.reviews, average: s.sessionAverage, saved: store.load() };
+  return { finished: true, reviews: s.reviews, average: s.sessionAverage, saved: store.load(), shopScore: s.shopScore };
 }
 
 export const BalanceSimulatorV2: BalanceSimulatorPort = {
@@ -117,6 +119,13 @@ export const BalanceSimulatorV2: BalanceSimulatorPort = {
     return sum / scenario.sessions;
   },
 };
+
+/** 가게 점수 평균(참고 출력용, 목표 없음). */
+export function averageShopScore(kind: BalanceScenario['kind'] | 'chaos', sessions: number, seed: number): number {
+  let sum = 0;
+  for (let i = 0; i < sessions; i++) sum += playSessionV2(kind, seed * 1_000_003 + i).shopScore;
+  return sum / sessions;
+}
 
 /** sim.balance 진입점 규약(TOOL_ENTRY_PATHS.sim, SimModule)이 읽는 이름. */
 export const BalanceSimulator = BalanceSimulatorV2;

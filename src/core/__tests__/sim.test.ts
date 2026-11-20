@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BalanceSimulatorV2, playSessionV2 } from '../sim';
+import { BalanceSimulatorV2, averageShopScore, playSessionV2 } from '../sim';
 
 describe('BalanceSimulatorV2 (굽기 개편 봇)', () => {
   it('전정답+완벽 봇은 세션을 끝내고 평균 5.0이다(GDD §밸런스 목표)', () => {
@@ -42,5 +42,13 @@ describe('BalanceSimulatorV2 (굽기 개편 봇)', () => {
 
   it('sessions가 1 미만이면 던진다', () => {
     expect(() => BalanceSimulatorV2.run({ kind: 'perfect', sessions: 0, seed: 1 })).toThrow();
+  });
+
+  it('가게 점수 평균을 봇별로 출력한다(참고용, 목표 없음). 전정답 봇이 무작위 봇보다 높다', () => {
+    const perfect = averageShopScore('perfect', 10, 1);
+    const random = averageShopScore('random', 10, 1);
+    console.info(`[sim-v2] 가게 점수 평균(10세션 seed 1): perfect ${perfect.toFixed(0)}, random ${random.toFixed(0)}`);
+    expect(perfect).toBeGreaterThan(random);
+    expect(random).toBeGreaterThan(0);
   });
 });
