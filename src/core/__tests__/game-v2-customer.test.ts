@@ -70,6 +70,20 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
     expect(h.of('customer/left')).toEqual([]);
   });
 
+  it('인내 100%에 도달하면 customer/fumed를 그 손님에게 한 번만 낸다(떠나지 않음)', () => {
+    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 20초
+    toP2(h);
+    const t0 = customerEnteredAt(h);
+    const id = h.game.state.customers[0]?.id;
+    tickTo(h, t0 + 19.9);
+    expect(h.of('customer/fumed')).toEqual([]);
+    tickTo(h, t0 + 20);
+    expect(h.of('customer/fumed')).toEqual([{ customerId: id }]);
+    h.tick(60);
+    expect(h.of('customer/fumed')).toHaveLength(1);
+    expect(h.of('customer/left')).toEqual([]);
+  });
+
   it('인내 100% -20은 한 번만 적용된다(손님 입장 기준으로 시작)', () => {
     // 직장인·20초. 12초에 대화 → 좋은 답(+10=90), 20초 인내 -20(70), 23초에 완벽 접시 +20 → 90 → delta +10(4.5★).
     // 두 번 적용되면 50+20=70 → delta -10.

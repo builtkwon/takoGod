@@ -1,4 +1,4 @@
-// 밸런스 시뮬레이터(굽기 개편). 봇이 contracts 이벤트로만 입력해 GameV2를 끝까지 돌리고 세션 평균 별점을 모은다.
+// 밸런스 시뮬레이터(굽기 개편, 4×4·무작위 영역). 봇이 contracts 이벤트로만 입력해 GameV2를 끝까지 돌리고 세션 평균 별점을 모은다.
 // sim.balance 도구가 읽는 진입점이다(TOOL_ENTRY_PATHS.sim).
 import type { BalanceScenario, BalanceSimulator as BalanceSimulatorPort, EventBus, GameStateV2, ReviewResult, SessionSnapshot } from '../contracts';
 import { createEventBus } from './event-bus';
@@ -19,6 +19,7 @@ const RANDOM_ANSWER_PROB = 0.02;
 function perfectBot(bus: EventBus, s: GameStateV2): void {
   for (const d of s.activeDialogues) bus.emit('input/answer', { customerId: d.customerId, choice: 'good' });
   for (const h of s.holes) {
+    if (h.locked) continue;
     const inZone = h.rollZone !== null && s.barPosition >= h.rollZone.from && s.barPosition <= h.rollZone.to;
     if (h.stage === 'empty') bus.emit('input/place-material', { hole: h.index, material: { kind: 'margarine' } });
     else if (h.stage === 'greased') bus.emit('input/place-material', { hole: h.index, material: { kind: 'batter' } });

@@ -1,26 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { HIT2, reach, reachDone, setupV2, tickUntilBar } from './helpers-v2';
+import { reach, reachDone, rollHole, setupV2 } from './helpers-v2';
 
 /** 같은 시각에 완성된 구멍들을 만든다. */
 const done = reachDone;
 
-describe('탐 타이머(완성부터 누적, 3초 어두움, 5초 탐)', () => {
-  it('완성 구멍은 burnElapsedSec이 늘고 3초에 어두워진다', () => {
+describe('탐 타이머(완성부터 누적, 4초 어두움, 6초 탐)', () => {
+  it('완성 구멍은 burnElapsedSec이 늘고 4초에 어두워진다', () => {
     const h = setupV2();
     done(h, 0);
-    h.tick(2.9);
+    h.tick(3.9);
     expect(h.hole(0).stage).toBe('done');
-    expect(h.hole(0).burnElapsedSec).toBeCloseTo(2.9);
+    expect(h.hole(0).burnElapsedSec).toBeCloseTo(3.9);
     expect(h.of('cook/darkened')).toEqual([]);
     h.tick(0.1);
     expect(h.hole(0).stage).toBe('dark');
     expect(h.of('cook/darkened')).toEqual([{ hole: 0 }]);
   });
 
-  it('누적 5초에 탄다(어두워진 뒤 2초)', () => {
+  it('누적 6초에 탄다(어두워진 뒤 2초)', () => {
     const h = setupV2();
     done(h, 0);
-    h.tick(3);
+    h.tick(4);
     h.tick(1.9);
     expect(h.hole(0).stage).toBe('dark');
     expect(h.of('cook/burnt')).toEqual([]);
@@ -31,7 +31,7 @@ describe('탐 타이머(완성부터 누적, 3초 어두움, 5초 탐)', () => {
     expect(h.of('cook/burnt')).toHaveLength(1);
   });
 
-  it('큰 dt 하나로 3초·5초를 건너뛰어도 어두움과 탐 이벤트가 모두 나온다', () => {
+  it('큰 dt 하나로 4초·6초를 건너뛰어도 어두움과 탐 이벤트가 모두 나온다', () => {
     const h = setupV2();
     done(h, 0);
     h.tick(6);
@@ -64,7 +64,7 @@ describe('들기·놓기', () => {
     expect(h.game.state.holding).toBeNull();
     expect(h.of('cook/rejected')).toEqual([]);
     expect(h.of('cook/dropped')).toEqual([]);
-    h.tick(0.9);
+    h.tick(1.9);
     expect(h.hole(0).stage).toBe('done');
     h.tick(0.1);
     expect(h.hole(0).stage).toBe('dark');
@@ -74,7 +74,7 @@ describe('들기·놓기', () => {
     const h = setupV2();
     done(h, 0, 1);
     h.pick(0);
-    h.tick(3);
+    h.tick(4);
     expect(h.hole(0).stage).toBe('done');
     expect(h.hole(1).stage).toBe('dark');
   });
@@ -143,7 +143,7 @@ describe('들기·놓기', () => {
   it('어두운 것도 후네에 담을 수 있다(item.dark)', () => {
     const h = setupV2();
     done(h, 0);
-    h.tick(3);
+    h.tick(4);
     h.pick(0);
     h.drop('fune');
     expect(h.of('fune/added')[0]?.item.dark).toBe(true);
@@ -153,7 +153,7 @@ describe('들기·놓기', () => {
   it('어두운 것을 other에 놓으면 떨어져 빈칸이 되고 cook/dropped{dark}', () => {
     const h = setupV2();
     done(h, 0);
-    h.tick(3);
+    h.tick(4);
     h.pick(0);
     h.drop('other');
     expect(h.hole(0).stage).toBe('empty');
@@ -165,7 +165,7 @@ describe('들기·놓기', () => {
   it.each(['fune', 'other', 'offscreen'] as const)('탄 것을 %s에 놓으면 빈칸이 되고 cook/dropped{burnt}, 후네에 담기지 않는다', (target) => {
     const h = setupV2();
     done(h, 0);
-    h.tick(5);
+    h.tick(6);
     h.pick(0);
     h.drop(target);
     expect(h.hole(0).stage).toBe('empty');
@@ -179,7 +179,7 @@ describe('들기·놓기', () => {
   it('탄 것을 cancel하면 탄 구멍으로 돌아간다', () => {
     const h = setupV2();
     done(h, 0);
-    h.tick(5);
+    h.tick(6);
     h.pick(0);
     h.drop('cancel');
     expect(h.hole(0).stage).toBe('burnt');
@@ -192,10 +192,9 @@ describe('warn: 탐 타이머가 도는 완성 구멍이 2개 이상이면 깜�
   it('1개면 경고 없음, 2개면 둘 다 경고', () => {
     const h = setupV2();
     reach(h, [0, 1, 2], 5);
-    tickUntilBar(h, HIT2);
-    h.roll(0);
+    rollHole(h, 0);
     expect(h.hole(0).warn).toBe(false);
-    h.roll(1);
+    rollHole(h, 1);
     expect(h.hole(0).warn).toBe(true);
     expect(h.hole(1).warn).toBe(true);
     expect(h.hole(2).warn).toBe(false);
@@ -223,11 +222,9 @@ describe('warn: 탐 타이머가 도는 완성 구멍이 2개 이상이면 깜�
   it('어두운 구멍도 타이머가 돌고 있으면 세고 경고한다', () => {
     const h = setupV2();
     reach(h, [0, 1], 5);
-    tickUntilBar(h, HIT2);
-    h.roll(0);
-    h.tick(3);
-    tickUntilBar(h, HIT2);
-    h.roll(1);
+    rollHole(h, 0);
+    h.tick(4);
+    rollHole(h, 1);
     expect(h.hole(0).stage).toBe('dark');
     expect(h.hole(0).warn).toBe(true);
     expect(h.hole(1).warn).toBe(true);
@@ -236,11 +233,9 @@ describe('warn: 탐 타이머가 도는 완성 구멍이 2개 이상이면 깜�
   it('탄 구멍은 세지 않는다', () => {
     const h = setupV2();
     reach(h, [0, 1], 5);
-    tickUntilBar(h, HIT2);
-    h.roll(0);
-    h.tick(5);
-    tickUntilBar(h, HIT2);
-    h.roll(1);
+    rollHole(h, 0);
+    h.tick(6);
+    rollHole(h, 1);
     expect(h.hole(0).stage).toBe('burnt');
     expect(h.hole(0).warn).toBe(false);
     expect(h.hole(1).warn).toBe(false);

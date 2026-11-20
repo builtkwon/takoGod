@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Personality } from '../../contracts';
 import { TRAY_SOURCE } from '../cooking';
 import { syntheticDataV2 } from '../synthetic-data-v2';
-import { makePlate, playUntilPhase, scripted, setupV2 } from './helpers-v2';
+import { makePlate, playUntilPhase, reachDone, scripted, setupV2 } from './helpers-v2';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 // 난수 값 → 성격(0..3)·인내시간(20 + v*20초)
@@ -32,6 +32,64 @@ describe('후네와 서빙', () => {
     finish();
     expect(h.of('plate/tasted')).toHaveLength(1);
     expect(h.game.state.fune).toHaveLength(0);
+  });
+
+  it('6개가 차면 funeServing이 켜지고 1초 뒤에 서빙한다(그 전에는 서빙하지 않는다)', () => {
+    const h = setupV2();
+    toP2(h);
+    const finish = makePlate(h, {}, true);
+    expect(h.game.state.funeServing).toBe(false);
+    h.drop('fune');
+    expect(h.game.state.fune).toHaveLength(6);
+    expect(h.game.state.funeServing).toBe(true);
+    h.tick(0.9);
+    expect(h.of('plate/tasted')).toEqual([]);
+    expect(h.game.state.funeServing).toBe(true);
+    h.tick(0.1);
+    expect(h.of('plate/tasted')).toHaveLength(1);
+    expect(h.game.state.fune).toHaveLength(0);
+    expect(h.game.state.funeServing).toBe(false);
+    void finish;
+  });
+
+  it('서빙 대기 중에는 후네 놓기를 거부하고(fune-full, 떨어뜨리지 않음) 탐 타이머가 멈춘다', () => {
+    const h = setupV2();
+    toP2(h);
+    const finish = makePlate(h, {}, true);
+    finish(); // 마지막 1개를 놓고 1초 지나 서빙까지 끝난다
+    // 새 접시: 구멍 0~5를 완성해 5개만 후네에 담고 6번째로 채운 직후 7번째를 넣어 본다.
+    reachDone(h, 0, 1, 2, 3, 4, 5, 6);
+    for (const i of [0, 1, 2, 3, 4, 5]) {
+      h.pick(i);
+      h.drop('fune');
+    }
+    expect(h.game.state.funeServing).toBe(true);
+    const burn = h.hole(6).burnElapsedSec;
+    h.pick(6);
+    h.drop('fune');
+    expect(h.of('cook/rejected').at(-1)).toEqual({ hole: 6, reason: 'fune-full' });
+    expect(h.of('cook/dropped')).toEqual([]);
+    expect(h.hole(6).stage).toBe('done');
+    expect(h.hole(6).burnElapsedSec).toBe(burn);
+    h.tick(0.5);
+    expect(h.hole(6).burnElapsedSec).toBe(burn);
+    h.tick(0.5);
+    h.tick(1);
+    expect(h.hole(6).burnElapsedSec).toBeGreaterThan(burn);
+  });
+
+  it('손님 0명 페이즈(P1)는 1초 뒤에 비우고 전환한다(그 전에는 후네가 차 있다)', () => {
+    const h = setupV2();
+    const finish = makePlate(h, {}, true);
+    h.drop('fune');
+    expect(h.game.state.phase).toBe('P1');
+    expect(h.game.state.funeServing).toBe(true);
+    h.tick(0.9);
+    expect(h.game.state.phase).toBe('P1');
+    h.tick(0.1);
+    expect(h.game.state.phase).toBe('P2');
+    expect(h.game.state.funeServing).toBe(false);
+    void finish;
   });
 
   it('서빙하면 후네만 비우고 철판에서 진행 중인 구멍은 그대로다', () => {
