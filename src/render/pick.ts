@@ -1,6 +1,5 @@
 // ScenePicker 구현. 투영·광선 판정은 순수 함수라 three 없이 테스트한다.
 import type { PickTarget, ScenePicker } from '../contracts';
-import { RT_H, RT_W } from './dims';
 import { CAMERA, FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
 import type { V3 } from './layout';
 
@@ -118,8 +117,7 @@ export function anchorUv(proj: Projector, target: PickTarget, trayCount: number)
 }
 
 /**
- * canvas의 현재 CSS 위치·크기로 뷰포트 좌표를 변환한다(CSS 확대 배율은 rect에서 나온다).
- * 포인터는 보이는 픽셀(렌더타깃 240x320의 nearest 확대) 중심으로 맞춘 뒤 판정한다.
+ * canvas의 현재 CSS 위치·크기로 뷰포트 좌표를 변환한다(렌더 해상도와 무관하게 rect 비율만 쓴다).
  * getTrayCount: 현재 화면에 있는 트레이 칸 수(렌더러가 마지막으로 그린 GameStateV2.tray 길이).
  */
 export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRect'>, getTrayCount: () => number, cam: CameraSpec = CAMERA): ScenePicker {
@@ -131,7 +129,7 @@ export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRe
       const u = (clientX - r.left) / r.width;
       const v = (clientY - r.top) / r.height;
       if (u < 0 || u >= 1 || v < 0 || v >= 1) return null;
-      return pickUv(proj, (Math.floor(u * RT_W) + 0.5) / RT_W, (Math.floor(v * RT_H) + 0.5) / RT_H, getTrayCount());
+      return pickUv(proj, u, v, getTrayCount());
     },
     anchor(target) {
       const r = canvas.getBoundingClientRect();

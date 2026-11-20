@@ -1,9 +1,8 @@
 // 밤 도로 배경: 카메라가 아래를 내려다봐 하늘은 안 보이고 먼 바닥(도로)이 화면 위쪽을 채운다.
-// 텍스처 없이 버텍스 컬러 그라데이션 + 로우폴리 가로등·보케 원판. 전경(철판·손님)보다 어둡게 둔다.
-import { CylinderGeometry, Float32BufferAttribute, Group, Mesh, PlaneGeometry } from 'three';
-import type { BufferGeometry, DataTexture } from 'three';
+// 텍스처·조명 없이 버텍스 컬러 그라데이션(MeshBasicMaterial) + 로우폴리 가로등·보케 원판. 전경(철판·손님)보다 어둡고 외곽선은 없다.
+import { CylinderGeometry, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three';
+import type { BufferGeometry } from 'three';
 import { merge, part } from './models';
-import { ps1Material } from './ps1';
 
 const GROUND_Y = -2;
 type Rgb = readonly [number, number, number];
@@ -40,7 +39,7 @@ function groundColor(x: number, z: number): Rgb {
   return c;
 }
 
-export function buildBackdrop(map: DataTexture): Group {
+export function buildBackdrop(): Group {
   const g = new Group();
   const ground = new PlaneGeometry(64, 40, 32, 20);
   ground.rotateX(-Math.PI / 2);
@@ -49,7 +48,7 @@ export function buildBackdrop(map: DataTexture): Group {
   const col: number[] = [];
   for (let i = 0; i < pos.count; i++) col.push(...groundColor(pos.getX(i), pos.getZ(i)));
   ground.setAttribute('color', new Float32BufferAttribute(col, 3));
-  g.add(new Mesh(ground, ps1Material(map)));
+  g.add(new Mesh(ground, new MeshBasicMaterial({ vertexColors: true })));
 
   const parts: BufferGeometry[] = [];
   for (const l of LAMPS) {
@@ -57,6 +56,6 @@ export function buildBackdrop(map: DataTexture): Group {
     parts.push(part(new CylinderGeometry(0.32, 0.32, 0.12, 6), 0xffb060, [l.x, GROUND_Y + 3.45, l.z])); // 등
   }
   for (const b of BOKEH) parts.push(part(new CylinderGeometry(b.r, b.r, 0.01, 8), b.hex, [b.p[0], GROUND_Y + 0.03, b.p[1]]));
-  g.add(new Mesh(merge(parts), ps1Material(map)));
+  g.add(new Mesh(merge(parts), new MeshBasicMaterial({ vertexColors: true })));
   return g;
 }

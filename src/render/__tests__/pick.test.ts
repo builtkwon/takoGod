@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { PickTarget } from '../../contracts';
 import { CAMERA, HOLE_POS } from '../layout';
 import { anchorUv, createScenePicker, makeProjector, pickUv, worldAnchor } from '../pick';
-import { RT_H, RT_W } from '../dims';
+
+const RT_W = 300;
+const RT_H = 400;
 
 const proj = makeProjector(CAMERA);
 const ALL: PickTarget[] = [...HOLE_POS.map((_, index): PickTarget => ({ kind: 'hole', index })), ...[0, 1, 2, 3, 4, 5].map((slot): PickTarget => ({ kind: 'tray', slot })), { kind: 'fune' }];
@@ -64,7 +66,7 @@ describe('pick/anchor 왕복', () => {
   });
 });
 
-describe('createScenePicker (CSS 확대·위치)', () => {
+describe('createScenePicker (CSS 크기·위치)', () => {
   const at = (left: number, top: number, scale: number) => ({ getBoundingClientRect: () => ({ left, top, width: RT_W * scale, height: RT_H * scale }) as DOMRect });
   it('CSS 배율·오프셋이 달라도 같은 대상을 잡고 anchor는 뷰포트 좌표다', () => {
     for (const [l, t, s] of [[0, 0, 1], [37, 12, 2.5], [100, 40, 3]] as const) {
@@ -83,14 +85,6 @@ describe('createScenePicker (CSS 확대·위치)', () => {
     expect(p.pick(5, 100)).toBeNull();
     expect(p.pick(10 + RT_W * 2, 100)).toBeNull();
     expect(p.pick(-50, -50)).toBeNull();
-  });
-  it('같은 렌더 픽셀 안(nearest 확대 블록)은 같은 결과다', () => {
-    const p = createScenePicker(at(0, 0, 3), () => 6);
-    const a = p.anchor({ kind: 'hole', index: 1 })!;
-    const bx = Math.floor(a.x / 3) * 3;
-    const by = Math.floor(a.y / 3) * 3;
-    const hits = [0, 1, 2].flatMap((i) => [0, 1, 2].map((j) => JSON.stringify(p.pick(bx + i + 0.5, by + j + 0.5))));
-    expect(new Set(hits).size).toBe(1);
   });
   it('트레이 칸 수는 호출 시점의 값을 쓴다', () => {
     let n = 6;

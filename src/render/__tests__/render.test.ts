@@ -18,7 +18,7 @@ describe('textures', () => {
   });
   it('같은 시드면 같은 픽셀이다(스냅샷 결정성)', () => {
     const again = createTextures();
-    expect(Array.from(again.iron.image.data as Uint8Array)).toEqual(Array.from(t.iron.image.data as Uint8Array));
+    expect(Array.from(again.wood.image.data as Uint8Array)).toEqual(Array.from(t.wood.image.data as Uint8Array));
   });
 });
 
