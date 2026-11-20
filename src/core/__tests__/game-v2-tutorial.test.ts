@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BATTER, MARGARINE, fill, setupV2, tickUntilBar, type H } from './helpers-v2';
+import { BATTER, MARGARINE, fill, scripted, setupV2, tickUntilBar, type H } from './helpers-v2';
 
 /** 튜토리얼에서 열린 6구(가운데 2열 × 위 3행). 나머지 10구는 잠긴다. */
 const TUTORIAL = [1, 2, 5, 6, 9, 10] as const;
@@ -249,6 +249,15 @@ describe('튜토리얼: 어두움·탐 없음, 바 전 구간 성공', () => {
     h.tick(600);
     expect(stage(h)).toBe('filling');
     expect(TUTORIAL.every((i) => h.hole(i).stage === 'cooked')).toBe(true);
+  });
+
+  it('반죽 놓기·굴리기 1·2에서 영역 위치 난수를 뽑지 않는다(튜토리얼은 전 구간)', () => {
+    const sc = scripted([], 0.5);
+    const h = setupV2({ tutorial: true, rng: sc.rng, liveZones: true });
+    const before = sc.used();
+    advanceTo(h, 'fune');
+    expect(TUTORIAL.every((i) => h.hole(i).stage === 'done')).toBe(true);
+    expect(sc.used()).toBe(before);
   });
 
   it('굴리기는 바 위치와 상관없이 적중이다', () => {
