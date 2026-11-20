@@ -3,7 +3,7 @@
 # - status: planned 는 tool.ts가 실행을 거부한다.
 # - 도구를 추가·제거하면 version을 올린다(full 검사가 HEAD와 비교해 확인). 줄이지 않는다.
 # - 실행: pnpm tool <id> [-- 추가 인자]
-version: 3
+version: 4
 tools:
   - id: test.unit
     run: pnpm vitest run
@@ -54,4 +54,9 @@ tools:
     run: tsx harness/scripts/receipts.ts
     purpose: 커밋 트레일러 Skill-Receipt를 집계해 스킬·단계별 사용 횟수와 미사용 후보 출력(기본 6주)
     side_effect: none
+    status: active
+  - id: artifacts.archive
+    run: tsx harness/scripts/archive-artifacts.ts
+    purpose: .artifacts/pm의 번호·시각 산출물을 archive/<시각>.tar.gz로 묶는다(보관 대상 30개 초과 시, 24시간 미만·0바이트·진행 중·쌍 보호). --dry-run 지원
+    side_effect: 원본 파일 삭제(tar 검증 뒤), .artifacts/pm/archive/에 tar.gz·txt 생성, archive/INDEX.md에 한 줄 추가
     status: active
