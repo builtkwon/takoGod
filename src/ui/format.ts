@@ -22,8 +22,8 @@ export function starsText(stars: number): string {
   return '★'.repeat(Math.floor(half)) + (half % 1 ? '½' : '');
 }
 
-export function phaseLabel(phase: PhaseId): string {
-  return phase === 'tutorial' ? '튜토리얼' : `${phase.slice(1)}단계`;
+export function phaseLabel(phase: PhaseId, level: number): string {
+  return phase === 'tutorial' ? '튜토리얼' : `${level}단계`;
 }
 
 /** 세션 평균 표시 문구. 리뷰가 없어 null이면 표시하지 않는다(null 반환). 계산은 core가 한다. */

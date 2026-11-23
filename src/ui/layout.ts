@@ -43,3 +43,19 @@ export function placeAnswerButtons(
   }
   return placed as [Rect, Rect];
 }
+
+const BUBBLE_H = 76;
+
+/**
+ * 말풍선 slot번째의 top(layer 좌표). 말풍선은 가로 전체를 쓰므로 속재료 트레이 칸(이름표 포함)을 가리는 자리는 건너뛴다.
+ * 말풍선은 안내라 트레이를 가릴 수 없다(답 버튼은 예외: 배치는 placeAnswerButtons가 한다).
+ * shortcut: 건너뛸 자리가 계속 막히면 maxTries번 뒤 마지막 후보를 쓴다, 화면이 극단적으로 작을 때만 해당한다.
+ */
+export function bubbleTop(slot: number, areaW: number, trayRects: readonly Rect[], top = 120, step = 84, maxTries = 24): number {
+  let t = top - step;
+  for (let n = -1, tries = 0; n < slot && tries < maxTries; tries++) {
+    t += step;
+    if (!trayRects.some((r) => overlaps({ x: 0, y: t, w: areaW, h: BUBBLE_H }, r))) n++;
+  }
+  return t;
+}

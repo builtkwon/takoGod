@@ -8,13 +8,14 @@ export interface TimingBar {
 }
 
 /** 영역 하나(굴리기 1 또는 2). 값이 바뀔 때마다 번쩍여 새 자리를 알린다. */
-function createZone(step: 1 | 2): { readonly root: HTMLElement; update(v: ZoneView | null): void } {
+function createZone(step: 1 | 2): { readonly root: HTMLElement; update(v: ZoneView | null, shared?: boolean): void } {
   const root = el('div', `ui-bar-zone ui-bar-zone-w${step}`, String(step));
   root.hidden = true;
   let key = '';
   return {
     root,
-    update(v) {
+    update(v, shared = false) {
+      root.textContent = shared ? '' : String(step); // 영역 하나를 함께 쓰면 번호를 붙이지 않는다
       root.hidden = v === null;
       const next = v ? `${v.leftPct}:${v.widthPct}` : '';
       if (v) {
@@ -42,7 +43,7 @@ export function createTimingBar(): TimingBar {
     root,
     update(state) {
       const v = barView(state);
-      w1.update(v.w1);
+      w1.update(v.w1, v.shared);
       w2.update(v.w2);
       marker.style.left = `${v.markerPct}%`;
     },

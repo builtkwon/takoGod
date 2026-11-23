@@ -18,16 +18,21 @@ export interface HudView {
   readonly phase: string;
   readonly score: string;
   readonly reviews: string;
+  /** 화난 손님 표시 문구와 0명 여부(0이면 흐리게). */
+  readonly fumed: string;
+  readonly fumedCount: number;
 }
 
 /** HUD 표시값. 점수 비교만 하고 계산은 core가 한다. */
-export function hudView(state: Pick<GameStateV2, 'phase' | 'shopScore' | 'bestShopScore' | 'reviews'>): HudView {
+export function hudView(state: Pick<GameStateV2, 'phase' | 'level' | 'shopScore' | 'bestShopScore' | 'reviews' | 'fumedCount' | 'fumedLimit'>): HudView {
   return {
     best: hudText.best(state.bestShopScore),
     isNew: state.shopScore > (state.bestShopScore ?? 0),
-    phase: phaseLabel(state.phase),
+    phase: phaseLabel(state.phase, state.level),
     score: String(state.shopScore),
     reviews: hudText.reviews(state.reviews.length),
+    fumed: hudText.fumed(state.fumedCount, state.fumedLimit),
+    fumedCount: state.fumedCount,
   };
 }
 
@@ -42,8 +47,11 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[]): HudV2 {
   const best = el('span', 'ui-hud-best');
   const newBadge = el('span', 'ui-hud-new', hudText.newBadge);
   newBadge.hidden = true;
+  const bestRow = el('div', 'ui-hud-best-row');
+  bestRow.append(best, newBadge);
+  const fumed = el('div', 'ui-hud-fumed');
   const left = el('div', 'ui-hud-left');
-  left.append(best, newBadge);
+  left.append(bestRow, fumed);
   const phase = el('div', 'ui-hud-phase');
   const score = el('div', 'ui-hud-score');
   const center = el('div', 'ui-hud-center');
@@ -80,6 +88,7 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[]): HudV2 {
 
   let facesKey = '';
   let lastScore = '';
+  let lastFumed = -1;
   return {
     root,
     reset: clearPop,
@@ -98,6 +107,14 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[]): HudV2 {
         score.textContent = v.score;
       }
       reviews.textContent = v.reviews;
+      fumed.textContent = v.fumed;
+      fumed.classList.toggle('ui-dim', v.fumedCount === 0);
+      if (v.fumedCount > lastFumed && lastFumed >= 0) {
+        fumed.classList.remove('ui-shake-s');
+        void fumed.offsetWidth; // 애니메이션 재시작
+        fumed.classList.add('ui-shake-s');
+      }
+      lastFumed = v.fumedCount;
       average.hidden = sessionAverageText(state.sessionAverage) === null;
       if (state.sessionAverage !== null) setStarRow(average, state.sessionAverage, `평균 ${starsLabel(state.sessionAverage)}`);
       const key = state.customers.map((c) => `${c.id}:${c.face}:${c.awaitingRedo}`).join();

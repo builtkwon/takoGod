@@ -11,14 +11,14 @@ import { LABEL_OFFSET_Y, trayLabelPlan } from '../tray-labels';
 
 describe('barView', () => {
   it('두 영역을 퍼센트로 동시에, null인 쪽은 null', () => {
-    const s = stateOf(['filled'], { barPosition: 0.25, barZones: { w1: { from: 0.4, to: 0.6 }, w2: null } });
-    expect(barView(s)).toEqual({ markerPct: 25, w1: { leftPct: 40, widthPct: 20 }, w2: null });
-    const both = stateOf(['filled'], { barZones: { w1: { from: 0.1, to: 0.4 }, w2: { from: 0.5, to: 0.7 } } });
+    const s = stateOf(['filled'], { barPosition: 0.25, barZones: { w1: { from: 0.4, to: 0.6 }, w2: null, shared: true } });
+    expect(barView(s)).toEqual({ markerPct: 25, w1: { leftPct: 40, widthPct: 20 }, w2: null, shared: true });
+    const both = stateOf(['filled'], { barZones: { w1: { from: 0.1, to: 0.4 }, w2: { from: 0.5, to: 0.7 }, shared: false } });
     expect(barView(both).w2).toEqual({ leftPct: 50, widthPct: 20 });
   });
   it('영역 없음·범위 밖·NaN', () => {
     const s = stateOf(['done'], { barPosition: Number.NaN });
-    expect(barView(s)).toEqual({ markerPct: 0, w1: null, w2: null });
+    expect(barView(s)).toEqual({ markerPct: 0, w1: null, w2: null, shared: false });
     expect(barView(stateOf([], { barPosition: 2 })).markerPct).toBe(100);
   });
 });
@@ -140,8 +140,20 @@ describe('hudView', () => {
     expect(hudView(stateOf([], { shopScore: 10 })).isNew).toBe(true);
   });
   it('기록이 있으면 넘었을 때만 NEW(같으면 아님), 단계·리뷰 수 표시', () => {
-    const s = stateOf([], { bestShopScore: 300, shopScore: 300, phase: 'P2' });
+    const s = stateOf([], { bestShopScore: 300, shopScore: 300, phase: 'main', level: 2 });
     expect(hudView(s)).toMatchObject({ best: '최고 300', isNew: false, phase: '2단계', reviews: '리뷰 0' });
     expect(hudView({ ...s, shopScore: 301 }).isNew).toBe(true);
+  });
+});
+
+describe('hudView 단계·화난 손님', () => {
+  it('튜토리얼은 튜토리얼, 본게임은 level 단계(20 이후도 계속)', () => {
+    expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).phase).toBe('튜토리얼');
+    expect(hudView(stateOf([], { level: 1 })).phase).toBe('1단계');
+    expect(hudView(stateOf([], { level: 37 })).phase).toBe('37단계');
+  });
+  it('화난 손님은 fumedLimit를 그대로 쓰고(하드코딩 아님) 0명이면 흐린 상태 값', () => {
+    expect(hudView(stateOf([], { fumedCount: 0, fumedLimit: 4 }))).toMatchObject({ fumed: '😠 0/4', fumedCount: 0 });
+    expect(hudView(stateOf([], { fumedCount: 3, fumedLimit: 5 }))).toMatchObject({ fumed: '😠 3/5', fumedCount: 3 });
   });
 });

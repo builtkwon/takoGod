@@ -11,7 +11,11 @@ export const CSS_V2 = `
 .ui-bar-marker{position:absolute;top:0;bottom:0;width:8px;margin-left:-4px;background:#ffeb3b;border:2px solid #000;box-sizing:border-box;border-radius:2px;box-shadow:0 0 6px #fff}
 .ui-hud2{padding:6px 12px;background:#000c;font-size:14px;box-sizing:border-box}
 .ui-hud-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:8px}
-.ui-hud-left{display:flex;align-items:center;gap:6px;font-weight:700}
+.ui-hud-left{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-weight:700}
+.ui-hud-best-row{display:flex;align-items:center;gap:6px}
+.ui-hud-fumed{font-size:12px;display:inline-block}
+.ui-hud-fumed.ui-dim{opacity:.4}
+.ui-hud-fumed.ui-shake-s{animation:ui-shake-s .4s}
 .ui-hud-new{padding:0 5px;border-radius:6px;background:#ffeb3b;color:#b00020;font-size:12px;font-weight:900;animation:ui-new-blink .6s steps(2) infinite}
 .ui-hud-center{position:relative;text-align:center;line-height:1.1}
 .ui-hud-phase{font-size:13px;opacity:.85}
@@ -34,6 +38,9 @@ export const CSS_V2 = `
 .ui-ghost svg{display:block}
 .ui-tray-label{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.TRAY_LABEL};padding:1px 6px;border-radius:8px;background:#000a;color:#fff;font-size:11px;line-height:14px;white-space:nowrap}
 .ui-tray-label[hidden]{display:none}
+.ui-tray-label-selected{background:#ffeb3b;color:#000;font-weight:700}
+.ui-tray-ring{position:fixed;left:0;top:0;width:38px;height:38px;box-sizing:border-box;border:3px solid #ffeb3b;border-radius:50%;box-shadow:0 0 8px #ffeb3b;pointer-events:none;z-index:${Z.TRAY_LABEL}}
+.ui-tray-ring[hidden]{display:none}
 .ui-mark{font-weight:900;font-size:30px;line-height:34px;white-space:nowrap;-webkit-text-stroke:5px #000;paint-order:stroke fill;text-shadow:0 2px 4px #000}
 .ui-mark-good{color:#7dff8a}.ui-mark-bad{color:#ff7a7a}.ui-mark-neutral{color:#fff}
 .ui-arrow{position:fixed;height:6px;margin-top:-3px;background:#ffeb3b;transform-origin:0 50%;pointer-events:none;animation:ui-pulse .7s infinite alternate}
@@ -54,6 +61,7 @@ export const CSS_V2 = `
 @keyframes ui-new-blink{50%{opacity:.35}}
 @keyframes ui-bump{40%{transform:scale(1.35)}}
 @keyframes ui-pop{0%{opacity:0;transform:translate(-50%,0)}15%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translate(-50%,18px)}}
+@keyframes ui-shake-s{20%{transform:translateX(-5px)}60%{transform:translateX(5px)}}
 @keyframes ui-pulse{to{opacity:.45}}
 @keyframes ui-arrow-shake{25%{translate:-8px 0}75%{translate:8px 0}}
 `;
