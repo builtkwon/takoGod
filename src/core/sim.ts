@@ -1,6 +1,6 @@
 // 밸런스 시뮬레이터(굽기 개편, 4×4·무작위 영역). 봇이 contracts 이벤트로만 입력해 GameV2를 끝까지 돌리고 세션 평균 별점을 모은다.
 // sim.balance 도구가 읽는 진입점이다(TOOL_ENTRY_PATHS.sim).
-import type { BalanceScenario, BalanceSimulator as BalanceSimulatorPort, EventBus, GameStateV2, ReviewResult, SessionSnapshot } from '../contracts';
+import type { BalanceScenario, BalanceSimulator as BalanceSimulatorPort, EventBus, GameStateV2, IngredientId, ReviewResult, SessionSnapshot } from '../contracts';
 import { createEventBus } from './event-bus';
 import { GameV2 } from './game-v2';
 import { createRng, randomIndex } from './rng';
@@ -16,16 +16,31 @@ const RANDOM_ACT_PROB = 0.2;
 const RANDOM_ANSWER_PROB = 0.02;
 
 /** 전정답 + 완벽 굽기: 영역 안에서만 굴리고, 완성품은 바로 후네에 담고, 대화는 좋은 답만 한다. */
+/** 다음 접시를 받을 손님(우선 서빙 규칙은 core와 같다)의 주문대로 속재료를 고른다. 주문이 없으면 문어(빼 주세요 재료는 어차피 넣지 않는다). */
+function fillingFor(s: GameStateV2): IngredientId {
+  const target = s.customers.find((c) => c.awaitingRedo || c.group?.platesReceived === 1) ?? s.customers[0];
+  const order = target?.order;
+  if (!order) return 'octopus';
+  const placed = s.holes.filter((h) => h.filling === order.ingredient).length + s.fune.filter((i) => i.filling === order.ingredient).length;
+  return placed < order.count ? order.ingredient : 'octopus';
+}
+
 function perfectBot(bus: EventBus, game: GameV2): void {
   let s = game.state;
+  // 10단계부터는 주문 개수를 맞추려고 한 접시 몫(구멍 0~5)만 굽는다.
+  const startable = (index: number): boolean => s.level < 10 || s.phase === 'tutorial' || index < 6;
   for (const d of s.activeDialogues) bus.emit('input/answer', { customerId: d.customerId, choice: 'good' });
   for (let i = 0; i < s.holes.length; i++) {
     const h = s.holes[i];
     if (h === undefined || h.locked) continue;
     const inZone = h.rollZone !== null && s.barPosition >= h.rollZone.from && s.barPosition <= h.rollZone.to;
-    if (h.stage === 'empty') bus.emit('input/place-material', { hole: h.index, material: { kind: 'margarine' } });
-    else if (h.stage === 'greased') bus.emit('input/place-material', { hole: h.index, material: { kind: 'batter' } });
-    else if (h.stage === 'cooked') bus.emit('input/place-material', { hole: h.index, material: { kind: 'filling', ingredient: 'octopus' } });
+    if (h.stage === 'empty') {
+      if (startable(h.index)) bus.emit('input/place-material', { hole: h.index, material: { kind: 'margarine' } });
+    } else if (h.stage === 'greased') bus.emit('input/place-material', { hole: h.index, material: { kind: 'batter' } });
+    else if (h.stage === 'cooked') {
+      bus.emit('input/place-material', { hole: h.index, material: { kind: 'filling', ingredient: fillingFor(s) } });
+      s = game.state; // 주문 개수를 세려고 새 상태를 읽는다
+    }
     else if ((h.stage === 'filled' || h.stage === 'rolled') && inZone) {
       bus.emit('input/roll', { hole: h.index });
       s = game.state; // 굴리면 공용 영역이 바뀌므로 다음 구멍은 새 영역으로 본다

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FuneItem } from '../../contracts';
-import { commentBucket, darkCapRange, isPerfectPlate, plateChanges, plateDefects, shopPlateScore } from '../scoring-v2';
+import { allergyViolated, commentBucket, darkCapRange, hasEraser, isPerfectPlate, orderSucceeded, plateChanges, plateDefects, shopPlateScore } from '../scoring-v2';
 
 const good: FuneItem = { rolledPerfectly: true, filling: 'octopus', noFilling: false, dark: false };
 const plate = (...over: Partial<FuneItem>[]): FuneItem[] =>
@@ -101,5 +101,59 @@ describe('접시 가게 점수(GDD §가게 점수)', () => {
 
   it('반올림한다', () => {
     expect(shopPlateScore(83, 11, true, 1)).toMatchObject({ points: Math.round((83 + 55) * 1.2) });
+  });
+});
+
+describe('주문·빼 주세요·VIP 점수 규칙(GDD §주문, §특별 손님)', () => {
+  const eraser = (n: number): FuneItem[] => plate(...Array.from({ length: n }, () => ({ filling: 'eraser' as const })));
+
+  it('주문 성공은 재료가 정확히 N개이고 나머지가 모두 문어일 때다', () => {
+    expect(orderSucceeded(eraser(3), { ingredient: 'eraser', count: 3 })).toBe(true);
+    expect(orderSucceeded(eraser(2), { ingredient: 'eraser', count: 3 })).toBe(false);
+    expect(orderSucceeded(eraser(4), { ingredient: 'eraser', count: 3 })).toBe(false);
+    expect(orderSucceeded(eraser(6), { ingredient: 'eraser', count: 6 })).toBe(true);
+    expect(orderSucceeded(plate({ filling: 'eraser' }, { filling: 'wasabi' }), { ingredient: 'eraser', count: 1 })).toBe(false);
+    expect(orderSucceeded(plate({ filling: 'eraser' }, { filling: null, noFilling: true }), { ingredient: 'eraser', count: 1 })).toBe(false);
+  });
+
+  it('어두운 알도 재료 판정에는 그 재료로 센다', () => {
+    expect(orderSucceeded(plate({ filling: 'eraser', dark: true }), { ingredient: 'eraser', count: 1 })).toBe(true);
+  });
+
+  it('주문 손님의 완벽 접시는 주문대로 + 굴리기 2회 적중 + 어두워짐 0개다(속재료 문어 조건 대신)', () => {
+    const order = { ingredient: 'eraser', count: 3 } as const;
+    expect(isPerfectPlate(eraser(3), { order })).toBe(true);
+    expect(isPerfectPlate(eraser(3))).toBe(false); // 주문이 없으면 문어만 완벽이다
+    expect(isPerfectPlate(plate({ filling: 'eraser', rolledPerfectly: false }, { filling: 'eraser' }, { filling: 'eraser' }), { order })).toBe(false);
+  });
+
+  it('주문 재료는 함정이 아니고 주문 외 비문어는 함정이다. 주문 증감은 마지막에 ±15다', () => {
+    const order = { ingredient: 'eraser', count: 3 } as const;
+    expect(plateDefects(eraser(3), { order })).toEqual([]);
+    expect(plateChanges(eraser(3), { order })).toEqual([20, 15]);
+    expect(plateChanges(eraser(2), { order })).toEqual([-15]);
+    const mixed = plate({ filling: 'eraser' }, { filling: 'eraser' }, { filling: 'eraser' }, { filling: 'wasabi' });
+    expect(plateChanges(mixed, { order })).toEqual([-20, -15]);
+  });
+
+  it('빼 주세요 위반은 -40 하나이고 그 재료의 함정 -20은 없다. 다른 함정 재료는 -20이 그대로다', () => {
+    expect(allergyViolated(plate({ filling: 'wasabi' }), 'wasabi')).toBe(true);
+    expect(allergyViolated(plate({ filling: 'wasabi' }), 'chili')).toBe(false);
+    expect(allergyViolated(plate(), null)).toBe(false);
+    expect(plateChanges(plate({ filling: 'wasabi' }), { avoid: 'wasabi' })).toEqual([-40]);
+    expect(plateChanges(plate({ filling: 'wasabi' }, { filling: 'chili' }), { avoid: 'wasabi' })).toEqual([-20, -40]);
+  });
+
+  it('지우개가 든 접시를 식품 신고 대상으로 센다', () => {
+    expect(hasEraser(plate())).toBe(false);
+    expect(hasEraser(eraser(1))).toBe(true);
+  });
+
+  it('가게 점수: 주문 보너스는 배수 전 기본에 더하고(115+60+50 = 225), VIP 완벽 접시는 ×2', () => {
+    expect(shopPlateScore(115, 12, true, 0, { orderBonus: 50 })).toEqual({ points: 225, multiplier: 1, combo: 1 });
+    expect(shopPlateScore(115, 12, true, 1, { orderBonus: 50 })).toMatchObject({ points: 270, multiplier: 1.2 });
+    expect(shopPlateScore(115, 12, true, 0, { orderBonus: 50, vip: true })).toEqual({ points: 450, multiplier: 2, combo: 1 });
+    expect(shopPlateScore(100, 12, true, 4, { vip: true })).toMatchObject({ points: 576, multiplier: 3.6, combo: 5 });
+    expect(shopPlateScore(80, 9, false, 4, { vip: true })).toEqual({ points: 125, multiplier: 1, combo: 0 });
   });
 });

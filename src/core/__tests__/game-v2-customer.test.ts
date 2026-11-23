@@ -35,7 +35,18 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
     const h = setupV2({ rng: scripted([SAL, 0]).rng });
     toP2(h);
     expect(h.of('customer/entered')).toEqual([
-      { customer: { id: expect.any(String), personality: 'salaryman', dialogueIntervalSec: 12, patience: 0, face: 'normal', awaitingRedo: false } },
+      { customer: {
+          id: expect.any(String),
+          personality: 'salaryman',
+          dialogueIntervalSec: 12,
+          patience: 0,
+          face: 'normal',
+          awaitingRedo: false,
+          order: null,
+          avoid: null,
+          group: null,
+          vip: false,
+        } },
     ]);
   });
 

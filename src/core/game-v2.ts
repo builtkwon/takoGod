@@ -40,7 +40,26 @@ import {
   drawZoneAwayFromCenter,
   inZone,
 } from './cooking-v2';
-import { FUMED_LIMIT, difficulty } from './levels';
+import {
+  AVOID_CHANCE,
+  AVOID_FROM_LEVEL,
+  FUMED_LIMIT,
+  GROUP_CHANCE,
+  GROUP_FROM_LEVEL,
+  GROUP_PATIENCE_MULTIPLIER,
+  GROUP_PLATES,
+  ORDER_COUNTS,
+  ORDER_FROM_LEVEL,
+  RUSH_DURATION_SEC,
+  RUSH_FROM_LEVEL,
+  RUSH_PATIENCE_MULTIPLIER,
+  RUSH_SCORE_STEP,
+  VIP_CHANCE,
+  VIP_FROM_LEVEL,
+  VIP_PATIENCE_MULTIPLIER,
+  difficulty,
+  orderChance,
+} from './levels';
 import { ANSWER_LIMIT_SEC, REPLACEMENT_DELAY_SEC, SECOND_CUSTOMER_DELAY_SEC, phaseConfig, targetPlates } from './phases';
 import { randomIndex, shuffle } from './rng';
 import { BAD_ANSWER, GOOD_ANSWER, START_SATISFACTION, TIMEOUT, applySatisfaction, sessionAverage, starsFromSatisfaction } from './scoring';
@@ -53,8 +72,15 @@ import {
   commentBucket,
   darkCapRange,
   plateChanges,
+  ORDER_SCORE_BONUS,
+  REPORT_CHANCE,
+  type PlateContext,
+  allergyViolated,
+  hasEraser,
   isPerfectPlate,
+  orderSucceeded,
   plateDefects,
+  reportedStars,
   shopPlateScore,
 } from './scoring-v2';
 
@@ -120,7 +146,16 @@ interface Guest {
   patienceExpired: boolean;
   redoUsed: boolean;
   awaitingRedo: boolean;
+  /** 입장 때 정해진 주문(10단계~)·빼 주세요(13단계~)·단체(15단계~, 주문 없는 손님만)·VIP(17단계~). 서빙·퇴장까지 바뀌지 않는다. */
+  readonly order: { readonly ingredient: IngredientId; readonly count: 1 | 3 | 6 } | null;
+  readonly avoid: IngredientId | null;
+  /** 단체: 받은 접시 수와 접시별 별점. 첫 접시 뒤 다음 완성 접시를 우선 받는다. */
+  group: { platesReceived: number; readonly stars: number[] } | null;
+  readonly vip: boolean;
 }
+
+/** 비문어 재료 5종(GDD §주문의 순서: 와사비·생마늘·지우개·마시멜로·고추). */
+const NON_OCTOPUS: readonly IngredientId[] = TRAY_SOURCE.filter((i) => i.id !== 'octopus').map((i) => i.id);
 
 /** 튜토리얼 유도 순서. 각 단계는 열린 6구가 minRank 이상이 되면 끝난다(순위: 빈칸 0 … 완성 6). */
 const TUTORIAL_FLOW: readonly { readonly stage: TutorialStage; readonly minRank: number }[] = [
@@ -147,6 +182,11 @@ export class GameV2 {
   private combo = 0;
   /** 후네 각 알의 굴리기 적중 수(0~2). fune과 같은 순서. */
   private funeHits: number[] = [];
+  /** 러시 아워 남은 시간(초). 아니면 null. 가게 점수 1000점 경계마다 12단계부터 시작하고 진행 중에는 다시 시작하지 않는다. */
+  private rushRemaining: number | null = null;
+  private rushBand = 0;
+  /** 빼 주세요 위반으로 화난 손님 수가 한도에 닿았다: 접시 처리를 마친 직후 판을 끝낸다. */
+  private pendingDefeat = false;
 
   /** 단계 번호: 튜토리얼 0, 본게임 1~(무한, 난이도는 20에서 고정). */
   private level = 0;
@@ -265,6 +305,7 @@ export class GameV2 {
       shopScore: this.shopScore,
       bestShopScore: this.best,
       combo: this.combo,
+      rush: this.rushRemaining === null ? null : { remainingSec: this.rushRemaining },
       tutorialCompleted: this.tutorialCompleted,
       tutorialStage: this.tutorialStage(),
     };
@@ -284,7 +325,9 @@ export class GameV2 {
       this.tickPatience(g, dt);
     }
     if (this.isFinished) return;
-    this.tickSpawns(dt);
+    const speed = this.rushRemaining === null ? 1 : 2; // 러시 아워에는 입장 대기가 2배속으로 흐른다
+    this.tickRush(dt);
+    this.tickSpawns(dt * speed);
     this.tickFune(dt); // 서빙·전환으로 새로 생긴 손님과 타이머에는 이번 dt를 흘리지 않는다
     this.advanceTutorial();
   }
@@ -493,24 +536,37 @@ export class GameV2 {
   /** 가득 찬 후네를 손님에게 서빙한다. 다시해줘를 요청한 손님이 우선이고, 그 밖에는 먼저 온 손님이다. */
   private tryServe(): void {
     if (this.fune.length < FUNE_SIZE || this.funeWait > EPS) return;
-    const guest = this.guests.find((g) => g.awaitingRedo) ?? this.guests[0];
+    const guest = this.guests.find((g) => g.awaitingRedo || g.group?.platesReceived === 1) ?? this.guests[0];
     if (guest !== undefined) this.serve(guest);
   }
 
-  /** 난수 순서(GDD §손님 대화): 어두워짐 상한 → 다시해줘 → 떠남 → 맛보기 → 리뷰 코멘트 → (트레이 셔플). 조건이 안 맞으면 뽑지 않는다. */
+  /**
+   * 접시를 손님에게 서빙한다. 난수 순서(GDD §손님 대화): 어두워짐 상한 → 다시해줘 → 떠남 → 떠남 별점 → 맛보기 → (점수·경계 영역) → 식품 신고 → 리뷰 코멘트 → 트레이 셔플.
+   * 조건이 안 맞으면 뽑지 않는다. 빼 주세요 위반으로 화난 손님 수가 한도에 닿으면 처리를 마친 직후 판이 끝난다.
+   */
   private serve(g: Guest): void {
+    this.serveInner(g);
+    if (this.pendingDefeat && !this.isFinished) {
+      this.bus.emit('session/game-over', { reason: 'fumed', fumedCount: this.fumedCount });
+      this.finish();
+    }
+  }
+
+  private serveInner(g: Guest): void {
     const items = this.fune;
-    const defects = plateDefects(items);
+    const ctx: PlateContext = { order: g.order, avoid: g.avoid };
+    const defects = plateDefects(items, ctx);
     let sat = g.satisfaction;
-    for (const d of plateChanges(items)) sat = applySatisfaction(sat, d);
+    for (const d of plateChanges(items, ctx)) sat = applySatisfaction(sat, d);
     let stars = starsFromSatisfaction(sat);
 
     const cap = darkCapRange(items.filter((i) => i.dark).length);
     if (cap !== null) stars = Math.min(stars, cap.min + 0.5 * randomIndex((cap.max - cap.min) / 0.5 + 1, this.rng));
 
-    const redo = !g.redoUsed && stars <= REDO_MAX_STARS && this.rng() < REDO_CHANCE;
+    // 단체 손님은 다시해줘·0~1점 떠남을 판정하지 않는다.
+    const redo = g.group === null && !g.redoUsed && stars <= REDO_MAX_STARS && this.rng() < REDO_CHANCE;
     let walkedOutStars: number | null = null;
-    if (!redo && stars <= WALKOUT_MAX_STARS && this.rng() < WALKOUT_CHANCE) walkedOutStars = 0.5 * randomIndex(3, this.rng);
+    if (g.group === null && !redo && stars <= WALKOUT_MAX_STARS && this.rng() < WALKOUT_CHANCE) walkedOutStars = 0.5 * randomIndex(3, this.rng);
 
     const kinds: readonly TasteKind[] = defects.length > 0 ? defects : ['perfect'];
     const lines = kinds.map((defect) => {
@@ -519,6 +575,11 @@ export class GameV2 {
     });
 
     this.bus.emit('plate/tasted', { customerId: g.id, defects: defects as readonly PlateDefect[], lines });
+    if (g.order !== null) this.bus.emit('order/resolved', { customerId: g.id, success: orderSucceeded(items, g.order) });
+    if (g.avoid !== null && allergyViolated(items, g.avoid)) {
+      this.bus.emit('customer/allergy', { customerId: g.id, ingredient: g.avoid });
+      this.angerByAllergy(g);
+    }
     this.bus.emit('plate/scored', { customerId: g.id, delta: sat - START_SATISFACTION, stars });
 
     if (redo) {
@@ -528,8 +589,30 @@ export class GameV2 {
       return this.clearFune();
     }
 
-    this.scorePlate(g.id, sat);
-    const finalStars = walkedOutStars ?? stars;
+    const orderBonus = g.order !== null && orderSucceeded(items, g.order) ? ORDER_SCORE_BONUS : 0;
+    this.scorePlate(g.id, sat, ctx, { orderBonus, vip: g.vip });
+    let plateStars = walkedOutStars ?? stars;
+    // 식품 신고: 지우개가 든 접시를 3%로. 점수·경계 영역 뽑기 뒤, 리뷰 코멘트 앞이다.
+    let reported = false;
+    if (hasEraser(items) && this.rng() < REPORT_CHANCE) {
+      const r = reportedStars(plateStars);
+      plateStars = r.stars;
+      reported = true;
+      this.bus.emit('plate/reported', { customerId: g.id, starsPenalty: r.penalty });
+    }
+    void reported;
+    this.plates++;
+
+    if (g.group !== null) {
+      g.group.stars.push(plateStars);
+      g.group.platesReceived++;
+      if (g.group.platesReceived < GROUP_PLATES) {
+        // 첫 접시: 리뷰·퇴장 없이 다음 접시를 기다린다.
+        this.clearFune();
+        return this.afterPlate();
+      }
+    }
+    const finalStars = g.group === null ? plateStars : Math.round((g.group.stars.reduce((a, b) => a + b, 0) / g.group.stars.length) * 2) / 2;
     const comments = this.data.reviewComments(g.personality, commentBucket(finalStars));
     const review: ReviewResult = {
       source: 'customer',
@@ -543,7 +626,6 @@ export class GameV2 {
     this.guests = this.guests.filter((x) => x !== g);
     this.spawnTimers[g.slot] = REPLACEMENT_DELAY_SEC;
     this.bus.emit('customer/left', { customerId: g.id });
-    this.plates++;
     this.clearFune();
     this.afterPlate();
   }
@@ -556,18 +638,40 @@ export class GameV2 {
   }
 
   /** 접시 가게 점수를 더하고 score/plate를 낸다(튜토리얼·다시해줘 첫 접시에는 부르지 않는다). */
-  private scorePlate(customerId: string | null, base: number): void {
+  private scorePlate(customerId: string | null, base: number, ctx: PlateContext = {}, extra: { orderBonus?: number; vip?: boolean } = {}): void {
     const hits = this.funeHits.reduce((a, b) => a + b, 0);
-    const r = shopPlateScore(base, hits, isPerfectPlate(this.fune), this.combo);
+    const r = shopPlateScore(base, hits, isPerfectPlate(this.fune, ctx), this.combo, extra);
     this.combo = r.combo;
     this.shopScore += r.points;
     this.bus.emit('score/plate', { customerId, points: r.points, hits, combo: r.combo, multiplier: r.multiplier });
-    // 가게 점수가 200의 배수 경계를 넘으면(한 접시로 여러 개를 넘어도 한 번) score/plate 직후 영역을 다시 뽑는다.
+    // 러시 아워: 12단계부터, 가게 점수가 1000의 배수 경계를 넘으면 30초(한 접시로 여러 경계를 넘어도 한 번, 진행 중에는 다시 시작하지 않는다).
+    // 12단계 전에 넘은 경계는 소급하지 않는다(구간은 항상 갱신한다).
+    const rushBand = Math.floor(this.shopScore / RUSH_SCORE_STEP);
+    if (rushBand > this.rushBand) {
+      this.rushBand = rushBand;
+      if (this.level >= RUSH_FROM_LEVEL && this.rushRemaining === null) {
+        this.rushRemaining = RUSH_DURATION_SEC;
+        this.bus.emit('rush/started', { durationSec: RUSH_DURATION_SEC });
+      }
+    }
+    // 가게 점수가 200의 배수 경계를 넘으면(한 접시로 여러 개를 넘어도 한 번) 영역을 다시 뽑는다.
     const band = Math.floor(this.shopScore / ZONE_SCORE_STEP);
     if (band > this.zoneBand) {
       this.zoneBand = band;
       this.redrawZones();
     }
+  }
+
+  private tickRush(dt: number): void {
+    if (this.rushRemaining === null) return;
+    this.rushRemaining -= dt;
+    if (this.rushRemaining <= EPS) this.endRush();
+  }
+
+  private endRush(): void {
+    if (this.rushRemaining === null) return;
+    this.rushRemaining = null;
+    this.bus.emit('rush/ended', {});
   }
 
   private afterPlate(): void {
@@ -577,6 +681,7 @@ export class GameV2 {
 
   private finish(): void {
     this.isFinished = true;
+    this.endRush();
     this.guests = [];
     this.spawnTimers = [];
     this.store.save({ version: 1, tutorialCompleted: true, finished: true, reviews: [...this.reviews] });
@@ -623,6 +728,11 @@ export class GameV2 {
 
   // ── 손님·대화·인내 ────────────────────────────────────
 
+  /** 손님이 앞으로 더 받아야 하는 접시 수(일반 1, 단체는 남은 수). */
+  private remainingPlates(g: Guest): number {
+    return g.group === null ? 1 : GROUP_PLATES - g.group.platesReceived;
+  }
+
   private tickSpawns(dt: number): void {
     const due: number[] = [];
     this.spawnTimers.forEach((t, slot) => {
@@ -635,17 +745,41 @@ export class GameV2 {
     });
     const level = this.level;
     for (const slot of due) {
-      // 서빙이 단계를 넘겼으면(입장 중 대기 후네 서빙) 남은 입장은 버린다.
+      // 서빙이 단계를 넘겼으면(입장 중 접시 서빙) 남은 입장은 버린다.
       if (this.level !== level) return;
-      if (this.plates + this.guests.length < targetPlates(level)) this.spawn(slot);
+      // 입장 조건: 서빙한 접시 수 + 손님들이 더 받을 접시 수 + 새 손님이 받을 접시 수 ≤ 목표(일반 1개).
+      const committed = this.plates + this.guests.reduce((n, g) => n + this.remainingPlates(g), 0);
+      if (committed + 1 <= targetPlates(level)) this.spawn(slot, targetPlates(level) - committed);
     }
   }
 
-  private spawn(slot: number): void {
+  /** 난수 순서(GDD §손님 대화): 성격 → 인내 → (10단계~) 주문 여부 → 재료 → 개수 → (13단계~) 빼 주세요 여부 → 재료 → (15단계~, 주문 없을 때) 단체 여부 → (17단계~) VIP 여부. */
+  private spawn(slot: number, roomPlates: number): void {
     const intervalSec = phaseConfig(this.level).dialogueIntervalsSec[slot] ?? 0;
     const personality = PERSONALITIES[randomIndex(PERSONALITIES.length, this.rng)] as Personality;
     const { patienceMinSec, patienceMaxSec } = difficulty(this.level);
-    const patienceTotal = patienceMinSec + this.rng() * (patienceMaxSec - patienceMinSec);
+    let patienceTotal = patienceMinSec + this.rng() * (patienceMaxSec - patienceMinSec);
+
+    let order: Guest['order'] = null;
+    if (this.level >= ORDER_FROM_LEVEL && this.rng() < orderChance(this.level)) {
+      const ingredient = NON_OCTOPUS[randomIndex(NON_OCTOPUS.length, this.rng)] as IngredientId;
+      order = { ingredient, count: ORDER_COUNTS[randomIndex(ORDER_COUNTS.length, this.rng)] as 1 | 3 | 6 };
+    }
+    let avoid: IngredientId | null = null;
+    if (this.level >= AVOID_FROM_LEVEL && this.rng() < AVOID_CHANCE) {
+      const pool = NON_OCTOPUS.filter((i) => i !== order?.ingredient); // 주문 재료와 겹치지 않는다
+      avoid = pool[randomIndex(pool.length, this.rng)] as IngredientId;
+    }
+    // 단체는 주문 없는 손님에게만. 뽑았어도 남은 목표가 1개뿐이면 일반 손님이다(난수는 이미 썼다).
+    const groupRolled = this.level >= GROUP_FROM_LEVEL && order === null && this.rng() < GROUP_CHANCE;
+    const group = groupRolled && roomPlates >= GROUP_PLATES ? { platesReceived: 0, stars: [] as number[] } : null;
+    const vip = this.level >= VIP_FROM_LEVEL && this.rng() < VIP_CHANCE;
+
+    // 인내 배율: 러시 아워 중 입장 ×1.5, 단체 ×1.6, VIP ×0.7(해당하는 것을 모두 곱한다).
+    if (this.rushRemaining !== null) patienceTotal *= RUSH_PATIENCE_MULTIPLIER;
+    if (group !== null) patienceTotal *= GROUP_PATIENCE_MULTIPLIER;
+    if (vip) patienceTotal *= VIP_PATIENCE_MULTIPLIER;
+
     const guest: Guest = {
       id: `c${++this.guestSeq}`,
       personality,
@@ -660,20 +794,30 @@ export class GameV2 {
       patienceExpired: false,
       redoUsed: false,
       awaitingRedo: false,
+      order,
+      avoid,
+      group,
+      vip,
     };
     this.guests.push(guest);
     this.bus.emit('customer/entered', { customer: toStatus(guest) });
     this.tryServe();
   }
 
-  private tickPatience(g: Guest, dt: number): void {
-    g.patienceElapsed += dt;
+  /** 경과 비율에 맞춰 얼굴 단계를 올린다(되돌아가지 않는다). */
+  private syncFace(g: Guest): number {
     const ratio = Math.min(1, (g.patienceElapsed + EPS) / g.patienceTotal);
     const target = ratio >= ANGRY_AT ? 2 : ratio >= ANNOYED_AT ? 1 : 0;
     for (let face = FACES.indexOf(g.face) + 1; face <= target; face++) {
       g.face = FACES[face] as PatienceLevel;
       this.bus.emit('customer/patience-changed', { customerId: g.id, face: g.face });
     }
+    return ratio;
+  }
+
+  private tickPatience(g: Guest, dt: number): void {
+    g.patienceElapsed += dt;
+    const ratio = this.syncFace(g);
     if (ratio >= 1 && !g.patienceExpired) {
       g.patienceExpired = true; // 손님은 떠나지 않고 만족도 -20을 한 번만 받는다
       g.satisfaction = applySatisfaction(g.satisfaction, PATIENCE_EXPIRED);
@@ -683,6 +827,19 @@ export class GameV2 {
         this.finish();
       }
     }
+  }
+
+  /**
+   * 빼 주세요 위반: 그 손님이 즉시 화난다(인내 100%, 얼굴 빨강, 화난 손님 수 +1). 만족도는 접시의 -40 하나로 끝내므로
+   * 인내 100% -20은 더하지 않는다. 이미 화난 손님이면 화난 손님 수를 늘리지 않는다. 한도에 닿으면 접시 처리 뒤 판이 끝난다.
+   */
+  private angerByAllergy(g: Guest): void {
+    if (g.patienceExpired) return;
+    g.patienceExpired = true;
+    g.patienceElapsed = g.patienceTotal;
+    this.syncFace(g);
+    this.bus.emit('customer/fumed', { customerId: g.id });
+    if (++this.fumedCount >= FUMED_LIMIT) this.pendingDefeat = true;
   }
 
   private tickDialogue(g: Guest, dt: number): void {
@@ -728,7 +885,7 @@ export class GameV2 {
   }
 }
 
-/** 공개 상태에는 만족도를 담지 않는다(점수 비공개). */
+/** 공개 상태에는 만족도를 담지 않는다(점수 비공개). 주문·특별 손님 필드는 입장 때 정해진 값이다. */
 const toStatus = (g: Guest): CustomerStatus => ({
   id: g.id,
   personality: g.personality,
@@ -736,4 +893,8 @@ const toStatus = (g: Guest): CustomerStatus => ({
   patience: Math.min(1, g.patienceElapsed / g.patienceTotal),
   face: g.face,
   awaitingRedo: g.awaitingRedo,
+  order: g.order,
+  avoid: g.avoid,
+  group: g.group === null ? null : { platesNeeded: GROUP_PLATES, platesReceived: g.group.platesReceived },
+  vip: g.vip,
 });
