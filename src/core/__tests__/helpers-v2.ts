@@ -257,7 +257,7 @@ export const customerEnteredAt = (h: H, index = 0): number => h.log.filter((r) =
 export function playToEnd(h: H): void {
   playUntilLevel(h, 3);
   for (let i = 0; i < 12 && !h.game.finished; i++) {
-    tickTo(h, h.now + 45);
+    tickTo(h, h.now + 65);
     if (!h.game.finished) makePlate(h);
   }
   if (!h.game.finished) throw new Error('판이 끝나지 않았다');

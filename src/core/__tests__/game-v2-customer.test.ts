@@ -7,24 +7,24 @@ const toP2 = (h: H) => playUntilLevel(h, 2);
 
 describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   it('입장 시 성격 → 인내 시간 순서로 뽑는다', () => {
-    const a = setupV2({ rng: scripted([0.9, 0]).rng }); // 관광객, 20초
+    const a = setupV2({ rng: scripted([0.9, 0]).rng }); // 관광객, 30초
     toP2(a);
     expect(a.game.state.customers[0]?.personality).toBe('tourist');
     a.tick(10);
-    expect(a.game.state.customers[0]?.patience).toBeCloseTo(10 / 20);
+    expect(a.game.state.customers[0]?.patience).toBeCloseTo(10 / 30);
 
-    const b = setupV2({ rng: scripted([0, 0.5]).rng }); // 직장인, 30초
+    const b = setupV2({ rng: scripted([0, 0.5]).rng }); // 직장인, 45초
     toP2(b);
     expect(b.game.state.customers[0]?.personality).toBe('salaryman');
     b.tick(10);
-    expect(b.game.state.customers[0]?.patience).toBeCloseTo(10 / 30);
+    expect(b.game.state.customers[0]?.patience).toBeCloseTo(10 / 45);
   });
 
   it.each([
-    [0, 20],
-    [0.5, 30],
-    [0.999, 39.98],
-  ] as const)('인내 시간은 20~40초: 난수 %f → %f초', (v, total) => {
+    [0, 30],
+    [0.5, 45],
+    [0.999, 59.97],
+  ] as const)('인내 시간은 30~60초: 난수 %f → %f초', (v, total) => {
     const h = setupV2({ rng: scripted([SAL, v]).rng });
     toP2(h);
     h.tick(10);
@@ -40,23 +40,23 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   });
 
   it('얼굴이 기본 → 주황(50%) → 빨강(80%)으로 한 번씩 바뀌고 되돌아가지 않는다', () => {
-    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 20초
+    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 30초
     toP2(h);
     const t0 = customerEnteredAt(h);
     const id = h.game.state.customers[0]?.id;
-    tickTo(h, t0 + 9.9);
+    tickTo(h, t0 + 14.9);
     expect(h.of('customer/patience-changed')).toEqual([]);
     expect(h.game.state.customers[0]?.face).toBe('normal');
-    tickTo(h, t0 + 10);
+    tickTo(h, t0 + 15);
     expect(h.of('customer/patience-changed')).toEqual([{ customerId: id, face: 'annoyed' }]);
-    tickTo(h, t0 + 15.9);
+    tickTo(h, t0 + 23.9);
     expect(h.game.state.customers[0]?.face).toBe('annoyed');
-    tickTo(h, t0 + 16);
+    tickTo(h, t0 + 24);
     expect(h.of('customer/patience-changed')).toEqual([
       { customerId: id, face: 'annoyed' },
       { customerId: id, face: 'angry' },
     ]);
-    tickTo(h, t0 + 60);
+    tickTo(h, t0 + 90);
     expect(h.game.state.customers[0]?.face).toBe('angry');
     expect(h.game.state.customers[0]?.patience).toBe(1);
     expect(h.of('customer/patience-changed')).toHaveLength(2);
@@ -71,13 +71,13 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   });
 
   it('인내 100%에 도달하면 customer/fumed를 그 손님에게 한 번만 낸다(떠나지 않음)', () => {
-    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 20초
+    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 30초
     toP2(h);
     const t0 = customerEnteredAt(h);
     const id = h.game.state.customers[0]?.id;
-    tickTo(h, t0 + 19.9);
+    tickTo(h, t0 + 29.9);
     expect(h.of('customer/fumed')).toEqual([]);
-    tickTo(h, t0 + 20);
+    tickTo(h, t0 + 30);
     expect(h.of('customer/fumed')).toEqual([{ customerId: id }]);
     h.tick(60);
     expect(h.of('customer/fumed')).toHaveLength(1);
@@ -85,8 +85,8 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   });
 
   it('인내 100% -20은 한 번만 적용된다(손님 입장 기준으로 시작)', () => {
-    // 직장인·20초. 12초에 대화 → 좋은 답(+10=90), 20초 인내 -20(70), 23초에 완벽 접시 +20 → 90 → delta +10(4.5★).
-    // 두 번 적용되면 50+20=70 → delta -10.
+    // 직장인·30초. 12초·24초 대화에 좋은 답 두 번(+20=100), 30초 인내 -20(80), 31초에 완벽 접시 +20 → 100 → delta +20(5★).
+    // 인내 -20이 두 번 적용되면 80 → delta 0.
     const h = setupV2({ rng: scripted([SAL, 0]).rng });
     toP2(h);
     const t0 = customerEnteredAt(h);
@@ -95,9 +95,11 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
     const d = h.game.state.activeDialogues[0];
     expect(d).toBeDefined();
     h.answer(d?.customerId ?? '', 'good');
-    tickTo(h, t0 + 23);
+    tickTo(h, t0 + 24.1);
+    h.answer(h.game.state.activeDialogues[0]?.customerId ?? '', 'good');
+    tickTo(h, t0 + 31);
     finish();
-    expect(h.of('plate/scored')[0]).toMatchObject({ delta: 10, stars: 4.5 });
+    expect(h.of('plate/scored')[0]).toMatchObject({ delta: 20, stars: 5 });
   });
 
   it('손님 입장 시각부터 센다(P2 첫 손님은 페이즈 시작 직후)', () => {
@@ -282,20 +284,25 @@ describe('다시해줘(별점 2.5 이하 20%, 1회)', () => {
 });
 
 describe('0~1점 떠남(별점 1.5 이하이고 다시해줘가 아닐 때 15%)', () => {
-  // 직장인·20초: 12초 대화 나쁜 답(-10 → 70), 20초 인내(-20 → 50), 21초 서빙: 접시 -40 → 10 → 1.0★
-  const walk = (script: readonly number[], bad: readonly { filling: 'none' | 'wasabi' }[] = [{ filling: 'none' }, { filling: 'wasabi' }]) => {
+  // 직장인·30초. 기본(late): 12초·24초 대화에 나쁜 답 두 번(-20 → 60), 28초 서빙: 접시 -40 → 20 → 1.0★.
+  // early: 12초 대화에 나쁜 답(-10 → 70), 22초 서빙: 접시 -40 → 30 → 1.5★.
+  const walk = (script: readonly number[], bad: readonly { filling: 'none' | 'wasabi' }[] = [{ filling: 'none' }, { filling: 'wasabi' }], early = false) => {
     const h = setupV2({ rng: scripted(script).rng });
     toP2(h);
     const t0 = customerEnteredAt(h);
     const finish = makePlate(h, bad, true);
     tickTo(h, t0 + 12.05);
     h.answer(h.game.state.activeDialogues[0]?.customerId ?? '', 'bad');
-    tickTo(h, t0 + 21);
+    if (!early) {
+      tickTo(h, t0 + 24.1);
+      h.answer(h.game.state.activeDialogues[0]?.customerId ?? '', 'bad');
+    }
+    tickTo(h, t0 + (early ? 22 : 28));
     finish();
     return h;
   };
-  // 난수: 성격, 인내, (12초 문항 선택), 다시해줘, 떠남, 떠남 별점, 맛보기 3개, 코멘트
-  const lead = [SAL, 0, 0.5];
+  // 난수: 성격, 인내, (12초 문항 선택), [24초 문항 선택], 다시해줘, 떠남, 떠남 별점, 맛보기 3개, 코멘트
+  const lead = [SAL, 0, 0.5, 0.5];
 
   it.each([
     [0.0, 0],
@@ -326,8 +333,8 @@ describe('0~1점 떠남(별점 1.5 이하이고 다시해줘가 아닐 때 15%)'
   });
 
   it('별점 1.5도 대상이다', () => {
-    // 접시 -20(속 없음만) → 50 - 20 = 30 → 1.5★
-    const h = walk([...lead, 0.99, 0.1, 0.99], [{ filling: 'none' }]);
+    // 12초 나쁜 답 → 70, 접시 -40 → 30 → 1.5★(문항 선택 난수는 하나)
+    const h = walk([SAL, 0, 0.5, 0.99, 0.1, 0.99], undefined, true);
     expect(h.of('plate/scored')[0]).toMatchObject({ stars: 1.5 });
     expect(h.of('customer/walked-out')).toHaveLength(1);
   });

@@ -25,11 +25,11 @@ export interface Difficulty {
 
 /** 단계(튜토리얼 0, 본게임 1~)의 난이도. 20단계 이후는 20단계 값이다. 튜토리얼 영역은 고정이라 폭·거리는 쓰지 않는다. */
 export function difficulty(level: number): Difficulty {
-  if (level <= 0) return { periodSec: TUTORIAL_PERIOD_SEC, twoZones: true, w1: 0.5, w2: 0.5, minCenterDistance: 0, patienceMinSec: 20, patienceMaxSec: 40 };
+  if (level <= 0) return { periodSec: TUTORIAL_PERIOD_SEC, twoZones: true, w1: 0.5, w2: 0.5, minCenterDistance: 0, patienceMinSec: 30, patienceMaxSec: 60 };
   if (level <= 5) {
     const periodSec = level <= 2 ? 2.2 : level === 3 ? 1.9 : 1.6;
     const w = level <= 2 ? 0.54 : 0.24; // 첫 영역은 3단계 이후보다 1.8배 넓다(0.30 → 0.54)
-    return { periodSec, twoZones: false, w1: w, w2: w, minCenterDistance: 0, patienceMinSec: 20, patienceMaxSec: 40 };
+    return { periodSec, twoZones: false, w1: w, w2: w, minCenterDistance: 0, patienceMinSec: 30, patienceMaxSec: 60 };
   }
   const t = (Math.min(level, MAX_DIFFICULTY_LEVEL) - 6) / (MAX_DIFFICULTY_LEVEL - 6);
   return {
@@ -38,7 +38,7 @@ export function difficulty(level: number): Difficulty {
     w1: 0.24 - 0.1 * t,
     w2: 0.2 - 0.1 * t,
     minCenterDistance: 0.3 * t,
-    patienceMinSec: 20 - 5 * t,
-    patienceMaxSec: 40 - 10 * t,
+    patienceMinSec: 30 - 7.5 * t,
+    patienceMaxSec: 60 - 15 * t,
   };
 }

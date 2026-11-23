@@ -34,24 +34,24 @@ describe('무한 단계(GDD §진행)', () => {
     expect(h.game.state.customers.map((c) => c.dialogueIntervalSec)).toEqual([6, 6]);
   });
 
-  it('손님 인내는 단계별 범위다: 2단계 20초, 7단계 하한 20 − 5/14초(난수 0)', () => {
+  it('손님 인내는 단계별 범위다: 2단계 30초, 7단계 하한 30 − 7.5/14초(난수 0)', () => {
     const h = setupV2({ rng: () => 0 });
     playUntilLevel(h, 2);
     const t2 = customerEnteredAt(h);
     tickTo(h, t2 + 10);
-    expect(h.game.state.customers[0]?.patience).toBeCloseTo(10 / 20, 4);
+    expect(h.game.state.customers[0]?.patience).toBeCloseTo(10 / 30, 4);
     playUntilLevel(h, 7);
     const t7 = customerEnteredAt(h, h.of('customer/entered').length - 1);
     tickTo(h, t7 + 5);
-    expect(h.game.state.customers[0]?.patience).toBeCloseTo(5 / (20 - 5 / 14), 3);
+    expect(h.game.state.customers[0]?.patience).toBeCloseTo(5 / (30 - 7.5 / 14), 3);
   });
 
-  it('인내 상한도 단계별이다: 7단계에서 난수 1 근처이면 40 − 10/14초', () => {
+  it('인내 상한도 단계별이다: 7단계에서 난수 1 근처이면 60 − 15/14초', () => {
     const h = setupV2({ rng: () => 0.999999 });
     playUntilLevel(h, 7);
     const t7 = customerEnteredAt(h, h.of('customer/entered').length - 1);
     tickTo(h, t7 + 5);
-    expect(h.game.state.customers[0]?.patience).toBeCloseTo(5 / (40 - 10 / 14), 3);
+    expect(h.game.state.customers[0]?.patience).toBeCloseTo(5 / (60 - 15 / 14), 3);
   });
 });
 
@@ -59,7 +59,7 @@ describe('패배: 화난 손님 4명(GDD §진행)', () => {
   it('손님이 인내 100%에 닿을 때마다 fumedCount가 1씩 는다(손님은 떠나지 않는다)', () => {
     const h = setupV2();
     playUntilLevel(h, 3); // 손님 2명
-    tickTo(h, h.now + 45);
+    tickTo(h, h.now + 65);
     expect(h.of('customer/fumed')).toHaveLength(2);
     expect(h.game.state.fumedCount).toBe(2);
     expect(h.game.finished).toBe(false);
@@ -69,7 +69,7 @@ describe('패배: 화난 손님 4명(GDD §진행)', () => {
   it('화난 손님 수는 단계가 바뀌어도 유지된다', () => {
     const h = setupV2();
     playUntilLevel(h, 2);
-    tickTo(h, h.now + 45);
+    tickTo(h, h.now + 65);
     expect(h.game.state.fumedCount).toBe(1);
     makePlate(h);
     makePlate(h);
@@ -119,17 +119,17 @@ describe('패배: 화난 손님 4명(GDD §진행)', () => {
 
   it('같은 틱에 두 손님이 인내 100%에 닿아 한계를 채워도 game-over는 한 번이고 그 뒤 이벤트가 없다', () => {
     // 2단계에서 손님 둘이 차례로 화나 2명을 채운 뒤, 3단계 두 손님(3초 간격 입장)의 인내를 30초·27초로 맞춰 같은 틱에 닿게 한다.
-    const c = controlled(0.5); // 인내 20 + 0.5 × 20 = 30초
+    const c = controlled(0.5); // 인내 30 + 0.5 × 30 = 45초
     const h = setupV2({ rng: c.rng });
     playUntilLevel(h, 2);
-    tickTo(h, h.now + 45);
+    tickTo(h, h.now + 65);
     makePlate(h); // 첫 손님 서빙
-    tickTo(h, h.now + 45); // 두 번째 손님도 화남
+    tickTo(h, h.now + 65); // 두 번째 손님도 화남
     expect(h.game.state.fumedCount).toBe(2);
-    makePlate(h); // 3단계 시작, 손님3 입장(인내 30초)
+    makePlate(h); // 3단계 시작, 손님3 입장(인내 45초)
     expect(h.game.state.level).toBe(3);
     const t3 = customerEnteredAt(h, h.of('customer/entered').length - 1);
-    c.set(0.35); // 손님4 인내 20 + 0.35 × 20 = 27초: 입장 3초 + 27초 = 손님3과 같은 시각
+    c.set(0.4); // 손님4 인내 30 + 0.4 × 30 = 42초: 입장 3초 + 27초 = 손님3과 같은 시각
     tickTo(h, t3 + 3.1);
     c.set(null);
     // 전제: 두 손님이 있고 아직 아무도 더 화나지 않았다.
@@ -137,7 +137,7 @@ describe('패배: 화난 손님 4명(GDD §진행)', () => {
     expect(h.game.state.fumedCount).toBe(2);
     expect(h.game.finished).toBe(false);
 
-    tickTo(h, t3 + 40);
+    tickTo(h, t3 + 50);
 
     const fumed = h.log.filter((r) => r.type === 'customer/fumed');
     expect(fumed).toHaveLength(4);
