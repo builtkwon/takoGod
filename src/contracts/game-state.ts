@@ -47,6 +47,11 @@ export interface GameStateV2 {
   readonly bestShopScore: number | null;
   /** 현재 연속 완벽 접시 수(0이면 연속 없음). 완벽이 아닌 접시가 나오면 0으로 돌아간다(GDD §가게 점수). */
   readonly combo: number;
+  /**
+   * 러시 아워(GDD §특별 손님). 진행 중이면 남은 시간(초), 아니면 null. ui가 상단 "러시 아워!"와 남은 시간을 그린다.
+   * 필수 필드로 둔 것은 core가 항상 채우게 하려는 것이고, 시작·끝 알림은 'rush/started'·'rush/ended'다.
+   */
+  readonly rush: { readonly remainingSec: number } | null;
   readonly tutorialCompleted: boolean;
   /** 튜토리얼 중 현재 유도 단계. 튜토리얼이 아니면 null. */
   readonly tutorialStage: TutorialStage | null;

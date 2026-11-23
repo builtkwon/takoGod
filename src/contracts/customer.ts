@@ -1,4 +1,5 @@
 // 손님·대화 계약. 원본: docs/GDD.md §손님 대화, §콘텐츠
+import type { IngredientId } from './cooking';
 
 export type Personality = 'salaryman' | 'grandma' | 'gourmet' | 'tourist';
 
@@ -32,6 +33,18 @@ export interface CustomerStatus {
   readonly face: PatienceLevel;
   /** 다시해줘를 요청해 다음 완성 후네를 우선 받는 중. */
   readonly awaitingRedo: boolean;
+
+  // ── v0.6.0 주문·특별 손님(GDD §주문, §특별 손님) ──
+  // 아래 필드는 모두 선택이다. 없거나 null이면 해당 없음이다(옛 생성처가 고치지 않아도 컴파일되도록 평평한 선택 필드로 둔다).
+  // core는 입장 때 정한 값을 서빙·퇴장까지 바꾸지 않고 항상 채워 낸다(단체의 platesReceived만 서빙마다 늘어난다).
+  /** 주문(10단계~): 재료 ingredient를 count개, 나머지는 문어. count 6은 "모두". 비문어 5종 중 하나다. 판정은 core가 하고 결과는 'order/resolved'다. */
+  readonly order?: { readonly ingredient: IngredientId; readonly count: 1 | 3 | 6 } | null;
+  /** 빼 주세요(13단계~): 이 재료가 접시에 있으면 위반이다. 머리 위 금지 아이콘의 근거. 위반은 'customer/allergy'다. */
+  readonly avoid?: IngredientId | null;
+  /** 단체 주문(15단계~): 접시를 platesNeeded개 받는다. platesReceived는 지금까지 받은 수다(머리 위 "×2" 표시). order와 함께 오지 않는다. */
+  readonly group?: { readonly platesNeeded: 2; readonly platesReceived: number } | null;
+  /** 깐깐한 VIP(17단계~): 왕관 표시. 인내·점수 배율은 core가 적용한다. */
+  readonly vip?: boolean;
 }
 
 /** 접시의 결함 종류. 결함이 없으면 맛보기 반응은 'perfect'다. 탄 것은 접시에 들어가지 않으므로 없다. */

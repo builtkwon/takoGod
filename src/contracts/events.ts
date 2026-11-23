@@ -52,6 +52,8 @@ export interface GameEvents {
   // 서빙·점수 공개 (core → ui). 순서는 두 경로다.
   //   다시해줘 경로: plate/tasted → plate/scored → customer/redo-requested (리뷰·퇴장 없음, 손님은 남는다)
   //   일반·떠남 경로: plate/tasted → plate/scored → [customer/walked-out] → review/issued → customer/left
+  //   v0.6.0 추가 이벤트는 위 경로 안에 끼어든다: plate/tasted 뒤 [order/resolved][customer/allergy → customer/fumed], score/plate 뒤 [rush/started], review/issued 앞 [plate/reported].
+  //   단체 손님의 첫 접시는 review/issued·customer/left 없이 끝나고 두 번째 접시에서 평균 리뷰 하나로 이어진다.
   /**
    * 서빙 직후 맛보기 반응. defects가 비어 있으면 결함이 없는 접시이고 lines는 완벽 대사 1개다.
    * lines는 core가 GDD §손님 대화의 난수 순서대로 고른다(ui는 고르지 않고 표시만 한다).
@@ -77,6 +79,16 @@ export interface GameEvents {
     readonly combo: number;
     readonly multiplier: number;
   };
+  /** 주문 손님의 접시 판정 결과(GDD §주문). 서빙 직후 plate/tasted 다음에 한 번 낸다. 만족도 ±15와 가게 점수 +50은 plate/scored·score/plate에 이미 반영된다. 다시해줘를 부른 첫 접시에도 낸다. */
+  'order/resolved': { readonly customerId: string; readonly success: boolean };
+  /** 식품 신고(GDD §점수): 지우개가 든 접시가 신고되어 별점이 깎였다. starsPenalty는 실제로 깎인 별 수(0~1. 최저 0.5★ 보호로 1보다 작을 수 있고, 이미 0.5★ 이하면 0이어도 카드는 뜬다). plate/scored 뒤·review/issued 앞에 낸다. */
+  'plate/reported': { readonly customerId: string; readonly starsPenalty: number };
+  /** 빼 주세요 위반(GDD §특별 손님): 접시에 avoid 재료가 있었다. 만족도 -40과 즉시 화남은 이어서 나오는 customer/fumed(처음 화날 때만)와 plate/scored로 알린다. plate/tasted 다음에 낸다. */
+  'customer/allergy': { readonly customerId: string; readonly ingredient: IngredientId };
+  /** 러시 아워가 시작됐다(GDD §특별 손님). 남은 시간은 GameStateV2.rush로 읽는다. */
+  'rush/started': { readonly durationSec: number };
+  /** 러시 아워가 끝났다(시간 경과 또는 판 종료). */
+  'rush/ended': Record<string, never>;
   /** 세션 종료 때 최고 가게 점수를 갱신했다(한 번). previous는 이전 기록이고 없으면 null이다(GDD §가게 점수, ADR 0004). */
   'score/new-best': { readonly score: number; readonly previous: number | null };
   /** 손님이 다시해줘를 요청했다. 이 접시에는 리뷰를 발급하지 않는다. */
