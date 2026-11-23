@@ -275,7 +275,7 @@ test('결과 화면 다시 하기: 새 판이 1단계·점수 0·리뷰 0으로 
   await page.clock.resume();
   await page.getByRole('button', { name: '시작' }).click();
   await expect(page.getByRole('heading', { name: '영업 종료' })).toBeVisible();
-  await page.getByRole('button', { name: '다시 하기' }).click();
+  await page.getByRole('button', { name: '다시 하기', exact: true }).click();
   await expect(page.getByRole('heading', { name: '영업 종료' })).toBeHidden();
   await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
   await expect(page.locator('.ui-hud-score')).toHaveText('0');
@@ -396,8 +396,72 @@ test('결과 화면 다시 하기: 새 판에 이전 판 말풍선·답 버튼�
   );
   await page.reload();
   await page.getByRole('button', { name: '시작' }).click();
-  await page.getByRole('button', { name: '다시 하기' }).click();
+  await page.getByRole('button', { name: '다시 하기', exact: true }).click();
   await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
   await expect(page.locator('.ui-bubble')).toHaveCount(0);
   await expect(page.locator('.ui-answer')).toHaveCount(0);
+});
+
+async function startMainGame(page: Page): Promise<void> {
+  await page.goto('/');
+  await page.evaluate((pk) => localStorage.setItem(pk, '{"version":1,"tutorialCompleted":true}'), PROFILE_KEY);
+  await page.reload();
+  await page.getByRole('button', { name: '시작' }).click();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  // 다시 하기가 세션 저장값을 지웠는지 보려는 표식(판이 이어지면 그대로 남는다).
+  await page.evaluate((k) => sessionStorage.setItem(k, 'marker'), KEY);
+}
+
+const marker = (page: Page): Promise<string | null> => page.evaluate((k) => sessionStorage.getItem(k), KEY);
+
+test('게임 중 다시 하기: 확인에서 예를 누르면 1단계·점수 0·리뷰 0으로 처음부터 시작한다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await startMainGame(page);
+  await page.getByRole('button', { name: '↻ 다시 하기' }).click();
+  await page.getByRole('button', { name: '예', exact: true }).click();
+  await expect(page.getByRole('button', { name: '예', exact: true })).toBeHidden();
+  expect(await marker(page)).not.toBe('marker');
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  await expect(page.locator('.ui-hud-score')).toHaveText('0');
+  await expect(page.locator('.ui-hud-reviews')).toHaveText('리뷰 0');
+  expect(errors).toEqual([]);
+});
+
+test('게임 중 다시 하기: 확인에서 아니오를 누르면 그대로 이어진다', async ({ page }) => {
+  await startMainGame(page);
+  await page.getByRole('button', { name: '↻ 다시 하기' }).click();
+  await page.getByRole('button', { name: '아니오' }).click();
+  await expect(page.getByRole('button', { name: '아니오' })).toBeHidden();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  expect(await marker(page)).toBe('marker');
+});
+
+test('게임 중 다시 하기: 튜토리얼 중에는 버튼이 없다', async ({ page }) => {
+  await start(page);
+  await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
+  await expect(page.getByRole('button', { name: '↻ 다시 하기' })).toBeHidden();
+});
+
+test('튜토리얼 속재료 탭 안내: 탭 링이 뜨고, 문어 칸 탭 → 구멍 탭으로 속재료 단계를 끝낸다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await start(page);
+  const picker = await scenePicker(page);
+  await dragAll(page, picker, () => center(page, '.ui-bucket-margarine'));
+  await dragAll(page, picker, () => center(page, '.ui-bucket-batter'));
+  await page.clock.runFor(3550);
+  await expect(page.locator('.ui-tap-ring')).toBeVisible();
+  const tray = at(picker, { kind: 'tray', slot: 0 });
+  for (const i of OPEN) {
+    await page.mouse.click(tray.x, tray.y);
+    await page.clock.runFor(50);
+    const p = at(picker, { kind: 'hole', index: i });
+    await page.mouse.click(p.x, p.y);
+    await page.clock.runFor(50);
+  }
+  await tapAll(page, picker);
+  await tapAll(page, picker);
+  await funeAll(page, picker);
+  await page.clock.runFor(1200);
+  await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
+  expect(errors).toEqual([]);
 });

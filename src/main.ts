@@ -30,7 +30,7 @@ const renderer = createRenderer(stage);
 // 이펙트 구독도 GameV2 생성 전에 건다(생성자가 이벤트를 낼 수 있다).
 bus.on('dialogue/resolved', (e) => renderer.effect(e.outcome === 'good' ? 'firework' : 'confused', e.customerId));
 bus.on('customer/fumed', (e) => renderer.effect('fumed', e.customerId));
-const ui = mountUiV2(app, bus, getState, renderer.picker, { versionLabel: versionLabel(__APP_VERSION__, __APP_COMMIT__) });
+const ui = mountUiV2(app, bus, getState, renderer.picker, { versionLabel: versionLabel(__APP_VERSION__, __APP_COMMIT__), onRestart: restart });
 const profileStore = createBrowserProfileStore();
 const sessionStore = withProfile(createBrowserSessionStore(), profileStore);
 
@@ -65,6 +65,18 @@ game = newGame(sessionStore);
 
 let resultShown = false;
 let last = performance.now();
+
+// 다시 하기(결과 화면·게임 중 버튼 공용): 세션 저장값을 지우고 새 판. 튜토리얼 완료 기기이므로 withProfile 대체값으로 1단계부터 시작한다(리뷰 0). best·profile은 그대로.
+function restart(): void {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // 접근 불가여도 아래 store가 load를 비워 profile 대체값(없으면 튜토리얼)으로 시작한다.
+  }
+  game = newGame(sessionStore); // 이전 GameV2 구독은 newGame이 해제한다.
+  resultShown = false;
+  last = performance.now(); // 새 판 첫 프레임의 dt 기준을 지금으로 맞춘다
+}
 function frame(now: number): void {
   const g = game as GameV2;
   g.tick(Math.max(0, Math.min(MAX_DT, (now - last) / 1000)));
@@ -73,17 +85,7 @@ function frame(now: number): void {
   renderer.renderV2(state, now);
   if (g.finished && !resultShown) {
     resultShown = true;
-    void ui.showResult({ average: state.sessionAverage, reviews: state.reviews }).then(() => {
-      // 다시 하기: 세션 저장값을 지우고 새 판. 튜토리얼 완료 기기이므로 withProfile 대체값으로 1단계부터 시작한다(리뷰 0). best·profile은 그대로.
-      try {
-        sessionStorage.removeItem(SESSION_KEY);
-      } catch {
-        // 접근 불가여도 아래 store가 load를 비워 profile 대체값(없으면 튜토리얼)으로 시작한다.
-      }
-      game = newGame(sessionStore); // 이전 GameV2 구독은 newGame이 해제한다.
-      resultShown = false;
-      last = performance.now(); // rAF는 계속 돌고 dt는 MAX_DT로 잘리지만, 새 판 첫 프레임의 dt 기준을 지금으로 맞춘다
-    });
+    void ui.showResult({ average: state.sessionAverage, reviews: state.reviews }).then(restart);
   }
   requestAnimationFrame(frame);
 }
