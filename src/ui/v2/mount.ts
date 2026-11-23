@@ -92,7 +92,12 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   raf = requestAnimationFrame(frame);
 
   return {
-    title: () => showIosInstall(layer).then(() => showTitle(layer, opts?.versionLabel)),
+    title: () => {
+      tutorial.setSuspended(true); // 시작 버튼을 누르기 전에는 튜토리얼 안내가 보이지 않는다
+      return showIosInstall(layer)
+        .then(() => showTitle(layer, opts?.versionLabel))
+        .finally(() => tutorial.setSuspended(false));
+    },
     showResult: (result) => showResult(layer, { ...result, shopScore: getState().shopScore, newBest }, opts?.versionLabel),
     destroy() {
       cancelAnimationFrame(raf);
