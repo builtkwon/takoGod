@@ -6,7 +6,7 @@ import type { ReviewResult } from './review';
 export interface SessionSnapshot {
   readonly version: 1;
   readonly tutorialCompleted: boolean;
-  /** P5까지 끝나 결과 화면에 도달했다. */
+  /** 패배(화난 손님 한도, GDD §진행)로 판이 끝나 결과 화면에 도달했다. 형식은 그대로라 version은 올리지 않는다. */
   readonly finished: boolean;
   readonly reviews: readonly ReviewResult[];
 }

@@ -87,7 +87,13 @@ export interface GameEvents {
   'customer/walked-out': { readonly customerId: string; readonly stars: number };
 
   // 진행·리뷰 (core → render·ui)
-  'phase/changed': { readonly phase: PhaseId };
+  /** 단계가 시작됐다(튜토리얼 포함). level은 튜토리얼 0, 본게임 1~ (GDD §진행). */
+  'phase/changed': { readonly phase: PhaseId; readonly level: number };
+  /**
+   * 판이 끝났다(패배, GDD §진행). fumedCount가 한도(GameStateV2.fumedLimit)에 닿은 customer/fumed 직후 한 번 낸다.
+   * 이어서 core는 finished를 true로 하고 결과 화면 흐름(최고 기록 갱신 score/new-best 포함)으로 간다.
+   */
+  'session/game-over': { readonly reason: 'fumed'; readonly fumedCount: number };
   'review/issued': { readonly review: ReviewResult };
 
   // 튜토리얼 (core → ui)
