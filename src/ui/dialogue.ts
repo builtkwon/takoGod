@@ -20,7 +20,7 @@ export interface Dialogues {
   reset(): void;
 }
 
-/** 말풍선과 랜덤 배치 답 버튼. 답 버튼은 fixed 요소와 obstacles(layer 기준 좌표, 장면의 구멍·트레이·후네 등)와 겹치지 않는다. */
+/** 말풍선과 랜덤 배치 답 버튼. 답 버튼은 fixed 요소와 obstacles(layer 기준 좌표, 장면의 구멍·트레이·접시 등)와 겹치지 않는다. */
 export function createDialogues(
   ctx: {
     readonly layer: HTMLElement;

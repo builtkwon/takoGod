@@ -29,7 +29,7 @@ const TAP_REACH = 70;
 
 /**
  * 단계의 화살표 시작점→목적지. 가리킬 곳이 없으면 null.
- * 시작점: 마가린·반죽은 통, 속재료는 문어 칸, 탭은 구멍 위, 후네 담기는 완성 구멍.
+ * 시작점: 마가린·반죽은 통, 속재료는 문어 칸, 탭은 구멍 위, 접시 담기는 완성 구멍.
  */
 export function tutorialArrow(
   stage: TutorialStage,
