@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { syntheticDataV2 } from '../synthetic-data-v2';
-import { controlled, customerEnteredAt, makePlate, playUntilPhase, scripted, setupV2, tickTo, type H } from './helpers-v2';
+import { controlled, customerEnteredAt, makePlate, playUntilLevel, scripted, setupV2, tickTo, type H } from './helpers-v2';
 
 const SAL = 0; // 성격 난수 값: salaryman
-const toP2 = (h: H) => playUntilPhase(h, 'P2');
+const toP2 = (h: H) => playUntilLevel(h, 2);
 
 describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   it('입장 시 성격 → 인내 시간 순서로 뽑는다', () => {
@@ -182,7 +182,7 @@ describe('다시해줘(별점 2.5 이하 20%, 1회)', () => {
     expect(h.game.state.reviews).toHaveLength(1); // 튜토리얼 리뷰뿐
     expect(h.game.state.customers[0]?.awaitingRedo).toBe(true);
     expect(h.game.state.fune).toHaveLength(0);
-    expect(h.game.state.phase).toBe('P2');
+    expect(h.game.state.level).toBe(2);
   });
 
   it('요청해도 plate/tasted → plate/scored를 먼저 낸다(점수 공개)', () => {
@@ -266,7 +266,7 @@ describe('다시해줘(별점 2.5 이하 20%, 1회)', () => {
   it('요청 손님에게 다시 서빙', () => {
     const c = controlled();
     const h = setupV2({ rng: c.rng });
-    playUntilPhase(h, 'P3');
+    playUntilLevel(h, 3);
     h.tick(3.1); // 손님2 입장
     const [first, second] = h.game.state.customers;
     const finish = makePlate(h, BAD, true);
@@ -347,6 +347,6 @@ describe('0~1점 떠남(별점 1.5 이하이고 다시해줘가 아닐 때 15%)'
     const h = walk([...lead, 0.99, 0.1, 0.99]);
     h.tick(2);
     makePlate(h);
-    expect(h.game.state.phase).toBe('P3');
+    expect(h.game.state.level).toBe(3);
   });
 });

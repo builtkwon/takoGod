@@ -2,24 +2,24 @@ import { describe, expect, it } from 'vitest';
 import type { Personality } from '../../contracts';
 import { TRAY_SOURCE } from '../cooking';
 import { syntheticDataV2 } from '../synthetic-data-v2';
-import { makePlate, playUntilPhase, reachDone, scripted, setupV2 } from './helpers-v2';
+import { makePlate, playUntilLevel, reachDone, scripted, setupV2 } from './helpers-v2';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 // 난수 값 → 성격(0..3)·인내시간(20 + v*20초)
 const P = { salaryman: 0, grandma: 0.3, gourmet: 0.6, tourist: 0.9 } as const;
 
 /** P2까지 진행한다(P1 접시는 서빙 없이 비운다). 이후 난수 소비는 P2 손님 입장(성격·인내)부터다. */
-const toP2 = (h: ReturnType<typeof setupV2>) => playUntilPhase(h, 'P2');
+const toP2 = (h: ReturnType<typeof setupV2>) => playUntilLevel(h, 2);
 
 describe('후네와 서빙', () => {
   it('손님 0명 페이즈(P1): 6개가 차면 서빙 없이 비우고 P2로 전환한다', () => {
     const h = setupV2();
     makePlate(h);
     expect(h.game.state.fune).toHaveLength(0);
-    expect(h.game.state.phase).toBe('P2');
+    expect(h.game.state.level).toBe(2);
     expect(h.of('plate/tasted')).toEqual([]);
     expect(h.of('review/issued')).toEqual([]);
-    expect(h.of('phase/changed').map((e) => e.phase)).toEqual(['P1', 'P2']);
+    expect(h.of('phase/changed').map((e) => e.level)).toEqual([1, 2]);
     expect(h.of('fune/added').map((e) => e.count)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
@@ -82,12 +82,12 @@ describe('후네와 서빙', () => {
     const h = setupV2();
     const finish = makePlate(h, {}, true);
     h.drop('fune');
-    expect(h.game.state.phase).toBe('P1');
+    expect(h.game.state.level).toBe(1);
     expect(h.game.state.funeServing).toBe(true);
     h.tick(0.9);
-    expect(h.game.state.phase).toBe('P1');
+    expect(h.game.state.level).toBe(1);
     h.tick(0.1);
-    expect(h.game.state.phase).toBe('P2');
+    expect(h.game.state.level).toBe(2);
     expect(h.game.state.funeServing).toBe(false);
     void finish;
   });
@@ -125,7 +125,7 @@ describe('후네와 서빙', () => {
     // 다음 손님이 입장하면 같은 틱에 서빙한다.
     h.tick(1.1);
     expect(h.of('plate/tasted').map((e) => e.customerId)).toEqual(['c1', 'c2']);
-    expect(h.game.state.phase).toBe('P3'); // 두 번째 접시로 P2가 끝나 P3 첫 손님(c3)이 입장했다
+    expect(h.game.state.level).toBe(3); // 두 번째 접시로 P2가 끝나 P3 첫 손님(c3)이 입장했다
     expect(h.game.state.fune).toHaveLength(0);
     expect(h.game.state.funeServing).toBe(false);
   });
@@ -146,7 +146,7 @@ describe('후네와 서빙', () => {
 
   it('두 손님이 기다리면 가장 먼저 온 손님이 먼저 서빙된다(선착순)', () => {
     const h = setupV2();
-    playUntilPhase(h, 'P3');
+    playUntilLevel(h, 3);
     h.tick(3.1); // 손님2 입장(3초 뒤)
     const [first, second] = h.game.state.customers;
     expect(h.game.state.customers).toHaveLength(2);
@@ -172,7 +172,7 @@ describe('후네와 서빙', () => {
     const h = setupV2();
     expect(h.game.state.tray.map((t) => t.id)).toEqual(TRAY_SOURCE.map((t) => t.id));
     makePlate(h);
-    expect(h.game.state.phase).toBe('P2');
+    expect(h.game.state.level).toBe(2);
     expect(h.game.state.tray.map((t) => t.id)).toEqual(TRAY_SOURCE.map((t) => t.id));
     const finish = makePlate(h, {}, true);
     expect(h.game.state.tray.map((t) => t.id)).toEqual(TRAY_SOURCE.map((t) => t.id));
@@ -186,10 +186,10 @@ describe('후네와 서빙', () => {
     const h = setupV2();
     toP2(h);
     makePlate(h);
-    expect(h.game.state.phase).toBe('P2');
+    expect(h.game.state.level).toBe(2);
     h.tick(2);
     makePlate(h);
-    expect(h.game.state.phase).toBe('P3');
+    expect(h.game.state.level).toBe(3);
     expect(h.of('review/issued')).toHaveLength(2);
   });
 });

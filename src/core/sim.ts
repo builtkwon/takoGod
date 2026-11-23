@@ -81,7 +81,10 @@ function chaosBot(bus: EventBus, s: GameStateV2, rng: () => number): void {
 }
 
 export interface SessionResultV2 {
+  /** 패배로 판이 끝났다. */
   readonly finished: boolean;
+  /** 끝난(또는 잘린) 시점의 단계. */
+  readonly level: number;
   readonly reviews: readonly ReviewResult[];
   readonly average: number | null;
   readonly saved: SessionSnapshot | null;
@@ -89,22 +92,40 @@ export interface SessionResultV2 {
   readonly shopScore: number;
 }
 
-/** 세션 하나를 끝까지 돌린다. 튜토리얼은 안내를 따라가야 하므로 두 봇 모두 정석대로 진행한다. */
-export function playSessionV2(kind: BalanceScenario['kind'] | 'chaos', seed: number): SessionResultV2 {
+/** 별점 목표(전정답 5.00, 무작위 2~3점대)를 재는 구간: 1~5단계. 무한 진행이라 이 단계가 끝나면 자른다. */
+export const BALANCE_UNTIL_LEVEL = 5;
+
+/**
+ * 세션 하나를 돌린다. 판이 패배로 끝나거나 untilLevel 단계가 끝나면(다음 단계 시작) 멈춘다.
+ * 튜토리얼은 안내를 따라가야 하므로 두 봇 모두 정석대로 진행한다.
+ */
+export function playSessionV2(kind: BalanceScenario['kind'] | 'chaos', seed: number, untilLevel: number = BALANCE_UNTIL_LEVEL): SessionResultV2 {
   const bus = createEventBus();
   const store = createMemorySessionStore();
   const game = new GameV2({ bus, data: syntheticDataV2, rng: createRng(seed), store, bestStore: createMemoryBestStore() });
   const botRng = createRng(seed ^ 0x9e3779b9);
-  for (let i = 0; i < MAX_TICKS && !game.finished; i++) {
+  for (let i = 0; i < MAX_TICKS && !game.finished && game.state.level <= untilLevel; i++) {
     const s = game.state;
     if (kind === 'perfect' || s.phase === 'tutorial') perfectBot(bus, game);
     else if (kind === 'chaos') chaosBot(bus, s, botRng);
     else randomBot(bus, s, botRng);
     game.tick(DT);
   }
-  if (!game.finished) throw new Error(`세션이 ${MAX_TICKS}틱 안에 끝나지 않았다(${kind}, seed ${seed})`);
   const s = game.state;
-  return { finished: true, reviews: s.reviews, average: s.sessionAverage, saved: store.load(), shopScore: s.shopScore };
+  if (!game.finished && s.level <= untilLevel) throw new Error(`세션이 ${MAX_TICKS}틱 안에 끝나지 않았다(${kind}, seed ${seed})`);
+  return { finished: game.finished, level: s.level, reviews: s.reviews, average: s.sessionAverage, saved: store.load(), shopScore: s.shopScore };
+}
+
+/** 20단계까지 가는 생존 측정(참고 출력용, 목표 없음). 도달 단계의 평균과 20단계를 넘긴 세션 비율을 낸다. */
+export function measureSurvival(kind: BalanceScenario['kind'] | 'chaos', sessions: number, seed: number, untilLevel = 20): { meanLevel: number; clearedRatio: number } {
+  let sum = 0;
+  let cleared = 0;
+  for (let i = 0; i < sessions; i++) {
+    const r = playSessionV2(kind, seed * 1_000_003 + i, untilLevel);
+    sum += r.level;
+    if (!r.finished) cleared++;
+  }
+  return { meanLevel: sum / sessions, clearedRatio: cleared / sessions };
 }
 
 export const BalanceSimulatorV2: BalanceSimulatorPort = {
