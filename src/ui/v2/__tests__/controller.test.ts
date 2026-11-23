@@ -171,6 +171,22 @@ describe('속재료 탭 선택', () => {
     c.up(1, { x: 50, y: 20 });
     expect(c.selected()).toBeNull();
   });
+  it('선택 중 익힘 완료(cooked) 구멍 탭은 place-material 1회, input/roll은 0회(굴리기 판정 없음)', () => {
+    const { c, bus } = setup(['cooked']);
+    tapTray(c);
+    c.down(1, { x: 50, y: 150 });
+    c.up(1, { x: 50, y: 150 });
+    expect(bus.sent.filter((e) => e.type === 'input/place-material')).toHaveLength(1);
+    expect(bus.sent.filter((e) => e.type === 'input/roll')).toHaveLength(0);
+  });
+  it('선택 중 익는 중(cooking) 구멍 탭은 roll 0회이고 선택은 유지', () => {
+    const { c, bus } = setup(['cooking']);
+    tapTray(c);
+    c.down(1, { x: 50, y: 150 });
+    c.up(1, { x: 50, y: 150 });
+    expect(bus.sent).toEqual([]);
+    expect(c.selected()).toBe('octopus');
+  });
   it('선택 중 넣을 수 없는 단계(filled·rolled) 구멍 탭은 굴리기로 넘기고 선택은 유지', () => {
     const { c, bus } = setup(['filled', 'rolled']);
     tapTray(c);

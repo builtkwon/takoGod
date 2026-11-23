@@ -161,6 +161,8 @@ export function createController(deps: {
           bus.emit('input/place-material', { hole: h.index, material });
           return;
         }
+        // 아직 익는 중인 구멍: 굴리지도 넣지도 않는다(속재료를 타이밍 바로 판정하지 않는다). 선택은 유지.
+        if (h && !h.locked && h.stage === 'cooking') return;
         if (!h) selected = null; // 빈 곳 탭은 해제
       }
       if (t?.kind === 'tray') {
