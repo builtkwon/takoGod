@@ -6,7 +6,7 @@
 
 - 필수: SemVer `MAJOR.MINOR.PATCH`. 원본은 `package.json`의 `version`이다. git tag·CHANGELOG·화면 표시는 이 값에서 파생한다.
 - 기본: 1.0.0 전에는 0.x로 둔다. 1.0.0은 사용자가 공개 출시로 선언할 때 올린다.
-- 올림 기준(0.x 기준. 1.0.0 이후는 아래 MAJOR 줄 적용):
+- 필수: 올림 기준은 아래 표를 따른다(0.x 기준. 1.0.0 이후는 MAJOR 줄 적용).
 
 | 변경 | 올림 | 예시 |
 | --- | --- | --- |
@@ -22,15 +22,20 @@
 
 ## 첫 버전
 
-첫 릴리스는 v0.1.0이다(2026-11-23). 그 이전 배포(2026-11-17~21)는 버전이 없고 CHANGELOG 0.1.0 항목에 한 단락으로 요약한다.
+- 필수: 첫 릴리스는 v0.1.0이다(2026-11-23). 그 이전 배포(2026-11-17~21)는 버전이 없고 CHANGELOG 0.1.0 항목에 한 단락으로 요약한다.
 
 ## 릴리스
 
 - 기본: 릴리스 단위는 "배포할 묶음"이다. 사용자 승인을 받은 main 배포 시점마다 버전을 올리고, 개별 커밋·병합마다 올리지 않는다.
-- 필수: 버전 올림은 PM이 릴리스를 승인하고 integrator가 실행한다. 배포 자체가 사용자 승인 대상이므로([commits.md](commits.md)) 사용자 승인도 받는다.
+- 필수: 앱 코드(`src/**`, `public/**`, `index.html`, 의존성)가 바뀌는 main push는 반드시 릴리스 커밋을 포함한다. 문서·하네스·테스트만 바뀐 push는 배포되더라도 릴리스가 아니며 버전을 올리지 않는다(화면 버전은 그대로, 커밋 해시만 달라질 수 있다).
+- 필수: 승인 순서는 아래와 같다. 사용자 승인은 배포 승인 한 번이다([commits.md](commits.md)).
+  1. 사용자가 배포를 승인한다.
+  2. integrator가 로컬에 릴리스 커밋과 주석 태그를 만든다(이 커밋은 배포 승인에 포함된 위임 커밋이다).
+  3. PM이 검증한 뒤 `git push origin main vX.Y.Z`를 실행한다.
 - 필수: 릴리스 커밋 하나에 `package.json` version 변경과 CHANGELOG 항목을 함께 담는다. 커밋 `chore: release vX.Y.Z`.
 - 필수: git tag는 `vX.Y.Z`(주석 태그), 릴리스 커밋에 건다.
-- 필수: push(`git push origin main vX.Y.Z`)는 사용자 승인 뒤 PM이 한다. integrator는 push하지 않는다. 릴리스 커밋과 tag는 로컬에서 만들므로 push 전에는 배포되지 않아 tag를 되돌릴 수 있다.
+- 필수: integrator는 push하지 않는다. 릴리스 커밋과 tag는 로컬에서 만들므로 push 전에는 배포되지 않아 tag를 되돌릴 수 있다.
+- 기본: Cloudflare Pages는 main 브랜치 push로 배포한다. tag push가 별도 배포를 일으키는지는 v0.1.0 릴리스 때 확인해 이 줄을 갱신한다.
 - 금지: push된 tag를 옮기거나 지우지 않는다. 틀렸으면 다음 PATCH로 고친다.
 
 ## CHANGELOG
@@ -43,7 +48,7 @@
 ## 화면 표시
 
 - 기본: 타이틀·결과 화면 하단에 `v<version> · <커밋 7자리>`(예: `v0.1.0 · 1a44527`)처럼 작게 표시한다. 버그 제보 때 사용자가 읽어 줄 수 있게 한다.
-- 필수: 커밋 값은 Cloudflare Pages 빌드 환경 변수 `CF_PAGES_COMMIT_SHA`를 우선한다. 없으면 `git rev-parse --short=7 HEAD`, 그것도 실패하면 `dev`.
+- 필수: 커밋 값은 Cloudflare Pages 빌드 환경 변수 `CF_PAGES_COMMIT_SHA`(40자리)의 앞 7자리를 우선한다. 없으면 `git rev-parse --short=7 HEAD`, 그것도 실패하면 `dev`.
 - 필수: 값은 빌드 시 주입한다(Vite `define`: `__APP_VERSION__`, `__APP_COMMIT__`). 런타임에 package.json을 읽지 않는다.
 - 필수: 소유. `vite.config.ts` define, 전역 타입 선언, main.ts에서 ui로 문자열 전달 = integrator. 표시 DOM·CSS = ui.
 
@@ -55,14 +60,14 @@
 ## 저장 형식 version
 
 - 필수: 키마다 정수 `version`을 가진다(`takoyaki:session`, `takoyaki:best`). 원본은 각 ADR이다.
-- 필수: 올리는 조건은 읽기 쪽 해석이 달라지는 형식 변경(필드 추가·삭제·의미 변경)뿐이다. 값 범위만 달라지는 변경은 올리지 않는다.
+- 필수: 올리는 조건은 읽기 쪽 해석이 달라지는 형식 변경(필드 추가·삭제·의미 변경)뿐이다. 읽기 쪽이 받아들이는 범위가 넓어지기만 하는 변경은 올리지 않는다. 좁아지면(옛 값이 버려질 수 있으면) 올린다.
 - 필수: version을 올릴 때는 ADR을 고치고 독립 리뷰를 받으며, CHANGELOG의 저장 형식 항목에 적는다.
 - 기본: 이전 version 값은 버린다(세션은 새로 시작, 최고 기록은 기록 없음). 기존 동작과 같다.
 - 허용: 버리면 사용자 손실이 큰 값(최고 기록)은 변환 코드를 둘 수 있다. 이 경우 변환 테스트를 같은 커밋에 넣고 ADR에 이유를 적는다.
 
 ## 하네스 버전
 
-[modules/harness.md](../architecture/modules/harness.md)를 따른다. 이 문서는 새로 정하지 않는다. toolset `version`은 도구 추가·제거 시 올린다. 스킬 `version`(SKILL.md, 영수증 `name@v<version>`)을 올리는 시점은 미정이며 harness 문서에서 정한다.
+[modules/harness.md](../architecture/modules/harness.md)를 따른다.
 
 ## contracts
 
