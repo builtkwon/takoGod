@@ -277,6 +277,26 @@ test('튜토리얼 완료 기억: 완료하면 profile이 쓰이고, 세션 저�
   expect(errors).toEqual([]);
 });
 
+test('타이틀 튜토리얼 버튼: 처음 방문에는 없다', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: '시작' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '튜토리얼' })).toHaveCount(0);
+});
+
+test('타이틀 튜토리얼 버튼: 튜토리얼 완료 뒤 새로고침하면 버튼이 있고, 누르면 튜토리얼부터 다시 시작한다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await start(page);
+  await playTutorial(page);
+  await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
+
+  await page.reload();
+  await page.clock.resume();
+  await page.getByRole('button', { name: '튜토리얼' }).click();
+  await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
+  expect(await page.evaluate((k) => localStorage.getItem(k), PROFILE_KEY)).toBe('{"version":1,"tutorialCompleted":true}');
+  expect(errors).toEqual([]);
+});
+
 test('튜토리얼 완료 기억: profile이 손상 값이면 튜토리얼부터 시작하고 키가 지워진다', async ({ page }) => {
   await page.goto('/');
   await page.evaluate((k) => localStorage.setItem(k, '{"version":1,"tutorialCompleted":"yes"}'), PROFILE_KEY);

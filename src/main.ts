@@ -1,11 +1,11 @@
 // bootstrap: 루프·조립·PWA 등록. 게임 규칙은 core에 있다. 경계: docs/rules/architecture/modules/contracts.md#bootstrap
 import { createBrowserBestStore } from './best-store';
-import type { GameStateV2 } from './contracts';
+import type { EventBus, GameStateV2, SessionStore } from './contracts';
 import { GameV2, createEventBus, createRng } from './core';
 import { dialogues, reviewComments, tasteLines, tutorialReviewComment } from './data';
 import { createBrowserProfileStore, withProfile } from './profile-store';
 import { createRenderer } from './render';
-import { createBrowserSessionStore } from './session-store';
+import { SESSION_KEY, createBrowserSessionStore } from './session-store';
 import { mountUiV2 } from './ui';
 import { versionLabel } from './version-label';
 
@@ -31,18 +31,37 @@ const renderer = createRenderer(stage);
 bus.on('dialogue/resolved', (e) => renderer.effect(e.outcome === 'good' ? 'firework' : 'confused', e.customerId));
 bus.on('customer/fumed', (e) => renderer.effect('fumed', e.customerId));
 const ui = mountUiV2(app, bus, getState, renderer.picker, { versionLabel: versionLabel(__APP_VERSION__, __APP_COMMIT__) });
-game = new GameV2({
-  bus,
-  data: {
-    dialogues,
-    reviewComments: (personality, bucket) => reviewComments[personality][bucket],
-    tutorialComment: tutorialReviewComment,
-    tasteLines,
+const profileStore = createBrowserProfileStore();
+const sessionStore = withProfile(createBrowserSessionStore(), profileStore);
+
+// GameV2는 해제 API가 없어, 게임이 거는 구독을 모았다가 다시 만들 때 끊는다(이전 인스턴스가 입력에 반응하지 않게). 타이머는 tick뿐이라 남지 않는다.
+let offAll: Array<() => void> = [];
+const gameBus: EventBus = {
+  on(type, handler) {
+    const off = bus.on(type, handler);
+    offAll.push(off);
+    return off;
   },
-  rng: createRng(Date.now()),
-  store: withProfile(createBrowserSessionStore(), createBrowserProfileStore()),
-  bestStore: createBrowserBestStore(),
-});
+  emit: (type, payload) => bus.emit(type, payload),
+};
+
+function newGame(store: SessionStore): GameV2 {
+  offAll.forEach((off) => off());
+  offAll = [];
+  return new GameV2({
+    bus: gameBus,
+    data: {
+      dialogues,
+      reviewComments: (personality, bucket) => reviewComments[personality][bucket],
+      tutorialComment: tutorialReviewComment,
+      tasteLines,
+    },
+    rng: createRng(Date.now()),
+    store,
+    bestStore: createBrowserBestStore(),
+  });
+}
+game = newGame(sessionStore);
 
 let resultShown = false;
 let last = performance.now();
@@ -59,7 +78,16 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-void ui.title().then(() => {
+void ui.title({ tutorialButton: profileStore.load()?.tutorialCompleted === true }).then((choice) => {
+  if (choice === 'tutorial') {
+    // 튜토리얼부터 다시: 세션 저장값을 지우고 profile 대체 없이 만든다. profile·best는 그대로.
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      // 접근 불가여도 아래 store가 load를 비워 튜토리얼부터 시작한다.
+    }
+    game = newGame({ load: () => null, save: (snap) => sessionStore.save(snap) });
+  }
   last = performance.now();
   requestAnimationFrame(frame);
 });
