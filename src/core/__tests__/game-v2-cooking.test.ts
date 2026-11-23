@@ -198,10 +198,10 @@ describe('굴리기', () => {
     const h = setupV2();
     reachDone(h, 0);
     h.roll(0);
-    h.tick(4);
+    h.tick(7.2);
     expect(h.hole(0).stage).toBe('dark');
     h.roll(0);
-    h.tick(2);
+    h.tick(3.6);
     expect(h.hole(0).stage).toBe('burnt');
     h.roll(0);
     expect(h.of('cook/tap-ignored')).toEqual([{ hole: 0 }, { hole: 0 }, { hole: 0 }]);

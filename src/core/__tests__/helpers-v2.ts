@@ -206,7 +206,7 @@ export interface HoleSpec {
 
 /**
  * 구멍 6개(0~5)를 완성품 6개로 구워 후네에 담는다(6개가 차면 끝에 서빙·비움까지 1초 진행한다).
- * 같은 순간에 굴려 한꺼번에 완성한다(어두운 것은 완성 뒤 4초를 기다려 담는다).
+ * 같은 순간에 굴려 한꺼번에 완성한다(어두운 것은 완성 뒤 7.2초를 기다려 담는다).
  * hold=true면 마지막 1개는 들고 멈추고, 돌려준 함수를 부르면 놓는다(들고 있는 동안 탐 타이머가 멈춘다).
  */
 export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold = false): () => void {
@@ -228,7 +228,7 @@ export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold
   const dark = ALL.filter((i) => specOf(i).dark);
   const order = [...fresh, ...dark];
   for (let k = 0; k < order.length; k++) {
-    if (k === fresh.length && dark.length > 0) h.tick(4);
+    if (k === fresh.length && dark.length > 0) h.tick(7.2);
     h.pick(order[k] as number);
     if (hold && k === order.length - 1) return () => { h.drop('fune'); h.tick(FUNE_SERVE_DELAY_SEC); };
     h.drop('fune');
