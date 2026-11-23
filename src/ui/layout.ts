@@ -44,7 +44,7 @@ export function placeAnswerButtons(
   return placed as [Rect, Rect];
 }
 
-const BUBBLE_H = 76;
+const BUBBLE_H = 52; // CSS .ui-bubble 높이와 같다
 
 /**
  * 말풍선 slot번째의 top(layer 좌표). 말풍선은 가로 전체를 쓰므로 속재료 트레이 칸(이름표 포함)을 가리는 자리는 건너뛴다.
@@ -52,7 +52,7 @@ const BUBBLE_H = 76;
  * 화면 높이(areaH)를 넘는 자리는 쓰지 않는다. 트레이를 피하는 자리가 모자라면 트레이 위쪽에서 가장 가까운 자리,
  * 그것도 없으면 화면 안 마지막 자리를 쓴다(트레이와 겹침 허용, 화면 밖 금지).
  */
-export function bubbleTop(slot: number, areaW: number, trayRects: readonly Rect[], areaH = Number.POSITIVE_INFINITY, top = 120, step = 84, maxTries = 24): number {
+export function bubbleTop(slot: number, areaW: number, trayRects: readonly Rect[], areaH = Number.POSITIVE_INFINITY, top = 120, step = 60, maxTries = 24): number {
   const inScreen: number[] = [];
   for (let i = 0, t = top; i < maxTries && t + BUBBLE_H <= areaH; i++, t += step) inScreen.push(t);
   const hits = (t: number): boolean => trayRects.some((r) => overlaps({ x: 0, y: t, w: areaW, h: BUBBLE_H }, r));
