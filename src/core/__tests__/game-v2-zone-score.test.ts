@@ -9,20 +9,20 @@ const zoneAt = (h: ReturnType<typeof setupV2>): RollZone => h.hole(15).rollZone 
 
 describe('타이밍 영역 교체: 단계 시작과 가게 점수 200점마다(GDD §굽기)', () => {
   it('가게 점수가 200의 배수 경계를 넘으면 영역을 한 번 다시 뽑는다(score/plate 직후)', () => {
-    // 뽑기 순서: 1단계 시작, 2단계 시작, 200 경계. 마지막 값 0.1 → 폭 0.30 영역이 0.07에서 시작한다.
+    // 뽑기 순서: 1단계 시작, 2단계 시작, 200 경계. 마지막 값 0.1 → 폭 0.54 영역이 0.046에서 시작한다.
     const h = setupV2({ zoneValues: [0.5, 0.5, 0.1] });
     reach(h, 15, 3);
     makePlate(h, MISS_ALL); // P1: 80점, 2단계 시작
     expect(h.game.state.shopScore).toBe(80);
     expect(h.zoneDraws()).toBe(2);
-    expect(zoneAt(h).from).toBeCloseTo(0.35, 9);
+    expect(zoneAt(h).from).toBeCloseTo(0.23, 9);
     let drawsAtScore = -1;
     h.bus.on('score/plate', () => (drawsAtScore = h.zoneDraws()));
     makePlate(h); // 2단계 첫 접시: 완벽 160점 → 240, 200 경계를 넘는다
     expect(h.game.state.shopScore).toBe(240);
     expect(drawsAtScore).toBe(2); // score/plate 시점에는 아직 안 뽑았다
     expect(h.zoneDraws()).toBe(3); // 그 직후 1회
-    expect(zoneAt(h).from).toBeCloseTo(0.07, 9);
+    expect(zoneAt(h).from).toBeCloseTo(0.046, 9);
   });
 
   it('경계를 넘지 않으면 영역이 그대로다', () => {
@@ -61,7 +61,7 @@ describe('타이밍 영역 교체: 단계 시작과 가게 점수 200점마다(G
     expect(h.zoneDraws()).toBe(1);
     makePlate(h, MISS_ALL); // 80점, 경계 없음 → 2단계 시작
     expect(h.zoneDraws()).toBe(2);
-    expect(zoneAt(h).from).toBeCloseTo(0.2 * 0.7, 9);
+    expect(zoneAt(h).from).toBeCloseTo(0.2 * 0.46, 9);
   });
 
   it('6단계부터 단계 시작에 W1 → W2 순으로 함께 뽑는다', () => {

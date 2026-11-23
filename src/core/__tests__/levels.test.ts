@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drawZoneAwayFromCenter } from '../cooking-v2';
+import { drawZone, drawZoneAwayFromCenter } from '../cooking-v2';
 import { FUMED_LIMIT, MAX_DIFFICULTY_LEVEL, difficulty } from '../levels';
 import { phaseConfig, targetPlates } from '../phases';
 import { createRng } from '../rng';
@@ -7,8 +7,8 @@ import { createRng } from '../rng';
 describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
   // [단계, 주기, 영역 2개, W1, W2, d, 인내 하한, 인내 상한]
   it.each<[number, number, boolean, number, number, number, number, number]>([
-    [1, 2.2, false, 0.3, 0.3, 0, 20, 40],
-    [2, 2.2, false, 0.3, 0.3, 0, 20, 40],
+    [1, 2.2, false, 0.54, 0.54, 0, 20, 40],
+    [2, 2.2, false, 0.54, 0.54, 0, 20, 40],
     [3, 1.9, false, 0.24, 0.24, 0, 20, 40],
     [5, 1.6, false, 0.24, 0.24, 0, 20, 40],
     [6, 1.6, true, 0.24, 0.2, 0, 20, 40],
@@ -69,6 +69,20 @@ describe('단계 표(GDD §진행)', () => {
     expect(c.isTutorial).toBe(level === 0);
     expect(c.countsReviews).toBe(level === 0 ? true : counts);
     expect(targetPlates(level)).toBe(plates);
+  });
+});
+
+describe('1·2단계 영역(폭 0.54) 뽑기', () => {
+  it('영역 전체가 0..1 안에 든다(난수 전 구간, 양 끝값 포함)', () => {
+    const w = difficulty(1).w1;
+    expect(w).toBeCloseTo(0.54, 9);
+    for (const v of [0, 0.25, 0.5, 0.75, 0.999999]) {
+      const z = drawZone(w, () => v);
+      expect(z.from).toBeGreaterThanOrEqual(0);
+      expect(z.to).toBeLessThanOrEqual(1 + 1e-12);
+      expect(z.to - z.from).toBeCloseTo(0.54, 9);
+    }
+    expect(drawZone(w, () => 0)).toEqual({ from: 0, to: w });
   });
 });
 

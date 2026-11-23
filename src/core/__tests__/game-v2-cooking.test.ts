@@ -73,7 +73,7 @@ describe('구멍 상태기계(GDD §굽기 상태 흐름)', () => {
   });
 });
 
-/** 1단계 영역은 폭 0.30이고 난수 0.5면 바 가운데(0.35~0.65)다. 주기는 2.2초다. */
+/** 1단계 영역은 폭 0.54이고 난수 0.5면 바 가운데(0.23~0.77)다. 주기는 2.2초다. */
 /** 상승 구간(4.4~5.5초)에서 바가 p에 오는 시각(reach 4가 끝난 3초 이후 첫 상승). */
 const up = (p: number) => 4.4 + p * 1.1;
 /** 하강 구간(5.5~6.6초)에서 바가 p에 오는 시각. */
@@ -118,12 +118,12 @@ describe('굴리기', () => {
     expect(h.hole(0).rollHits).toEqual([true, false]);
   });
 
-  // 1단계: 영역 하나(폭 0.30, 난수 0.5 → 0.35~0.65)를 굴리기 1·2가 함께 쓴다.
+  // 1단계: 영역 하나(폭 0.54, 난수 0.5 → 0.23~0.77)를 굴리기 1·2가 함께 쓴다.
   it.each<[number, boolean, string]>([
-    [0.65, true, '상단'],
-    [0.66, false, '상단 밖'],
-    [0.35, true, '하단'],
-    [0.34, false, '하단 밖'],
+    [0.77, true, '상단'],
+    [0.78, false, '상단 밖'],
+    [0.23, true, '하단'],
+    [0.22, false, '하단 밖'],
     [0.5, true, '가운데'],
   ])('굴리기 1 경계: 바 %f → 적중 %s (%s)', (p, hit) => {
     const h = setupV2();
@@ -135,10 +135,10 @@ describe('굴리기', () => {
 
   // 굴리기 1을 바 0.5에 적중시킨 뒤 하강 구간에서 같은 영역으로 굴리기 2를 판정한다(재추첨 없음).
   it.each<[number, boolean, string]>([
-    [0.66, false, '상단 밖'],
-    [0.65, true, '상단'],
-    [0.35, true, '하단'],
-    [0.34, false, '하단 밖'],
+    [0.78, false, '상단 밖'],
+    [0.77, true, '상단'],
+    [0.23, true, '하단'],
+    [0.22, false, '하단 밖'],
   ])('굴리기 2 경계(같은 영역): 바 %f → 적중 %s (%s)', (p, hit) => {
     const h = setupV2();
     reach(h, 0, 4);
@@ -250,13 +250,13 @@ describe('전역 타이밍 바(단계별 주기 왕복)', () => {
 
 /** 1~5단계: 영역 하나를 단계 시작 때 한 번 뽑아 고정한다. */
 describe('영역(1~5단계): 하나를 단계 동안 고정', () => {
-  it('단계 시작 때 난수 1회로 뽑는다: 1단계 폭 0.30, 난수 0.2 → 0.14~0.44', () => {
+  it('단계 시작 때 난수 1회로 뽑는다: 1단계 폭 0.54, 난수 0.2 → 0.092~0.632', () => {
     const h = setupV2({ zoneValues: [0.2] });
     expect(h.zoneDraws()).toBe(1);
     reach(h, 0, 2);
     const z = h.hole(0).rollZone as RollZone;
-    expect(z.from).toBeCloseTo(0.2 * 0.7, 9);
-    expect(z.to - z.from).toBeCloseTo(0.3, 9);
+    expect(z.from).toBeCloseTo(0.2 * 0.46, 9);
+    expect(z.to - z.from).toBeCloseTo(0.54, 9);
   });
 
   it('굴리기 1·2에서도, 반죽·마가린·속재료에서도 다시 뽑지 않는다(영역 그대로)', () => {
@@ -269,16 +269,16 @@ describe('영역(1~5단계): 하나를 단계 동안 고정', () => {
     expect(h.zoneDraws()).toBe(1);
   });
 
-  it('폭이 단계별이다(1·2단계 0.30, 3~5단계 0.24)', () => {
+  it('폭이 단계별이다(1·2단계 0.54, 3~5단계 0.24)', () => {
     const h = setupV2();
     const width = (): number => {
       reach(h, 15, 2);
       const z = h.hole(15).rollZone as RollZone;
       return z.to - z.from;
     };
-    expect(width()).toBeCloseTo(0.3, 9);
+    expect(width()).toBeCloseTo(0.54, 9);
     playUntilLevel(h, 2);
-    expect(width()).toBeCloseTo(0.3, 9);
+    expect(width()).toBeCloseTo(0.54, 9);
     playUntilLevel(h, 3);
     expect(width()).toBeCloseTo(0.24, 9);
     playUntilLevel(h, 5);
