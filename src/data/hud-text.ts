@@ -10,9 +10,8 @@ export const hudText = {
   combo: (combo: number, multiplier: number): string | null => (combo >= 2 ? `콤보 ×${multiplier.toFixed(1)}` : null),
   /** 화난 손님 수. 한도는 core가 정한 값(GameStateV2.fumedLimit)을 받아 쓴다. */
   fumed: (count: number, limit: number): string => `😠 ${count}/${limit}`,
-  resultTitle: '오늘의 결과',
-  /** 화난 손님 한도로 판이 끝났을 때(패배) 결과 화면 제목. */
-  gameOverTitle: '영업 종료',
+  /** 판이 끝나는 길은 패배(화난 손님 한도) 하나뿐이라 결과 화면 제목은 항상 이것이다(새로고침 복원 포함). */
+  resultTitle: '영업 종료',
   resultShopScore: (score: number): string => `가게 점수 ${score}`,
   resultNewBest: '최고 기록!',
 } as const;

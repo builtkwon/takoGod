@@ -36,7 +36,10 @@ export function createDialogues(
   rng: () => number = Math.random,
 ): Dialogues {
   const shown = new Map<string, Shown>();
-  const topFor = (slot: number): number => bubbleTop(slot, ctx.layer.getBoundingClientRect().width, ctx.trayObstacles?.() ?? []);
+  const topFor = (slot: number): number => (() => {
+    const r = ctx.layer.getBoundingClientRect();
+    return bubbleTop(slot, r.width, ctx.trayObstacles?.() ?? [], r.height);
+  })();
   /** 분노 말풍선: 손님당 하나, 약 1.2초. 말풍선 자리(slot)를 다이얼로그와 나눠 쓴다. */
   const fumed = new Map<string, { readonly slot: number; readonly bubble: HTMLElement; readonly timer: ReturnType<typeof setTimeout> }>();
   const usedSlots = (): Set<number> => new Set([...shown.values(), ...fumed.values()].map((x) => x.slot));

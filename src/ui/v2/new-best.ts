@@ -6,10 +6,3 @@ export function trackNewBest(bus: EventBus, disposers: (() => void)[]): { readon
   disposers.push(bus.on('score/new-best', () => (flag = true)));
   return { value: () => flag, reset: () => (flag = false) };
 }
-
-/** 결과 화면 제목용. 패배(화난 손님 한도) 때 core가 한 번 내는 session/game-over를 기억하고, 다시 하기 때 초기화한다. */
-export function trackGameOver(bus: EventBus, disposers: (() => void)[]): { readonly value: () => boolean; readonly reset: () => void } {
-  let flag = false;
-  disposers.push(bus.on('session/game-over', () => (flag = true)));
-  return { value: () => flag, reset: () => (flag = false) };
-}

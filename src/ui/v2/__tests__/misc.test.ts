@@ -147,6 +147,10 @@ describe('hudView', () => {
 });
 
 describe('hudView 단계·화난 손님', () => {
+  it('튜토리얼에서는 화난 손님 표시를 숨기고 본게임에서는 보인다', () => {
+    expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).fumedHidden).toBe(true);
+    expect(hudView(stateOf([], { phase: 'main', level: 1 })).fumedHidden).toBe(false);
+  });
   it('튜토리얼은 튜토리얼, 본게임은 level 단계(20 이후도 계속)', () => {
     expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).phase).toBe('튜토리얼');
     expect(hudView(stateOf([], { level: 1 })).phase).toBe('1단계');

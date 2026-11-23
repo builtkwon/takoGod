@@ -59,4 +59,15 @@ describe('bubbleTop: 말풍선은 트레이를 가리지 않는다', () => {
     }
     expect(bubbleTop(1, 390, [tray])).toBeGreaterThan(bubbleTop(0, 390, [tray]));
   });
+
+  it('작은 화면(320×568)에서 트레이가 자리를 막아도 말풍선은 화면 밖으로 나가지 않는다', () => {
+    const tray320: Rect = { x: 10, y: 300, w: 300, h: 98 }; // 트레이+이름표가 가운데를 막음
+    for (let slot = 0; slot < 6; slot++) {
+      const t = bubbleTop(slot, 320, [tray320], 568);
+      expect(t + 76).toBeLessThanOrEqual(568);
+      expect(t).toBeGreaterThanOrEqual(0);
+    }
+    // 아래쪽 자리는 막혀도 트레이 위쪽에서 가장 가까운 자리를 쓴다
+    expect(bubbleTop(5, 320, [tray320], 568) + 76).toBeLessThanOrEqual(300);
+  });
 });

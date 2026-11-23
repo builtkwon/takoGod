@@ -60,6 +60,8 @@ const HELD: ReadonlySet<string> = new Set(['done', 'dark', 'burnt']);
 /** 칠하기 검사 간격(CSS px). 화면의 구멍 지름보다 충분히 짧다. */
 const PAINT_STEP = 10;
 /** 끌어 칠하는 재료가 들어가는 구멍 단계. */
+/** 속재료를 받는 구멍 단계(core accepts와 같다). */
+const FILLABLE_STAGE = 'cooked';
 const PAINT_STAGE = { margarine: 'empty', batter: 'greased' } as const;
 const dist = (a: Pt, b: Pt): number => Math.hypot(a.x - b.x, a.y - b.y);
 const resolve = (p: Pt | (() => Pt | null)): Pt | null => (typeof p === 'function' ? p() : p);
@@ -149,9 +151,10 @@ export function createController(deps: {
       const t = picker.pick(at.x, at.y);
       const sel = selectedId();
       if (sel !== null && t?.kind !== 'tray') {
-        // 속재료가 선택돼 있으면 구멍 탭은 굴리기가 아니라 넣기다. 들 수 있는 완성품 구멍과 잠긴 구멍은 예외(선택 유지).
+        // 속재료가 선택돼 있으면 넣을 수 있는 구멍(익힘 완료) 탭은 굴리기가 아니라 넣기다.
+        // 그 밖의 구멍(굴리기 단계·완성품·잠김)은 기존 굴리기·들기로 넘기고 선택은 유지한다.
         const h = t?.kind === 'hole' ? getState().holes[t.index] : undefined;
-        if (h && !h.locked && !HELD.has(h.stage)) {
+        if (h && !h.locked && h.stage === FILLABLE_STAGE) {
           selected = null; // 한 칸에 넣으면 선택이 바로 풀린다
           const material: Material = { kind: 'filling', ingredient: sel };
           last = { type: 'place', hole: h.index, look: lookOf(material), origin: trayOrigin(sel) };

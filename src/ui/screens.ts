@@ -71,11 +71,11 @@ export function showReviewCard(layer: HTMLElement, review: ReviewResult): void {
 /** 결과 화면. average는 GameState.sessionAverage(core 계산)이고 null이면 점수를 표시하지 않는다. */
 export function showResult(
   layer: HTMLElement,
-  result: { readonly average: number | null; readonly reviews: readonly ReviewResult[]; readonly shopScore?: number; readonly newBest?: boolean; readonly gameOver?: boolean },
+  result: { readonly average: number | null; readonly reviews: readonly ReviewResult[]; readonly shopScore?: number; readonly newBest?: boolean },
   versionLabel?: string,
 ): Promise<'again'> {
   const o = overlay(layer, 'ui-result');
-  o.append(el('h2', '', result.gameOver ? hudText.gameOverTitle : hudText.resultTitle));
+  o.append(el('h2', '', hudText.resultTitle));
   if (result.shopScore !== undefined) o.append(el('div', 'ui-shop-score', hudText.resultShopScore(result.shopScore)));
   if (result.newBest) o.append(el('div', 'ui-new-best', hudText.resultNewBest));
   const text = sessionAverageText(result.average);
