@@ -81,7 +81,7 @@ describe('튜토리얼: 단계별 6구 유도(GDD §진행)', () => {
     expect(h.of('review/issued')).toEqual([]);
     h.tick(0.1);
     expect(h.of('review/issued')).toEqual([{ review: { source: 'tutorial', stars: 5, comment: 'tutorial 5 stars', personality: null } }]);
-    expect(h.game.state.phase).toBe('P1');
+    expect(h.game.state.level).toBe(1);
     expect(h.game.state.tutorialStage).toBeNull();
     expect(h.game.state.tutorialCompleted).toBe(true);
     expect(h.game.state.fune).toEqual([]);
@@ -264,17 +264,17 @@ describe('튜토리얼: 어두움·탐 없음, 고정 영역 0.50', () => {
     const h = tut();
     advanceTo(h, 'roll-1');
     const z = { from: 0.25, to: 0.75 };
-    expect(h.game.state.barZones).toEqual({ w1: z, w2: null });
+    expect(h.game.state.barZones).toEqual({ w1: z, w2: null, shared: false });
     expect(h.hole(1).rollZone).toEqual(z);
     all((i) => h.roll(i));
-    expect(h.game.state.barZones).toEqual({ w1: null, w2: z });
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: z, shared: false });
     expect(h.hole(1).rollZone).toEqual(z);
   });
 
   it('튜토리얼 W1은 익힘·익힘 완료 구멍만 있을 때는 보이지 않는다(그 구멍은 굴릴 수 없다)', () => {
     const h = tut();
     advanceTo(h, 'cook-wait');
-    expect(h.game.state.barZones).toEqual({ w1: null, w2: null });
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null, shared: false });
   });
 
   it('영역 안에서 굴리면 적중, 밖이면 빗나감이지만 진행은 막지 않는다', () => {
@@ -300,7 +300,7 @@ describe('튜토리얼: 어두움·탐 없음, 고정 영역 0.50', () => {
 
 describe('튜토리얼: 세션 저장·복원', () => {
   it('완료 저장값이 있으면 튜토리얼을 건너뛰고 P1부터 시작한다', () => {
-    expect(setupV2().game.state.phase).toBe('P1');
+    expect(setupV2().game.state.level).toBe(1);
     expect(setupV2().game.state.tutorialStage).toBeNull();
   });
 });

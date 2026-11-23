@@ -23,6 +23,7 @@ export const OUTPUT_EVENTS: readonly GameEventType[] = [
   'customer/fumed',
   'score/plate',
   'score/new-best',
+  'session/game-over',
   'plate/tasted',
   'plate/scored',
   'customer/redo-requested',
@@ -71,6 +72,8 @@ export interface SetupOpts {
    * 기본은 난수 0.5로 고정해(영역이 바 가운데) rng 수열이 영역 뽑기에 밀리지 않게 하고 구멍들을 한꺼번에 굴릴 수 있게 한다.
    */
   readonly liveZones?: boolean;
+  /** liveZones가 아닐 때 영역 뽑기가 차례로 쓰는 난수. 다 쓰면 0.5(영역이 바 가운데). */
+  readonly zoneValues?: readonly number[];
   /** 판 시작 때 저장소에 있던 최고 가게 점수. 기본은 기록 없음. */
   readonly best?: number | null;
 }
@@ -92,15 +95,22 @@ export function setupV2(opts: SetupOpts = {}) {
         },
   );
   const baseRng = opts.rng ?? createRng(opts.seed ?? 1);
-  const zoneRng = (): number => 0.5; // 모든 구멍의 영역이 바 가운데에 같게 놓여 구멍들을 한꺼번에 굴릴 수 있다
-  // 영역 위치 뽑기(drawZone 호출)만 zoneRng로 돌린다. 호출 위치를 스택에서 알아본다(테스트 전용).
-  const rng = (): number => (!opts.liveZones && new Error().stack?.includes('drawZone') ? zoneRng() : baseRng());
+  // 영역 위치 뽑기(drawZone 호출)만 따로 돌린다. 호출 위치를 스택에서 알아본다(테스트 전용).
+  // 기본은 0.5라 영역이 바 가운데에 놓여 구멍들을 한꺼번에 굴릴 수 있다.
+  let zoneDraws = 0;
+  const rng = (): number => {
+    if (!new Error().stack?.includes('drawZone')) return baseRng();
+    const n = zoneDraws++;
+    return opts.liveZones ? baseRng() : (opts.zoneValues?.[n] ?? 0.5);
+  };
   const game = new GameV2({ bus, data: opts.data ?? syntheticDataV2, rng, store, bestStore });
   return {
     bus,
     game,
     store,
     bestStore,
+    /** 지금까지 영역 위치를 뽑은 횟수. */
+    zoneDraws: (): number => zoneDraws,
     log,
     get now(): number {
       return t;
@@ -227,10 +237,10 @@ export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold
   return () => {};
 }
 
-/** 완벽한 접시를 target 페이즈에 닿을 때까지 만든다. */
-export function playUntilPhase(h: H, phase: string): void {
-  for (let i = 0; i < 12 && h.game.state.phase !== phase; i++) makePlate(h);
-  if (h.game.state.phase !== phase) throw new Error(`${phase}에 닿지 못했다: ${h.game.state.phase}`);
+/** 완벽한 접시를 target 단계에 닿을 때까지 만든다. */
+export function playUntilLevel(h: H, level: number): void {
+  for (let i = 0; i < 40 && h.game.state.level < level; i++) makePlate(h);
+  if (h.game.state.level !== level) throw new Error(`${level}단계에 닿지 못했다: ${h.game.state.level}`);
 }
 
 /** abs(h.now 기준 절대 시각)까지 0.1초 단위로 진행한다. */
@@ -240,8 +250,15 @@ export function tickTo(h: H, abs: number): void {
 
 export const customerEnteredAt = (h: H, index = 0): number => h.log.filter((r) => r.type === 'customer/entered')[index]?.t ?? NaN;
 
-/** 세션이 끝날 때까지 완벽 접시를 만든다(손님 대화·인내는 신경 쓰지 않는다). */
+/**
+ * 화난 손님 4명으로 판을 끝낸다(패배). 2단계 이상의 손님이 인내 100%에 닿도록 시간을 흘리고, 손님이 바뀌면 접시를 내 보낸다.
+ * 접시는 완벽하게 만들므로 가게 점수는 쌓인다.
+ */
 export function playToEnd(h: H): void {
-  for (let i = 0; i < 30 && !h.game.finished; i++) makePlate(h);
-  if (!h.game.finished) throw new Error('세션이 끝나지 않았다');
+  playUntilLevel(h, 3);
+  for (let i = 0; i < 12 && !h.game.finished; i++) {
+    tickTo(h, h.now + 45);
+    if (!h.game.finished) makePlate(h);
+  }
+  if (!h.game.finished) throw new Error('판이 끝나지 않았다');
 }

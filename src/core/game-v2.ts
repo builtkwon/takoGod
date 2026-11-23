@@ -25,7 +25,7 @@ import type {
   TasteLines,
   TutorialStage,
 } from '../contracts';
-import { EPS, TRAY_SOURCE, rollPosition } from './cooking';
+import { EPS, TRAY_SOURCE, trianglePosition } from './cooking';
 import {
   BURN_AT_SEC,
   COOK_SEC,
@@ -37,10 +37,11 @@ import {
   TUTORIAL_ZONE,
   accepts,
   drawZone,
+  drawZoneAwayFromCenter,
   inZone,
-  zoneWidths,
 } from './cooking-v2';
-import { ANSWER_LIMIT_SEC, PHASES, REPLACEMENT_DELAY_SEC, SECOND_CUSTOMER_DELAY_SEC, TARGET_PLATES, nextPhase } from './phases';
+import { FUMED_LIMIT, difficulty } from './levels';
+import { ANSWER_LIMIT_SEC, REPLACEMENT_DELAY_SEC, SECOND_CUSTOMER_DELAY_SEC, phaseConfig, targetPlates } from './phases';
 import { randomIndex, shuffle } from './rng';
 import { BAD_ANSWER, GOOD_ANSWER, START_SATISFACTION, TIMEOUT, applySatisfaction, sessionAverage, starsFromSatisfaction } from './scoring';
 import {
@@ -79,9 +80,6 @@ export interface GameOptionsV2 {
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 const TASTE_KINDS: readonly TasteKind[] = ['no-filling', 'trap', 'dark', 'roll-miss', 'perfect'];
-/** 손님 인내: 20~40초 사이 무작위. */
-const PATIENCE_MIN_SEC = 20;
-const PATIENCE_MAX_SEC = 40;
 /** 얼굴 단계 경계(경과 비율). */
 const ANNOYED_AT = 0.5;
 const ANGRY_AT = 0.8;
@@ -146,14 +144,17 @@ export class GameV2 {
   /** 후네 각 알의 굴리기 적중 수(0~2). fune과 같은 순서. */
   private funeHits: number[] = [];
 
-  private phase: PhaseId = 'tutorial';
+  /** 단계 번호: 튜토리얼 0, 본게임 1~(무한, 난이도는 20에서 고정). */
+  private level = 0;
+  private fumedCount = 0;
   private holes: Hole[] = Array.from({ length: HOLE_COUNT }, newHole);
   private tray: Ingredient[] = [...TRAY_SOURCE];
   private fune: FuneItem[] = [];
   /** 후네가 찬 뒤 서빙(또는 비우기)까지 남은 초. 후네가 차 있는 동안만 의미가 있다. */
   private funeWait = 0;
   private holding: number | null = null;
-  private barTime = 0;
+  /** 타이밍 바 누적 위상(한 주기 = 1). 주기가 단계마다 달라도 위치가 끊기지 않는다. */
+  private barCycles = 0;
   /** 판 공용 영역(GDD §굽기). 굴리기 1용 W1과 굴리기 2용 W2. 튜토리얼은 고정. */
   private zoneW1: RollZone = TUTORIAL_ZONE;
   private zoneW2: RollZone = TUTORIAL_ZONE;
@@ -196,17 +197,21 @@ export class GameV2 {
       this.isFinished = true;
       this.tutorialCompleted = true;
       this.reviews = [...saved.reviews];
-      this.phase = 'P5';
+      this.level = 1;
       return;
     }
     if (saved?.tutorialCompleted) {
-      // 본게임 도중 새로고침: 튜토리얼 리뷰만 남기고 P1부터 다시 시작한다.
+      // 본게임 도중 새로고침: 튜토리얼 리뷰만 남기고 1단계부터 다시 시작한다.
       this.tutorialCompleted = true;
       this.reviews = saved.reviews.filter((r) => r.source === 'tutorial');
-      this.startPhase('P1');
+      this.startLevel(1);
       return;
     }
-    this.startPhase('tutorial');
+    this.startLevel(0);
+  }
+
+  private get phase(): PhaseId {
+    return this.level === 0 ? 'tutorial' : 'main';
   }
 
   get finished(): boolean {
@@ -235,13 +240,17 @@ export class GameV2 {
     }
     const stageIs = (...stages: HoleStage[]) => this.holes.some((h) => stages.includes(h.stage));
     // 각 영역은 그 영역으로 굴릴 수 있는 구멍이 있을 때만 보인다(튜토리얼은 속재료 전 굴리기를 받지 않는다).
-    const w1Stages: HoleStage[] = this.phase === 'tutorial' ? ['filled'] : ['cooking', 'cooked', 'filled'];
+    const shared = this.sharedZone;
+    const w1Stages: HoleStage[] = this.phase === 'tutorial' ? ['filled'] : shared ? ['cooking', 'cooked', 'filled', 'rolled'] : ['cooking', 'cooked', 'filled'];
     return {
       phase: this.phase,
+      level: this.level,
+      fumedCount: this.fumedCount,
+      fumedLimit: FUMED_LIMIT,
       holes,
       tray: [...this.tray],
-      barPosition: rollPosition(this.barTime),
-      barZones: { w1: stageIs(...w1Stages) ? this.zoneW1 : null, w2: stageIs('rolled') ? this.zoneW2 : null },
+      barPosition: trianglePosition(this.barCycles),
+      barZones: { w1: stageIs(...w1Stages) ? this.zoneW1 : null, w2: !shared && stageIs('rolled') ? this.zoneW2 : null, shared },
       fune: [...this.fune],
       funeServing: this.fune.length >= FUNE_SIZE,
       holding: this.holding,
@@ -263,12 +272,14 @@ export class GameV2 {
    */
   tick(dt: number): void {
     if (this.isFinished) return;
-    this.barTime += dt;
+    this.barCycles += dt / difficulty(this.level).periodSec;
     this.tickHoles(dt);
     for (const g of [...this.guests]) {
+      if (this.isFinished) return; // 패배로 끝났으면 남은 손님은 더 처리하지 않는다
       this.tickDialogue(g, dt);
       this.tickPatience(g, dt);
     }
+    if (this.isFinished) return;
     this.tickSpawns(dt);
     this.tickFune(dt); // 서빙·전환으로 새로 생긴 손님과 타이머에는 이번 dt를 흘리지 않는다
     this.advanceTutorial();
@@ -276,11 +287,16 @@ export class GameV2 {
 
   // ── 구멍 ──────────────────────────────────────────────
 
+  /** 1~5단계는 영역 하나를 굴리기 1·2가 함께 쓴다(튜토리얼은 고정 영역 둘이라 해당 없음). */
+  private get sharedZone(): boolean {
+    return this.level > 0 && !difficulty(this.level).twoZones;
+  }
+
   private zoneOf(h: Hole): RollZone | null {
     // 익힘·익힘 완료 탭도 W1로 판정한다(속재료 전 굴리기). 튜토리얼은 이 탭을 거부하므로 영역이 없다.
     if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : this.zoneW1;
     if (h.stage === 'filled') return this.zoneW1;
-    if (h.stage === 'rolled') return this.zoneW2;
+    if (h.stage === 'rolled') return this.sharedZone ? this.zoneW1 : this.zoneW2;
     return null;
   }
 
@@ -372,12 +388,12 @@ export class GameV2 {
 
   private doRoll(index: number, hole: Hole, nth: 0 | 1): void {
     // 판정은 누르는 순간의 공용 영역으로 하고, 그 뒤 쓴 영역을 새로 뽑는다(적중·빗나감 무관).
-    const hit = inZone(rollPosition(this.barTime), nth === 0 ? this.zoneW1 : this.zoneW2);
+    const hit = inZone(trianglePosition(this.barCycles), nth === 0 || this.sharedZone ? this.zoneW1 : this.zoneW2);
     hole.rollHits[nth] = hit;
-    if (this.phase !== 'tutorial') {
-      const widths = zoneWidths(this.phase);
-      if (nth === 0) this.zoneW1 = drawZone(widths.w1, this.rng);
-      else this.zoneW2 = drawZone(widths.w2, this.rng);
+    // 6단계부터는 굴릴 때마다 쓴 영역을 새로 뽑는다. 1~5단계는 단계 동안 고정이다.
+    if (difficulty(this.level).twoZones && this.level > 0) {
+      if (nth === 0) this.zoneW1 = this.drawTwoZone('w1');
+      else this.zoneW2 = this.drawTwoZone('w2');
     }
     hole.stage = nth === 0 ? 'rolled' : 'done';
     if (nth === 1) hole.burnElapsed = 0;
@@ -450,7 +466,7 @@ export class GameV2 {
     this.funeHits = [];
     this.store.save({ version: 1, tutorialCompleted: true, finished: false, reviews: [...this.reviews] });
     this.bus.emit('review/issued', { review });
-    this.startPhase('P1');
+    this.startLevel(1);
   }
 
   // ── 후네·서빙 ─────────────────────────────────────────
@@ -464,8 +480,8 @@ export class GameV2 {
 
   private onFuneFull(): void {
     if (this.phase === 'tutorial') return this.finishTutorial();
-    if (PHASES[this.phase].customerCount === 0) {
-      // 손님이 없는 페이즈(P1): 서빙 없이 후네를 비우고 전환한다. 가게 점수 기본은 시작 만족도다.
+    if (phaseConfig(this.level).customerCount === 0) {
+      // 손님이 없는 단계(1단계): 서빙 없이 후네를 비우고 전환한다. 가게 점수 기본은 시작 만족도다.
       this.scorePlate(null, START_SATISFACTION);
       this.fune = [];
       this.funeHits = [];
@@ -523,7 +539,7 @@ export class GameV2 {
       personality: g.personality,
     };
     if (walkedOutStars !== null) this.bus.emit('customer/walked-out', { customerId: g.id, stars: walkedOutStars });
-    if (PHASES[this.phase].countsReviews) this.reviews.push(review);
+    if (phaseConfig(this.level).countsReviews) this.reviews.push(review);
     this.bus.emit('review/issued', { review });
     this.guests = this.guests.filter((x) => x !== g);
     this.spawnTimers[g.slot] = REPLACEMENT_DELAY_SEC;
@@ -550,10 +566,8 @@ export class GameV2 {
   }
 
   private afterPlate(): void {
-    if (this.plates < TARGET_PLATES[this.phase]) return;
-    const next = nextPhase(this.phase);
-    if (next === null) this.finish();
-    else this.startPhase(next);
+    if (this.plates < targetPlates(this.level)) return;
+    this.startLevel(this.level + 1);
   }
 
   private finish(): void {
@@ -568,20 +582,30 @@ export class GameV2 {
     }
   }
 
-  private startPhase(id: PhaseId): void {
-    this.phase = id;
+  /** 두 영역 단계(6~)의 영역을 뽑는다. 폭과 중심 최소 거리는 난이도 곡선을 따른다. */
+  private drawTwoZone(which: 'w1' | 'w2'): RollZone {
+    const d = difficulty(this.level);
+    return drawZoneAwayFromCenter(which === 'w1' ? d.w1 : d.w2, d.minCenterDistance, this.rng);
+  }
+
+  private startLevel(level: number): void {
+    this.level = level;
     this.plates = 0;
     this.guests = [];
-    this.spawnTimers = PHASES[id].dialogueIntervalsSec.map((_, slot) => (slot === 0 ? 0 : SECOND_CUSTOMER_DELAY_SEC));
-    if (id === 'tutorial') {
+    this.spawnTimers = phaseConfig(level).dialogueIntervalsSec.map((_, slot) => (slot === 0 ? 0 : SECOND_CUSTOMER_DELAY_SEC));
+    const d = difficulty(level);
+    if (level === 0) {
       this.zoneW1 = TUTORIAL_ZONE;
       this.zoneW2 = TUTORIAL_ZONE;
+    } else if (!d.twoZones) {
+      // 1~5단계: 영역 하나를 단계 시작 때 한 번 뽑아 굴리기 1·2가 함께 쓴다.
+      this.zoneW1 = drawZone(d.w1, this.rng);
+      this.zoneW2 = this.zoneW1;
     } else {
-      const widths = zoneWidths(id);
-      this.zoneW1 = drawZone(widths.w1, this.rng);
-      this.zoneW2 = drawZone(widths.w2, this.rng);
+      this.zoneW1 = this.drawTwoZone('w1');
+      this.zoneW2 = this.drawTwoZone('w2');
     }
-    this.bus.emit('phase/changed', { phase: id });
+    this.bus.emit('phase/changed', { phase: this.phase, level });
     this.tickSpawns(0);
   }
 
@@ -597,18 +621,19 @@ export class GameV2 {
         due.push(slot);
       } else this.spawnTimers[slot] = left;
     });
-    const phase = this.phase;
+    const level = this.level;
     for (const slot of due) {
-      // 서빙이 페이즈를 넘겼으면(입장 중 대기 후네 서빙) 남은 입장은 버린다.
-      if (this.phase !== phase) return;
-      if (this.plates + this.guests.length < TARGET_PLATES[phase]) this.spawn(slot);
+      // 서빙이 단계를 넘겼으면(입장 중 대기 후네 서빙) 남은 입장은 버린다.
+      if (this.level !== level) return;
+      if (this.plates + this.guests.length < targetPlates(level)) this.spawn(slot);
     }
   }
 
   private spawn(slot: number): void {
-    const intervalSec = PHASES[this.phase].dialogueIntervalsSec[slot] ?? 0;
+    const intervalSec = phaseConfig(this.level).dialogueIntervalsSec[slot] ?? 0;
     const personality = PERSONALITIES[randomIndex(PERSONALITIES.length, this.rng)] as Personality;
-    const patienceTotal = PATIENCE_MIN_SEC + this.rng() * (PATIENCE_MAX_SEC - PATIENCE_MIN_SEC);
+    const { patienceMinSec, patienceMaxSec } = difficulty(this.level);
+    const patienceTotal = patienceMinSec + this.rng() * (patienceMaxSec - patienceMinSec);
     const guest: Guest = {
       id: `c${++this.guestSeq}`,
       personality,
@@ -633,14 +658,18 @@ export class GameV2 {
     g.patienceElapsed += dt;
     const ratio = Math.min(1, (g.patienceElapsed + EPS) / g.patienceTotal);
     const target = ratio >= ANGRY_AT ? 2 : ratio >= ANNOYED_AT ? 1 : 0;
-    for (let level = FACES.indexOf(g.face) + 1; level <= target; level++) {
-      g.face = FACES[level] as PatienceLevel;
+    for (let face = FACES.indexOf(g.face) + 1; face <= target; face++) {
+      g.face = FACES[face] as PatienceLevel;
       this.bus.emit('customer/patience-changed', { customerId: g.id, face: g.face });
     }
     if (ratio >= 1 && !g.patienceExpired) {
       g.patienceExpired = true; // 손님은 떠나지 않고 만족도 -20을 한 번만 받는다
       g.satisfaction = applySatisfaction(g.satisfaction, PATIENCE_EXPIRED);
       this.bus.emit('customer/fumed', { customerId: g.id });
+      if (this.phase !== 'tutorial' && ++this.fumedCount >= FUMED_LIMIT) {
+        this.bus.emit('session/game-over', { reason: 'fumed', fumedCount: this.fumedCount });
+        this.finish();
+      }
     }
   }
 

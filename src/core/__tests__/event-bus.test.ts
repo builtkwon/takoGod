@@ -16,7 +16,7 @@ describe('EventBus', () => {
     const bus = createEventBus();
     let n = 0;
     bus.on('customer/left', () => n++);
-    bus.emit('phase/changed', { phase: 'P1' });
+    bus.emit('phase/changed', { phase: 'main', level: 1 });
     expect(n).toBe(0);
   });
 });
