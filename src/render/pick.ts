@@ -1,6 +1,6 @@
 // ScenePicker 구현. 투영·광선 판정은 순수 함수라 three 없이 테스트한다.
 import type { PickTarget, ScenePicker } from '../contracts';
-import { CAMERA, FUNE_S, FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
+import { BOARD_K, CAMERA, FUNE_S, FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
 import type { V3 } from './layout';
 
 export interface CameraSpec {
@@ -55,7 +55,7 @@ export function makeProjector(cam: CameraSpec): Projector {
 
 // 판정 면: 모델 중심 높이의 수평면. 서 있는 모델 윗부분을 눌러도 같은 대상으로 잡히게 한다.
 const HOLE_Y = PLATE_TOP + 0.2;
-const HOLE_R = 0.42; // 구멍 간격 0.9의 절반(0.45) 안쪽이라 이웃과 겹치지 않는다.
+const HOLE_R = 0.42 * BOARD_K; // 구멍 간격 0.9의 절반(0.45) 안쪽이라 이웃과 겹치지 않는다.
 const TRAY_Y = TRAY_TOP + 0.12;
 const TRAY_HALF_X = 0.25;
 const TRAY_HALF_Z = 0.3;
