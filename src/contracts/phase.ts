@@ -1,9 +1,14 @@
 // 진행 계약. 원본: docs/GDD.md §진행
 
-export type PhaseId = 'tutorial' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5';
+/**
+ * 튜토리얼인지 본게임인지만 가른다. 본게임 단계는 무한이라(GDD §진행) 'P1'..'P5' 유니온으로 표현할 수 없어
+ * 단계 번호는 별도 level(튜토리얼 0, 본게임 1~)로 둔다. 튜토리얼 여부로만 분기하는 소비처는 그대로 둘 수 있다.
+ */
+export type PhaseId = 'tutorial' | 'main';
 
 export interface PhaseConfig {
-  readonly id: PhaseId;
+  /** 단계 번호. 튜토리얼 0, 본게임 1~(20 이후 난이도 고정). */
+  readonly level: number;
   readonly isTutorial: boolean;
   /** 동시 손님 수. */
   readonly customerCount: number;

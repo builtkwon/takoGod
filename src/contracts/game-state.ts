@@ -11,14 +11,24 @@ import type { ReviewResult } from './review';
  */
 export interface GameStateV2 {
   readonly phase: PhaseId;
+  /** 단계 번호(GDD §진행). 튜토리얼 0, 본게임 1~. 20 이후도 계속 늘어난다(난이도만 고정). HUD의 현재 단계 표시에 쓴다. */
+  readonly level: number;
+  /** 세션 동안 인내 100%에 도달한 손님 수 누적(튜토리얼 제외, 단계가 바뀌어도 유지. GDD §진행 패배). HUD "😠 N/4"의 N. */
+  readonly fumedCount: number;
+  /** 패배 기준 화난 손님 수(GDD §진행: 4). fumedCount가 이 값에 닿으면 판이 끝난다. ui는 이 값을 읽어 표시하고 숫자를 따로 갖지 않는다. */
+  readonly fumedLimit: number;
   /** 길이 16(4×4). */
   readonly holes: readonly HoleStateV2[];
   /** 트레이 표시 순서. core는 서빙 시점에 즉시 섞는다. 재료를 끌고 있는 중이면 화면 반영을 놓은 뒤로 미루는 것은 ui 책임이다. */
   readonly tray: readonly Ingredient[];
   /** 전역 타이밍 바 위치(0..1). 세션 내내 왕복한다(주기는 GDD §굽기). 굴리기 판정은 탭 순간의 이 값으로 한다. */
   readonly barPosition: number;
-  /** 판 공용 영역(GDD §굽기). 그 영역으로 굴릴 수 있는 구멍이 없으면 null. ui는 둘 다 그린다(1·2 표시). */
-  readonly barZones: { readonly w1: RollZone | null; readonly w2: RollZone | null };
+  /**
+   * 판 공용 영역(GDD §굽기). 그 영역으로 굴릴 수 있는 구멍이 없으면 null.
+   * shared가 true(1~5단계)이면 영역은 w1 하나이고 굴리기 1·2가 함께 쓴다(w2는 항상 null). ui는 번호 없이 하나만 그린다.
+   * shared가 false(튜토리얼, 6단계~)이면 ui는 둘 다 그린다(1·2 표시). 단계 번호로 ui가 규칙을 되풀이하지 않도록 core가 알려 준다.
+   */
+  readonly barZones: { readonly w1: RollZone | null; readonly w2: RollZone | null; readonly shared: boolean };
   /** 후네에 담긴 완성품. 가득 차면 가장 먼저 온 대기 손님에게 서빙된다(GDD §굽기). */
   readonly fune: readonly FuneItem[];
   /** 후네가 6알로 차면 true가 되고 서빙(또는 손님 0명 페이즈의 비우기) 전까지 유지된다. 최소 1초(가쓰오부시 연출)이고 손님이 없으면 입장할 때까지 길어진다(GDD §굽기). render는 가쓰오부시를 얹는다. */
