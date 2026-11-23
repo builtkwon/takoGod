@@ -6,6 +6,7 @@ import { dialogues, reviewComments, tasteLines, tutorialReviewComment } from './
 import { createRenderer } from './render';
 import { createBrowserSessionStore } from './session-store';
 import { mountUiV2 } from './ui';
+import { versionLabel } from './version-label';
 
 const MAX_DT = 0.1; // core.tick은 프레임 크기 dt를 전제로 한다.
 
@@ -28,7 +29,7 @@ const renderer = createRenderer(stage);
 // 이펙트 구독도 GameV2 생성 전에 건다(생성자가 이벤트를 낼 수 있다).
 bus.on('dialogue/resolved', (e) => renderer.effect(e.outcome === 'good' ? 'firework' : 'confused', e.customerId));
 bus.on('customer/fumed', (e) => renderer.effect('fumed', e.customerId));
-const ui = mountUiV2(app, bus, getState, renderer.picker);
+const ui = mountUiV2(app, bus, getState, renderer.picker, { versionLabel: versionLabel(__APP_VERSION__, __APP_COMMIT__) });
 game = new GameV2({
   bus,
   data: {

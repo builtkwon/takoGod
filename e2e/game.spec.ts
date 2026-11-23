@@ -118,6 +118,11 @@ test('부팅: 콘솔 에러 없이 캔버스와 타이틀이 뜬다', async ({ p
   expect(errors).toEqual([]);
 });
 
+test('버전 라벨: 타이틀 .ui-version이 "v버전 · 7자리 또는 dev"다', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.ui-version')).toHaveText(/^v\d+\.\d+\.\d+ · ([0-9a-f]{7}|dev)$/);
+});
+
 test('PWA: manifest 링크가 있고 서비스 워커가 등록된다', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
