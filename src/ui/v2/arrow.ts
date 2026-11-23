@@ -1,4 +1,4 @@
-import type { GameStateV2, ScenePicker, TutorialStage } from '../../contracts';
+import type { GameStateV2, IngredientId, ScenePicker, TutorialStage } from '../../contracts';
 import type { Pt } from './controller';
 
 export interface ArrowGeometry {
@@ -52,4 +52,23 @@ export function tutorialArrow(
     return to ? { from: holePt, to } : null;
   } else from = { x: holePt.x, y: holePt.y - TAP_REACH };
   return from ? { from, to: holePt } : null;
+}
+
+/**
+ * 속재료 단계의 탭 안내(GDD §튜토리얼, 탭 방식): 아직 문어를 고르지 않았으면 문어 칸, 골랐으면 넣을 구멍(익힘 완료) 위에 '탭'을 표시한다.
+ * 끌어 놓기도 동작하지만 가르치지 않는다. 가리킬 곳이 없으면 null.
+ */
+export function tutorialTap(
+  state: Pick<GameStateV2, 'holes' | 'tray'>,
+  picker: ScenePicker,
+  selected: IngredientId | null,
+): { readonly at: Pt; readonly target: 'tray' | 'hole' } | null {
+  if (selected !== 'octopus') {
+    const slot = state.tray.findIndex((t) => t.id === 'octopus');
+    const at = slot < 0 ? null : picker.anchor({ kind: 'tray', slot });
+    return at ? { at, target: 'tray' } : null;
+  }
+  const hole = state.holes.find((h) => !h.locked && h.stage === 'cooked');
+  const at = hole ? picker.anchor({ kind: 'hole', index: hole.index }) : null;
+  return at ? { at, target: 'hole' } : null;
 }

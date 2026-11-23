@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrowGeometry, tutorialArrow } from '../arrow';
+import { arrowGeometry, tutorialArrow, tutorialTap } from '../arrow';
 import { barView } from '../bar';
 import { createSequencer, type Clock } from '../sequencer';
 import { deltaText, scoreText } from '../reveal';
@@ -159,5 +159,17 @@ describe('hudView 단계·화난 손님', () => {
   it('화난 손님은 fumedLimit를 그대로 쓰고(하드코딩 아님) 0명이면 흐린 상태 값', () => {
     expect(hudView(stateOf([], { fumedCount: 0, fumedLimit: 4 }))).toMatchObject({ fumed: '😠 0/4', fumedCount: 0 });
     expect(hudView(stateOf([], { fumedCount: 3, fumedLimit: 5 }))).toMatchObject({ fumed: '😠 3/5', fumedCount: 3 });
+  });
+});
+
+describe('tutorialTap: 속재료 단계 탭 표시', () => {
+  it('고르기 전에는 문어 칸, 고른 뒤에는 넣을 구멍(익힘 완료)으로 바뀐다', () => {
+    const s = stateOf(['cooking', 'cooked']);
+    expect(tutorialTap(s, stubPicker(), null)).toEqual({ at: { x: 50, y: 350 }, target: 'tray' });
+    expect(tutorialTap(s, stubPicker(), 'octopus')).toEqual({ at: { x: 150, y: 150 }, target: 'hole' });
+  });
+  it('다른 재료를 골랐다면 다시 문어 칸을 가리키고, 넣을 구멍이 없으면 null', () => {
+    expect(tutorialTap(stateOf(['cooked']), stubPicker(), 'wasabi')?.target).toBe('tray');
+    expect(tutorialTap(stateOf(['cooking']), stubPicker(), 'octopus')).toBeNull();
   });
 });

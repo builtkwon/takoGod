@@ -1,12 +1,13 @@
-import type { EventBus, GameStateV2, ScenePicker } from '../../contracts';
-import { tutorialArrowHints, tutorialStepsV2 } from '../../data';
+import type { EventBus, GameStateV2, IngredientId, ScenePicker } from '../../contracts';
+import { tutorialArrowHints, tutorialStepsV2, tutorialTapHint } from '../../data';
 import { el } from '../dom';
 import { INGREDIENT_LABEL } from '../format';
-import { arrowGeometry, tutorialArrow } from './arrow';
+import { arrowGeometry, tutorialArrow, tutorialTap } from './arrow';
 import type { Pt } from './controller';
 
 export interface TutorialViewV2 {
-  update(state: GameStateV2): void;
+  /** selected는 탭으로 고른 속재료(있으면 대상 구멍에 '탭'을 보인다). */
+  update(state: GameStateV2, selected?: IngredientId | null): void;
   /** 타이틀 화면 등 오버레이가 덮는 동안 안내·화살표·동작 문구·경고를 숨긴다. */
   setSuspended(suspended: boolean): void;
 }
@@ -26,10 +27,12 @@ export function createTutorialView(
   const arrow = el('div', 'ui-arrow');
   const hint = el('div', 'ui-arrow-label');
   hint.hidden = true;
+  const ring = el('div', 'ui-tap-ring');
+  ring.hidden = true;
   guide.hidden = true;
   warning.hidden = true;
   arrow.hidden = true;
-  layer.append(guide, warning, arrow, hint);
+  layer.append(guide, warning, arrow, hint, ring);
 
   let suspended = false;
   let warningTimer: ReturnType<typeof setTimeout> | undefined;
@@ -53,20 +56,27 @@ export function createTutorialView(
       suspended = v;
       if (v) warning.hidden = true;
     },
-    update(state) {
+    update(state, selected = null) {
       const stage = !suspended && state.phase === 'tutorial' ? state.tutorialStage : null;
       guide.hidden = stage === null;
       guide.textContent = stage ? (tutorialStepsV2.find((s) => s.stage === stage)?.message ?? '') : '';
-      const a = stage ? tutorialArrow(stage, state, picker, buckets) : null;
+      // 속재료 단계는 끌기 화살표 대신 '탭' 표시(문어 칸 → 선택되면 대상 구멍).
+      const tap = stage === 'filling' ? tutorialTap(state, picker, selected) : null;
+      ring.hidden = tap === null;
+      if (tap) ring.style.transform = `translate(${tap.at.x}px, ${tap.at.y}px) translate(-50%, -50%)`;
+      const a = stage && stage !== 'filling' ? tutorialArrow(stage, state, picker, buckets) : null;
       arrow.hidden = a === null;
       if (a) {
         const g = arrowGeometry(a.from, a.to);
         Object.assign(arrow.style, { left: `${g.x}px`, top: `${g.y}px`, width: `${g.length}px`, transform: `rotate(${g.angle}deg)` });
       }
       // 화살표 가운데 위에 동작 문구(끌어서 바르기 등). 문구가 없는 단계는 숨긴다.
-      const text = stage && a ? tutorialArrowHints[stage] : undefined;
+      const text = tap ? tutorialTapHint : stage && a ? tutorialArrowHints[stage] : undefined;
       hint.hidden = text === undefined;
-      if (text !== undefined && a) {
+      if (text !== undefined && tap) {
+        hint.textContent = text;
+        hint.style.transform = `translate(${tap.at.x}px, ${tap.at.y - 38}px) translate(-50%, -50%)`;
+      } else if (text !== undefined && a) {
         hint.textContent = text;
         hint.style.transform = `translate(${(a.from.x + a.to.x) / 2}px, ${(a.from.y + a.to.y) / 2 - 24}px) translate(-50%, -50%)`;
       }

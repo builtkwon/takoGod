@@ -107,7 +107,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     hud.update(state);
     trayLabels.update(state, controller.selected());
     dialogues.update(state);
-    tutorial.update(state);
+    tutorial.update(state, controller.selected());
     raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);
