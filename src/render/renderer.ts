@@ -222,7 +222,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   ro.observe(container);
 
   return {
-    picker: createScenePicker(canvas, () => trayCount),
+    picker: createScenePicker(canvas, () => trayCount, CAMERA, (id) => slotIds.indexOf(id)),
     renderV2(state, nowMs = performance.now()) {
       state.holes.forEach((h) => updateHoleV2(h.index, h, state.holding === h.index, nowMs));
       updateTrayFune(
