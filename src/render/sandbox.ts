@@ -48,6 +48,7 @@ const base2: GameStateV2 = {
   shopScore: 0,
   bestShopScore: null,
   combo: 0,
+  rush: null,
   fune: [],
   funeServing: false,
   holding: null,

@@ -95,3 +95,22 @@ describe('createScenePicker (CSS 크기·위치)', () => {
     expect(p.anchor({ kind: 'tray', slot: 5 })).toBeNull();
   });
 });
+
+describe('customer anchor', () => {
+  const at = () => ({ getBoundingClientRect: () => ({ left: 0, top: 0, width: RT_W, height: RT_H }) as DOMRect });
+  const slotOf = (id: string) => ['a', 'b'].indexOf(id);
+  it('손님 id의 자리 위 화면 좌표를 돌려주고, 자리가 바뀌면 따라간다', () => {
+    const p = createScenePicker(at(), () => 0, undefined, slotOf);
+    const a = p.anchor({ kind: 'customer', customerId: 'a' })!;
+    const b = p.anchor({ kind: 'customer', customerId: 'b' })!;
+    expect(a.x).toBeLessThan(b.x);
+    expect(a.y).toBeCloseTo(b.y, 6);
+    expect(a.y).toBeGreaterThan(0);
+  });
+  it('없는 손님은 null이고 pick은 customer를 돌려주지 않는다', () => {
+    const p = createScenePicker(at(), () => 0, undefined, slotOf);
+    expect(p.anchor({ kind: 'customer', customerId: 'zzz' })).toBeNull();
+    const a = p.anchor({ kind: 'customer', customerId: 'a' })!;
+    expect(p.pick(a.x, a.y)?.kind).not.toBe('customer');
+  });
+});
