@@ -7,6 +7,8 @@ import { setStarRow, starRow, starsLabel } from './stars';
 export interface HudV2 {
   readonly root: HTMLElement;
   update(state: GameStateV2): void;
+  /** 판이 바뀔 때 떠 있는 "+N" 점수 팝업을 지운다. */
+  reset(): void;
 }
 
 export interface HudView {
@@ -80,6 +82,7 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[]): HudV2 {
   let lastScore = '';
   return {
     root,
+    reset: clearPop,
     update(state) {
       const v = hudView(state);
       best.textContent = v.best;

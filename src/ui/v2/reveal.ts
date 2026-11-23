@@ -26,7 +26,8 @@ const cardStars = (stars: number): HTMLElement => {
   return e;
 };
 
-export function bindReveal(layer: HTMLElement, bus: EventBus, getState: () => GameStateV2, clock?: Clock): () => void {
+/** dispose는 구독 해제, reset은 판이 바뀔 때 대기 중·표시 중인 점수 공개 연출을 비운다. */
+export function bindReveal(layer: HTMLElement, bus: EventBus, getState: () => GameStateV2, clock?: Clock): { readonly dispose: () => void; readonly reset: () => void } {
   const seq = createSequencer(clock);
   let card: HTMLElement | null = null;
 
@@ -80,10 +81,16 @@ export function bindReveal(layer: HTMLElement, bus: EventBus, getState: () => Ga
       seq.push(() => (review.source === 'tutorial' ? showTutorialComplete(layer, review) : showReviewCard(layer, review)), 0),
     ),
   ];
-  return () => {
-    offs.forEach((off) => off());
+  const reset = (): void => {
     seq.clear();
     close();
+  };
+  return {
+    dispose: () => {
+      offs.forEach((off) => off());
+      reset();
+    },
+    reset,
   };
 }
 

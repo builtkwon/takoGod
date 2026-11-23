@@ -58,7 +58,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const prevTouch = root.style.touchAction;
   root.style.touchAction = 'none'; // 끌기 중 스크롤·확대 방지
 
-  disposers.push(bindFeedback(bus, picker, fx), bindReveal(layer, bus, getState), () => controller.dispose());
+  const reveal = bindReveal(layer, bus, getState);
+  disposers.push(bindFeedback(bus, picker, fx), reveal.dispose, () => controller.dispose());
 
   // 장면(3D 캔버스) 입력. ui-hit 요소 위의 입력은 DOM 쪽 몫이다.
   const pt = (e: PointerEvent): { x: number; y: number } => ({ x: e.clientX, y: e.clientY });
@@ -90,16 +91,30 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   };
   raf = requestAnimationFrame(frame);
 
+  /** 판 단위 UI(대화·분노 말풍선·점수 공개·판정 글자·점수 팝업·끌기)를 모두 비운다. 다시 하기·튜토리얼 재시작 때 쓴다. */
+  const reset = (): void => {
+    controller.cancel();
+    dialogues.reset();
+    reveal.reset();
+    fx.reset();
+    hud.reset();
+    newBest.reset();
+  };
+
   return {
     title: (titleOpts) => {
       tutorial.setSuspended(true); // 시작 버튼을 누르기 전에는 튜토리얼 안내가 보이지 않는다
       return showIosInstall(layer)
         .then(() => showTitle(layer, opts?.versionLabel, titleOpts))
+        .then((choice) => {
+          if (choice === 'tutorial') reset(); // 튜토리얼 재시작: 이전 판 UI를 남기지 않는다
+          return choice;
+        })
         .finally(() => tutorial.setSuspended(false));
     },
     showResult: (result) =>
       showResult(layer, { ...result, shopScore: getState().shopScore, newBest: newBest.value() }, opts?.versionLabel).then((choice) => {
-        newBest.reset(); // 다음 판에 "최고 기록!"이 남지 않게
+        reset(); // 이전 판 대화·연출 UI와 "최고 기록!"이 새 판에 남지 않게
         return choice;
       }),
     destroy() {

@@ -18,6 +18,8 @@ interface Shown {
 
 export interface Dialogues {
   update(state: Pick<GameStateV2, 'activeDialogues'>): void;
+  /** 판이 끝나고 다시 시작할 때: 말풍선·답 버튼·분노 말풍선을 모두 지운다(이전 customerId로 input/answer가 새 판에 가지 않게). */
+  reset(): void;
 }
 
 /** 말풍선과 랜덤 배치 답 버튼. 답 버튼은 fixed 요소와 obstacles(layer 기준 좌표, 장면의 구멍·트레이·후네 등)와 겹치지 않는다. */
@@ -112,6 +114,10 @@ export function createDialogues(
   );
 
   return {
+    reset() {
+      [...shown.keys()].forEach(remove);
+      [...fumed.keys()].forEach(removeFumed);
+    },
     update(state) {
       for (const d of state.activeDialogues) {
         const s = shown.get(d.customerId);
