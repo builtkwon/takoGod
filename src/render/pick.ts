@@ -55,7 +55,7 @@ export function makeProjector(cam: CameraSpec): Projector {
 
 // 판정 면: 모델 중심 높이의 수평면. 서 있는 모델 윗부분을 눌러도 같은 대상으로 잡히게 한다.
 const HOLE_Y = PLATE_TOP + 0.2;
-const HOLE_R = 0.42 * BOARD_K; // 구멍 간격 0.9의 절반(0.45) 안쪽이라 이웃과 겹치지 않는다.
+const HOLE_R = 0.42 * BOARD_K; // 구멍 간격 HOLE_SPACING(0.9×BOARD_K=1.035)의 절반(0.5175) 안쪽(0.483)이라 이웃과 겹치지 않는다.
 const TRAY_Y = TRAY_TOP + 0.12;
 const TRAY_HALF_X = 0.25;
 const TRAY_HALF_Z = 0.3;
