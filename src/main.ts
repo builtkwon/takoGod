@@ -3,6 +3,7 @@ import { createBrowserBestStore } from './best-store';
 import type { GameStateV2 } from './contracts';
 import { GameV2, createEventBus, createRng } from './core';
 import { dialogues, reviewComments, tasteLines, tutorialReviewComment } from './data';
+import { createBrowserProfileStore, withProfile } from './profile-store';
 import { createRenderer } from './render';
 import { createBrowserSessionStore } from './session-store';
 import { mountUiV2 } from './ui';
@@ -39,7 +40,7 @@ game = new GameV2({
     tasteLines,
   },
   rng: createRng(Date.now()),
-  store: createBrowserSessionStore(),
+  store: withProfile(createBrowserSessionStore(), createBrowserProfileStore()),
   bestStore: createBrowserBestStore(),
 });
 

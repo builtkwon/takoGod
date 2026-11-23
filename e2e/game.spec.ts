@@ -256,6 +256,36 @@ test('새로고침 복원: finished 저장값이면 결과 화면을 다시 보�
   await expect(page.getByText('받은 리뷰 2개')).toBeVisible();
 });
 
+const PROFILE_KEY = 'takoyaki:profile';
+
+test('튜토리얼 완료 기억: 완료하면 profile이 쓰이고, 세션 저장값이 없는 새 탭은 튜토리얼 없이 1단계에 리뷰 0이다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await start(page);
+  await playTutorial(page);
+  await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
+  expect(await page.evaluate((k) => localStorage.getItem(k), PROFILE_KEY)).toBe('{"version":1,"tutorialCompleted":true}');
+
+  // 새 탭 흉내: 세션 저장값만 비우고 다시 연다(localStorage는 남는다).
+  await page.evaluate((k) => sessionStorage.removeItem(k), KEY);
+  await page.reload();
+  await page.clock.resume();
+  await page.getByRole('button', { name: '시작' }).click();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  await expect(page.locator('.ui-hud2')).not.toContainText('튜토리얼');
+  const saved = await page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) ?? 'null'), KEY);
+  expect(saved?.reviews ?? []).toHaveLength(0); // 튜토리얼 5★ 리뷰를 주지 않는다
+  expect(errors).toEqual([]);
+});
+
+test('튜토리얼 완료 기억: profile이 손상 값이면 튜토리얼부터 시작하고 키가 지워진다', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate((k) => localStorage.setItem(k, '{"version":1,"tutorialCompleted":"yes"}'), PROFILE_KEY);
+  await page.reload();
+  await page.getByRole('button', { name: '시작' }).click();
+  await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
+  expect(await page.evaluate((k) => localStorage.getItem(k), PROFILE_KEY)).toBeNull();
+});
+
 test('손상된 저장값은 버리고 튜토리얼부터 시작한다', async ({ page }) => {
   await page.goto('/');
   await page.evaluate((k) => sessionStorage.setItem(k, '{"version":1,"tutorialCompleted":true,"finished":false,"reviews":[null]}'), KEY);

@@ -79,6 +79,7 @@ src/
   main.ts            조립·루프·서비스 워커 등록
   session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
   best-store.ts      브라우저 BestScoreStore(localStorage takoyaki:best, ADR 0004)
+  profile-store.ts   튜토리얼 완료 기기 저장(localStorage takoyaki:profile)과 세션 저장 포트 감싸기(ADR 0005)
   __tests__/         src 최상위 파일의 단위 테스트(모듈마다 자기 __tests__/)
 e2e/                 Playwright 시나리오(game.spec.ts)
 playwright.config.ts E2E 설정(mobile 프로젝트, build 후 preview)
