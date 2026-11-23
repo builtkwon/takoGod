@@ -32,6 +32,11 @@ v0.3.0(무한 단계) 반영 내용(수치 원본은 GDD).
 - 조작: 속재료는 끌어 놓기 말고 트레이 칸을 탭해 고른 뒤 구멍을 탭해도 들어간다(한 칸 넣으면 선택이 풀린다). 말풍선은 재료칸을 가리지 않는다.
 - 튜토리얼 완료는 기기에 기억하고(타이틀에 "튜토리얼" 버튼으로 다시 가능) 결과 화면 "다시 하기"는 1단계부터 새 판을 연다. 구이판은 약 15% 커졌다.
 
+v0.5.0 반영 내용.
+- 게임 중 다시 하기: 튜토리얼이 아닐 때 HUD의 "↻ 다시 하기"를 누르고 확인에서 "예"를 하면 세션 저장값을 지우고 1단계부터 새 판을 연다("아니오"는 그대로). main.ts의 `restart`를 결과 화면 "다시 하기"와 공유한다.
+- 1·2단계 타이밍 영역 폭이 0.30에서 0.54(1.8배)로 넓어졌다.
+- 튜토리얼 속재료 단계는 트레이 칸 탭 → 구멍 탭으로 넣는 법을 링과 "탭" 글자로 안내한다. 손님 말풍선은 높이를 76px에서 52px로 줄였다.
+
 병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
 ## 브랜치
@@ -151,7 +156,7 @@ pnpm tool test.e2e                # E2E(build 후 vite preview 대상)
 
 ## 테스트
 
-세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 20개: 부팅, PWA, 튜토리얼, 속재료 탭 선택, 복원, 손상된 저장값, 최고 기록 표시·손상, 튜토리얼 완료 기억, 타이틀 튜토리얼 버튼, 결과 화면 다시 하기 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
+세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 24개: 부팅, PWA, 튜토리얼, 속재료 탭 선택·탭 안내, 게임 중 다시 하기, 복원, 손상된 저장값, 최고 기록 표시·손상, 튜토리얼 완료 기억, 타이틀 튜토리얼 버튼, 결과 화면 다시 하기 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
 
 ## PWA
 
