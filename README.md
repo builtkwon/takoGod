@@ -53,7 +53,7 @@ CLAUDE.md            AGENTS.md를 가져오는 Claude Code 진입점
 TODO-CONTRACT.md     contracts 변경 제안함(역할별 섹션)
 docs/
   GDD.md             게임 규칙·수치 원본
-  adr/               기술 결정 기록(0001 PS1 렌더는 0003 툰 렌더로 대체됨, 0002 세션 저장, 0004 최고 가게 점수 저장)
+  adr/               기술 결정 기록(0001 PS1 렌더는 0003 툰 렌더로 대체됨, 0002 세션 저장, 0004 최고 가게 점수 저장, 0005 튜토리얼 완료 기기 저장)
   harness-design.md  하네스 설계 스냅샷(수정 금지)
   rules/
     architecture/    계층·경계, 모듈별 규칙

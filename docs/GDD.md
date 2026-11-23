@@ -7,6 +7,7 @@
 - 모바일 세로화면 PWA, 정적 배포(Cloudflare Pages). 백엔드·계정 없음.
 - 세션 점수 = 받은 리뷰 별점의 평균. sessionStorage 저장(탭 종료 시 초기화).
 - 가게 점수 = 별점과 별개의 상한 없는 점수(§가게 점수). 최고 가게 점수만 localStorage 키 `takoyaki:best`에 영구 저장한다. 값은 JSON `{version: 1, best: number}`이고 손상된 값(파싱 실패, version 불일치, best가 유한한 0 이상의 수가 아님)은 버린다(기록 없음) → [ADR 0004](adr/0004-best-shop-score-storage.md). 최고 기록은 세션이 끝날 때(결과 화면 도달) max로 갱신한다.
+- 튜토리얼 완료 여부는 기기에 기억한다. localStorage 키 `takoyaki:profile`, 값은 JSON `{version: 1, tutorialCompleted: true}`이고 손상된 값은 버린다 → [ADR 0005](adr/0005-profile-storage.md). 이번 판 점수·리뷰는 아래 sessionStorage 그대로다.
 - sessionStorage 키 `takoyaki:session`, 값은 JSON `{version: 1, tutorialCompleted, finished, reviews: ReviewResult[]}`(contracts `SessionSnapshot`) → [ADR 0002](adr/0002-session-storage.md). `reviews`는 contracts `ReviewResult`(source, stars, comment, personality)를 그대로 직렬화하고, 튜토리얼 리뷰의 personality는 null이다.
 - 복원: 파싱 실패나 version이 1이 아니면 값을 버리고 새로 시작한다. `finished`가 true면 결과 화면을 다시 보여준다. 본게임 도중 새로고침하면 본게임 P1부터 다시 시작하고 튜토리얼 리뷰만 남긴다.
 - 그래픽: 툰 셰이딩. Three.js, 화면 해상도 렌더(pixelRatio 상한 2), 3단 셀 조명(방향광 1 + 앰비언트), 모델 외곽선(inverted hull), 밝고 채도 높은 평면 색, 로우폴리. 절차 텍스처는 64px 이하만 사용하고 외부 에셋 금지. → [ADR 0003](adr/0003-toon-render-pipeline.md)
@@ -103,7 +104,7 @@
 - 후네 담기 단계에서 후네가 아닌 곳에 놓으면 떨어뜨리지 않고 거부·원위치한다(학습 단계).
 - 함정 재료는 감점 없이 경고 말풍선을 표시하고 재료는 트레이로 돌아간다.
 - 완수 시 5★ 리뷰 카드 → 본게임 P1 진입.
-- 세션당 1회(sessionStorage `tutorialCompleted` 플래그). 새로고침 시 스킵.
+- 기기당 1회. 완료하면 localStorage `takoyaki:profile`에 기억하고, 같은 브라우저로 다시 접속하면 튜토리얼을 건너뛰고 P1부터 시작한다. 이때 튜토리얼 5★ 리뷰는 주지 않는다(그 세션에서 튜토리얼을 하지 않았다). 같은 탭 새로고침은 세션 저장값(`tutorialCompleted`)으로 건너뛰는 동작 그대로다. "튜토리얼 다시 보기"는 없다.
 
 ## 점수
 
