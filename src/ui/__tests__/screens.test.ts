@@ -1,6 +1,6 @@
 // 버전 라벨: 값이 있으면 그대로, 없거나 빈 문자열이면 표시하지 않는다. DOM 라이브러리가 없어 최소 가짜 요소를 쓴다.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { showTitle, versionTag } from '../screens';
+import { showResult, showTitle, versionTag } from '../screens';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -50,5 +50,36 @@ describe('showTitle 선택', () => {
     const b = run({ tutorialButton: true });
     b.buttons[0]!.handlers[0]!();
     await expect(b.p).resolves.toBe('start');
+  });
+});
+
+describe('showResult 다시 하기', () => {
+  class FakeEl {
+    className = '';
+    textContent = '';
+    removed = false;
+    children: FakeEl[] = [];
+    handlers: (() => void)[] = [];
+    append(...c: FakeEl[]): void {
+      this.children.push(...c);
+    }
+    remove(): void {
+      this.removed = true;
+    }
+    addEventListener(_: string, h: () => void): void {
+      this.handlers.push(h);
+    }
+  }
+  it('다시 하기 버튼이 있고, 클릭하면 오버레이를 닫고 again으로 resolve', async () => {
+    vi.stubGlobal('document', { createElement: () => new FakeEl() });
+    const layer = new FakeEl();
+    const p = showResult(layer as unknown as HTMLElement, { average: null, reviews: [] });
+    const overlay = layer.children[0]!;
+    const button = overlay.children.find((c) => c.textContent === '다시 하기');
+    expect(button).toBeDefined();
+    expect(overlay.removed).toBe(false);
+    button!.handlers[0]!();
+    await expect(p).resolves.toBe('again');
+    expect(overlay.removed).toBe(true);
   });
 });

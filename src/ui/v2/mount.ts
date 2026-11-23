@@ -17,6 +17,7 @@ import { bindReveal } from './reveal';
 import { CSS_V2 } from './styles';
 import { createTimingBar } from './timing-bar';
 import { createTrayLabels } from './tray-labels';
+import { trackNewBest } from './new-best';
 import { createTutorialView } from './tutorial-view';
 
 /** 장면 대상 주변을 답 버튼이 피할 반경(CSS px). 구멍·트레이 칸은 앵커 중심 기준이다. */
@@ -29,9 +30,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const style = el('style', '', CSS + CSS_V2);
   const disposers: (() => void)[] = [];
 
-  // 결과 화면의 "최고 기록!" 표시용. 세션 종료 때 core가 한 번 내는 이벤트를 기억해 둔다.
-  let newBest = false;
-  disposers.push(bus.on('score/new-best', () => (newBest = true)));
+  const newBest = trackNewBest(bus, disposers);
   const fx = createEffects(layer);
   const controller = createController({ bus, picker, getState, view: fx });
   const buckets = createBuckets(controller);
@@ -98,7 +97,11 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
         .then(() => showTitle(layer, opts?.versionLabel, titleOpts))
         .finally(() => tutorial.setSuspended(false));
     },
-    showResult: (result) => showResult(layer, { ...result, shopScore: getState().shopScore, newBest }, opts?.versionLabel),
+    showResult: (result) =>
+      showResult(layer, { ...result, shopScore: getState().shopScore, newBest: newBest.value() }, opts?.versionLabel).then((choice) => {
+        newBest.reset(); // 다음 판에 "최고 기록!"이 남지 않게
+        return choice;
+      }),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);
