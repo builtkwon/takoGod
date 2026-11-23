@@ -12,9 +12,9 @@ export const FUNE_SERVE_DELAY_SEC = 1;
 export const FUNE_SIZE = 6;
 /** 반죽을 놓은 뒤 익힘 완료까지. */
 export const COOK_SEC = 3;
-/** 완성부터 누적한 탐 타이머: 4초에 어두워지고 6초에 탄다. */
-export const DARK_AT_SEC = 4;
-export const BURN_AT_SEC = 6;
+/** 완성부터 누적한 탐 타이머: 7.2초에 어두워지고 10.8초에 탄다(한때 4·6초, 1.8배). */
+export const DARK_AT_SEC = 7.2;
+export const BURN_AT_SEC = 10.8;
 
 /** 튜토리얼 영역: W1·W2 모두 폭 0.50, 가운데 고정(타이밍 연습). 난수를 쓰지 않는다. */
 export const TUTORIAL_ZONE: RollZone = { from: 0.25, to: 0.75 };

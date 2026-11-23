@@ -4,7 +4,7 @@
 export const MAX_DIFFICULTY_LEVEL = 20;
 /** 패배 기준 화난 손님 수. */
 export const FUMED_LIMIT = 4;
-/** 튜토리얼 바 왕복(초). GDD는 1.6이나 PM 결정으로 1단계와 같은 2.2초를 쓴다. */
+/** 튜토리얼 바 왕복(초). 1단계와 같은 2.2초다(GDD §굽기·§튜토리얼). */
 const TUTORIAL_PERIOD_SEC = 2.2;
 
 export interface Difficulty {
