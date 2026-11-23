@@ -325,6 +325,23 @@ test('타이틀 튜토리얼 버튼: 튜토리얼 완료 뒤 새로고침하면 
   expect(errors).toEqual([]);
 });
 
+test('타이틀 튜토리얼 버튼: 다시 한 튜토리얼을 끝내면 5★ 리뷰가 정확히 1개다(입력이 두 번 처리되지 않는다)', async ({ page }) => {
+  const errors = collectErrors(page);
+  await start(page);
+  await playTutorial(page);
+  await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
+
+  await page.reload();
+  await page.clock.resume();
+  await page.getByRole('button', { name: '튜토리얼' }).click();
+  await playTutorial(page);
+  await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
+  const saved = await page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) ?? 'null'), KEY);
+  expect(saved?.reviews).toHaveLength(1);
+  expect(saved?.reviews[0].stars).toBe(5);
+  expect(errors).toEqual([]);
+});
+
 test('튜토리얼 완료 기억: profile이 손상 값이면 튜토리얼부터 시작하고 키가 지워진다', async ({ page }) => {
   await page.goto('/');
   await page.evaluate((k) => localStorage.setItem(k, '{"version":1,"tutorialCompleted":"yes"}'), PROFILE_KEY);

@@ -82,7 +82,7 @@ function frame(now: number): void {
       }
       game = newGame(sessionStore); // 이전 GameV2 구독은 newGame이 해제한다.
       resultShown = false;
-      last = performance.now(); // 결과 화면 동안 쌓인 시간이 큰 dt로 들어가지 않게
+      last = performance.now(); // rAF는 계속 돌고 dt는 MAX_DT로 잘리지만, 새 판 첫 프레임의 dt 기준을 지금으로 맞춘다
     });
   }
   requestAnimationFrame(frame);
