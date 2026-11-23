@@ -24,6 +24,11 @@ export const OUTPUT_EVENTS: readonly GameEventType[] = [
   'score/plate',
   'score/new-best',
   'session/game-over',
+  'order/resolved',
+  'plate/reported',
+  'customer/allergy',
+  'rush/started',
+  'rush/ended',
   'plate/tasted',
   'plate/scored',
   'customer/redo-requested',
@@ -209,7 +214,7 @@ export interface HoleSpec {
  * 같은 순간에 굴려 한꺼번에 완성한다(어두운 것은 완성 뒤 7.2초를 기다려 담는다).
  * hold=true면 마지막 1개는 들고 멈추고, 돌려준 함수를 부르면 놓는다(들고 있는 동안 탐 타이머가 멈춘다).
  */
-export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold = false): () => void {
+export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold = false): (beforeServe?: () => void) => void {
   const specOf = (i: number): HoleSpec => (Array.isArray(specs) ? (specs as readonly HoleSpec[])[i] : (specs as HoleSpec)) ?? {};
   for (const i of ALL) h.place(i, MARGARINE);
   for (const i of ALL) h.place(i, BATTER);
@@ -230,7 +235,13 @@ export function makePlate(h: H, specs: HoleSpec | readonly HoleSpec[] = {}, hold
   for (let k = 0; k < order.length; k++) {
     if (k === fresh.length && dark.length > 0) h.tick(7.2);
     h.pick(order[k] as number);
-    if (hold && k === order.length - 1) return () => { h.drop('fune'); h.tick(FUNE_SERVE_DELAY_SEC); };
+    if (hold && k === order.length - 1)
+      return (beforeServe?: () => void) => {
+        h.drop('fune');
+        h.tick(FUNE_SERVE_DELAY_SEC - 0.1);
+        beforeServe?.(); // 서빙 직전(마지막 0.1초 전)에 난수 큐를 채우는 데 쓴다
+        h.tick(0.1);
+      };
     h.drop('fune');
   }
   h.tick(FUNE_SERVE_DELAY_SEC); // 후네가 찬 뒤 서빙(또는 비움)까지 1초
@@ -257,7 +268,7 @@ export const customerEnteredAt = (h: H, index = 0): number => h.log.filter((r) =
 export function playToEnd(h: H): void {
   playUntilLevel(h, 3);
   for (let i = 0; i < 12 && !h.game.finished; i++) {
-    tickTo(h, h.now + 45);
+    tickTo(h, h.now + 65);
     if (!h.game.finished) makePlate(h);
   }
   if (!h.game.finished) throw new Error('판이 끝나지 않았다');
