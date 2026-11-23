@@ -8,6 +8,8 @@ export type MarkTone = 'good' | 'bad' | 'neutral';
 
 export interface Effects extends DragView {
   mark(text: string, at: Pt, tone: MarkTone): void;
+  /** 판이 바뀔 때 떠 있는 판정 글자·끌기 고스트를 지운다. */
+  reset(): void;
 }
 
 const FLY_MS = 380;
@@ -47,6 +49,12 @@ export function createEffects(layer: HTMLElement): Effects {
   const at = (p: Pt): string => `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
 
   return {
+    reset() {
+      markEl?.remove();
+      markEl = null;
+      ghost?.remove();
+      ghost = null;
+    },
     ghostStart(look, p) {
       ghost?.remove();
       ghost = ghostEl(look);
