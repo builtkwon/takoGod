@@ -12,6 +12,11 @@ export const hudText = {
   fumed: (count: number, limit: number): string => `😠 ${count}/${limit}`,
   /** 판이 끝나는 길은 패배(화난 손님 한도) 하나뿐이라 결과 화면 제목은 항상 이것이다(새로고침 복원 포함). */
   resultTitle: '영업 종료',
+  /** 게임 중 다시 하기 버튼과 확인 모달. */
+  restartButton: '↻ 다시 하기',
+  restartConfirm: '처음부터 다시 할까요?',
+  restartYes: '예',
+  restartNo: '아니오',
   resultShopScore: (score: number): string => `가게 점수 ${score}`,
   resultNewBest: '최고 기록!',
 } as const;

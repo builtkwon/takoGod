@@ -147,6 +147,10 @@ describe('hudView', () => {
 });
 
 describe('hudView 단계·화난 손님', () => {
+  it('게임 중 다시 하기 버튼은 튜토리얼에서 숨기고 본게임에서 보인다', () => {
+    expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).restartVisible).toBe(false);
+    expect(hudView(stateOf([], { phase: 'main', level: 3 })).restartVisible).toBe(true);
+  });
   it('튜토리얼에서는 화난 손님 표시를 숨기고 본게임에서는 보인다', () => {
     expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).fumedHidden).toBe(true);
     expect(hudView(stateOf([], { phase: 'main', level: 1 })).fumedHidden).toBe(false);

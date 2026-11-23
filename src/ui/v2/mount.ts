@@ -16,6 +16,7 @@ import { createHudV2 } from './hud';
 import { bindReveal } from './reveal';
 import { CSS_V2 } from './styles';
 import { createTimingBar } from './timing-bar';
+import { createRestartConfirm } from './restart';
 import { createTrayLabels } from './tray-labels';
 import { trackNewBest } from './new-best';
 import { createTutorialView } from './tutorial-view';
@@ -25,7 +26,7 @@ const HOLE_R = 46;
 const TRAY_R = 36;
 const FUNE_R = 70;
 
-export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => GameStateV2, picker: ScenePicker, opts?: { readonly versionLabel?: string }): UiHandle {
+export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => GameStateV2, picker: ScenePicker, opts?: { readonly versionLabel?: string; readonly onRestart?: () => void }): UiHandle {
   const layer = el('div', 'ui-layer');
   const style = el('style', '', CSS + CSS_V2);
   const disposers: (() => void)[] = [];
@@ -35,7 +36,12 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const controller = createController({ bus, picker, getState, view: fx });
   const buckets = createBuckets(controller);
   const bar = createTimingBar();
-  const hud = createHudV2(bus, disposers);
+  // 게임 중 다시 하기: 결과 화면 '다시 하기'와 같은 reset을 공유하고 상위(main)에 알린다.
+  const restartConfirm = createRestartConfirm(layer, () => {
+    reset();
+    opts?.onRestart?.();
+  });
+  const hud = createHudV2(bus, disposers, opts?.onRestart ? () => restartConfirm.open() : undefined);
   const trayLabels = createTrayLabels(layer, picker);
   const tutorial = createTutorialView(layer, bus, picker, { margarine: () => buckets.origin('margarine'), batter: () => buckets.origin('batter') }, disposers);
 
@@ -120,6 +126,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     fx.reset();
     hud.reset();
     controller.clearSelection();
+    restartConfirm.close();
     newBest.reset();
   };
 
