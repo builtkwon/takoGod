@@ -358,3 +358,45 @@ test('손상된 저장값은 버리고 튜토리얼부터 시작한다', async (
   await page.getByRole('button', { name: '시작' }).click();
   await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
 });
+
+test('속재료 탭 선택: 트레이 칸을 탭하면 선택되고 구멍을 탭하면 넣어지고 선택이 풀린다(튜토리얼을 탭만으로 끝낸다)', async ({ page }) => {
+  const errors = collectErrors(page);
+  await start(page);
+  const picker = await scenePicker(page);
+  await dragAll(page, picker, () => center(page, '.ui-bucket-margarine'));
+  await dragAll(page, picker, () => center(page, '.ui-bucket-batter'));
+  await page.clock.runFor(3500);
+  const tray = at(picker, { kind: 'tray', slot: 0 });
+  for (const i of OPEN) {
+    await page.mouse.click(tray.x, tray.y);
+    await page.clock.runFor(50); // 시계가 멈춰 있어 라벨 갱신 프레임은 이 호출로 돈다
+    await expect(page.locator('.ui-tray-label-selected')).toHaveCount(1);
+    const p = at(picker, { kind: 'hole', index: i });
+    await page.mouse.click(p.x, p.y);
+    await page.clock.runFor(50);
+    await expect(page.locator('.ui-tray-label-selected')).toHaveCount(0); // 한 칸 넣으면 해제
+  }
+  await tapAll(page, picker);
+  await tapAll(page, picker);
+  await funeAll(page, picker);
+  await page.clock.runFor(1200);
+  await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible(); // 넣기가 실제로 먹혔다는 증거
+  expect(errors).toEqual([]);
+});
+
+test('결과 화면 다시 하기: 새 판에 이전 판 말풍선·답 버튼이 없다', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(
+    ([k, p]) => {
+      sessionStorage.setItem(k as string, '{"version":1,"tutorialCompleted":true,"finished":true,"reviews":[]}');
+      localStorage.setItem(p as string, '{"version":1,"tutorialCompleted":true}');
+    },
+    [KEY, PROFILE_KEY],
+  );
+  await page.reload();
+  await page.getByRole('button', { name: '시작' }).click();
+  await page.getByRole('button', { name: '다시 하기' }).click();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  await expect(page.locator('.ui-bubble')).toHaveCount(0);
+  await expect(page.locator('.ui-answer')).toHaveCount(0);
+});

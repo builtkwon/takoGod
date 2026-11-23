@@ -74,7 +74,7 @@ function frame(now: number): void {
   if (g.finished && !resultShown) {
     resultShown = true;
     void ui.showResult({ average: state.sessionAverage, reviews: state.reviews }).then(() => {
-      // 다시 하기: 세션 저장값을 지우고 새 판. 튜토리얼 완료 기기이므로 withProfile 대체값으로 P1부터 시작한다(리뷰 0). best·profile은 그대로.
+      // 다시 하기: 세션 저장값을 지우고 새 판. 튜토리얼 완료 기기이므로 withProfile 대체값으로 1단계부터 시작한다(리뷰 0). best·profile은 그대로.
       try {
         sessionStorage.removeItem(SESSION_KEY);
       } catch {

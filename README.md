@@ -4,7 +4,7 @@
 
 ## 구현 상태
 
-5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 P1~P5 진행, 결과 화면, 오프라인 셸, iOS 홈 화면 추가 안내. 6단계 굽기 조작 개편을 통합했고 후속 정리를 마쳤다. `main.ts`는 V2 진입점(GameV2·renderV2·ScenePicker·mountUiV2)을 쓰고, 옛 Game·옛 render 경로·옛 mountUi·도구바와 사용 중단된 contracts 타입·이벤트는 삭제했다. `sim.balance`는 V2 게임을 측정한다. contracts의 V2 접미사 타입(`GameStateV2`, `HoleStateV2`, `TutorialStepV2`)은 이름 변경이 따로 남아 있다.
+5단계(core·render·ui 구현 병합과 main 조립)를 마쳤다. main에서 PWA 게임이 동작한다: 튜토리얼과 1단계부터 끝없이 이어지는 진행(난이도는 20단계까지 오르고 이후 고정), 화난 손님 4명이 되면 패배(HUD 😠 N/4)와 결과 화면(최종 점수·별점·다시 하기), 오프라인 셸, iOS 홈 화면 추가 안내. 6단계 굽기 조작 개편을 통합했고 후속 정리를 마쳤다. `main.ts`는 V2 진입점(GameV2·renderV2·ScenePicker·mountUiV2)을 쓰고, 옛 Game·옛 render 경로·옛 mountUi·도구바와 사용 중단된 contracts 타입·이벤트는 삭제했다. `sim.balance`는 V2 게임을 측정한다. contracts의 V2 접미사 타입(`GameStateV2`, `HoleStateV2`, `TutorialStepV2`)은 이름 변경이 따로 남아 있다.
 
 굽기 개편의 새 게임 규칙은 [GDD](docs/GDD.md)가 원본이다. 요약만 적는다.
 - 구멍마다 독립 상태로 진행한다. 버터(내부 이름 margarine)·반죽은 통에서 끌어 손가락이 지나간 구멍마다 칠하고, 속재료는 구멍 하나에 놓으며, 굴리기는 구멍을 누르는 순간 타이밍 바 위치로 판정한다(§굽기).
@@ -25,6 +25,12 @@
 - HUD: 왼쪽 위 최고 가게 점수("최고 N", 기록이 없으면 "최고 -", 진행 중 넘으면 NEW), 가운데 단계와 그 아래 현재 가게 점수, 오른쪽 위 별 칸과 그 아래 작게 리뷰 수. 접시를 더하면 +N과 콤보 팝업이 뜬다.
 - 가게 점수 규칙: 별점과 별개의 상한 없는 점수다. 접시 점수 = round((만족도 + 굴리기 적중 × 5) × 콤보 배수). 연속 완벽 접시 n번째는 배수 1.0 + 0.2 × (n−1)(최대 2.0)이고 완벽이 아니면 ×1.0과 콤보 0이다. 튜토리얼 접시는 0점, 다시해줘를 부른 첫 접시는 더하지 않는다.
 - 최고 기록은 세션이 끝날 때(결과 화면) max로 갱신해 localStorage `takoyaki:best`에 영구 저장한다(`{version:1,best}`, 손상 값은 버림). 결과 화면은 가게 점수와, 갱신했으면 "최고 기록!"을 보인다 → [ADR 0004](docs/adr/0004-best-shop-score-storage.md).
+
+v0.3.0(무한 단계) 반영 내용(수치 원본은 GDD).
+- 진행: 튜토리얼 뒤 1단계부터 패배할 때까지 이어진다. 난이도 곡선은 `src/core/levels.ts`(20단계 상한). 1~5단계는 타이밍 영역이 하나이고 바 주기는 2.2/1.9/1.6초, 6단계부터 영역이 둘이며 점점 좁고 가장자리로 간다. 튜토리얼 바 주기는 1단계와 같은 2.2초다.
+- 패배: 인내가 100%가 된 손님이 세션 합계 4명이면 영업 종료(결과 화면 제목 "영업 종료"). 결과 화면은 판이 끝날 때만 나온다.
+- 조작: 속재료는 끌어 놓기 말고 트레이 칸을 탭해 고른 뒤 구멍을 탭해도 들어간다(한 칸 넣으면 선택이 풀린다). 말풍선은 재료칸을 가리지 않는다.
+- 튜토리얼 완료는 기기에 기억하고(타이틀에 "튜토리얼" 버튼으로 다시 가능) 결과 화면 "다시 하기"는 1단계부터 새 판을 연다. 구이판은 약 15% 커졌다.
 
 병합 규칙은 [implementation.md](docs/rules/collaboration/implementation.md#병합), 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
@@ -72,9 +78,9 @@ harness/
   pre-commit         커밋 시 하네스 full 검사
 src/
   contracts/         core와 render·ui 사이 타입·이벤트
-  core/              순수 게임 로직(GameV2, 시뮬레이터, scoring-v2.ts 접시 가게 점수·콤보, session.ts 메모리 저장소, three·DOM 금지)
+  core/              순수 게임 로직(GameV2, 시뮬레이터, scoring-v2.ts 접시 가게 점수·콤보, levels.ts 단계별 난이도 곡선, session.ts 메모리 저장소, three·DOM 금지)
   render/            Three.js 툰 셰이딩 렌더링(toon.ts 툰 재질·외곽선, effects.ts 폭죽·물음표·빠직, backdrop.ts 밤 도로 배경, slots.ts 손님 자리 id 고정, ADR 0003)
-  ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, v2/stars.ts 우상단 별 칸, v2/hud.ts HUD 3열, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, iOS 설치 안내 포함)
+  ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, v2/stars.ts 우상단 별 칸, v2/hud.ts HUD 3열, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, z.ts 레이어 z-index, iOS 설치 안내 포함)
   data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구(fumed-lines.ts 분노 대사, hud-text.ts HUD·점수 문구)
   main.ts            조립·루프·서비스 워커 등록
   session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
@@ -145,7 +151,7 @@ pnpm tool test.e2e                # E2E(build 후 vite preview 대상)
 
 ## 테스트
 
-세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 17개: 부팅, PWA, 튜토리얼, 복원, 손상된 저장값, 최고 기록 표시·손상, 튜토리얼 완료 기억, 타이틀 튜토리얼 버튼, 결과 화면 다시 하기 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
+세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 20개: 부팅, PWA, 튜토리얼, 속재료 탭 선택, 복원, 손상된 저장값, 최고 기록 표시·손상, 튜토리얼 완료 기억, 타이틀 튜토리얼 버튼, 결과 화면 다시 하기 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
 
 ## PWA
 
