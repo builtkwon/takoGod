@@ -59,7 +59,7 @@
 
 ## 저장 형식 version
 
-- 필수: 키마다 정수 `version`을 가진다(`takoyaki:session`, `takoyaki:best`). 원본은 각 ADR이다.
+- 필수: 키마다 정수 `version`을 가진다(`takoyaki:session`, `takoyaki:best`, `takoyaki:profile`). 원본은 각 ADR이다.
 - 필수: 올리는 조건은 읽기 쪽 해석이 달라지는 형식 변경(필드 추가·삭제·의미 변경)뿐이다. 읽기 쪽이 받아들이는 범위가 넓어지기만 하는 변경은 올리지 않는다. 좁아지면(옛 값이 버려질 수 있으면) 올린다.
 - 필수: version을 올릴 때는 ADR을 고치고 독립 리뷰를 받으며, CHANGELOG의 저장 형식 항목에 적는다.
 - 기본: 이전 version 값은 버린다(세션은 새로 시작, 최고 기록은 기록 없음). 기존 동작과 같다.

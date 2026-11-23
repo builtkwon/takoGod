@@ -16,7 +16,7 @@
 
 - 점수·별점·평균 정확성
 - contracts 변경
-- sessionStorage 키·형식
+- 저장소(sessionStorage·localStorage) 키·형식
 - 공통 유틸·빌드·PWA 설정
 
 - 기본: 조건 해당 여부가 불분명하면 추가한다.

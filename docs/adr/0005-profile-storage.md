@@ -35,7 +35,7 @@ C를 채택한다. 새 ADR로 둔 이유는 0002의 대상이 sessionStorage 세
 5. core·contracts는 바꾸지 않는다. main이 세션 저장 포트(`SessionStore`)를 감싼다.
    - `load()`: 세션 값이 있으면 그대로 돌려준다. 없고 profile이 완료면 `{version:1, tutorialCompleted:true, finished:false, reviews:[]}`를 돌려준다(core는 튜토리얼 없이 P1부터 시작, 튜토리얼 리뷰 없음).
    - `save(s)`: 세션에 저장하고 `s.tutorialCompleted`가 true면 profile에도 기록한다.
-6. "튜토리얼 다시 보기"는 두지 않는다.
+6. 튜토리얼을 마친 기기에서는 타이틀 "튜토리얼" 버튼으로 튜토리얼을 다시 할 수 있다(세션만 지우고 profile·best는 유지). 결과 화면 "다시 하기"도 세션만 지우고 profile·best를 유지한다.
 
 ## 영향
 
@@ -45,5 +45,5 @@ C를 채택한다. 새 ADR로 둔 이유는 0002의 대상이 sessionStorage 세
 
 ## 재검토 조건
 
-- 튜토리얼 다시 보기, 설정 등 기기 단위로 남길 값이 늘 때.
+- 설정 등 기기 단위로 남길 값이 늘 때(튜토리얼 다시 하기는 결정 6으로 이미 있다).
 - 기기 간 동기화(계정)가 필요할 때.
