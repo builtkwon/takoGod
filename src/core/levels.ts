@@ -28,7 +28,7 @@ export function difficulty(level: number): Difficulty {
   if (level <= 0) return { periodSec: TUTORIAL_PERIOD_SEC, twoZones: true, w1: 0.5, w2: 0.5, minCenterDistance: 0, patienceMinSec: 20, patienceMaxSec: 40 };
   if (level <= 5) {
     const periodSec = level <= 2 ? 2.2 : level === 3 ? 1.9 : 1.6;
-    const w = level <= 2 ? 0.3 : 0.24;
+    const w = level <= 2 ? 0.54 : 0.24; // 첫 영역은 3단계 이후보다 1.8배 넓다(0.30 → 0.54)
     return { periodSec, twoZones: false, w1: w, w2: w, minCenterDistance: 0, patienceMinSec: 20, patienceMaxSec: 40 };
   }
   const t = (Math.min(level, MAX_DIFFICULTY_LEVEL) - 6) / (MAX_DIFFICULTY_LEVEL - 6);
