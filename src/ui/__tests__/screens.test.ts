@@ -83,16 +83,12 @@ describe('showResult 다시 하기', () => {
     expect(overlay.removed).toBe(true);
   });
 
-  it('패배(gameOver)면 제목이 영업 종료, 아니면 오늘의 결과이고 다시 하기는 유지', () => {
+  it('결과 화면 제목은 항상 영업 종료이고 다시 하기는 유지', () => {
     vi.stubGlobal('document', { createElement: () => new FakeEl() });
-    const titleOf = (gameOver: boolean): string => {
-      const layer = new FakeEl();
-      void showResult(layer as unknown as HTMLElement, { average: null, reviews: [], shopScore: 10, gameOver });
-      const overlay = layer.children[0]!;
-      expect(overlay.children.some((c) => c.textContent === '다시 하기')).toBe(true);
-      return overlay.children[0]!.textContent;
-    };
-    expect(titleOf(true)).toBe('영업 종료');
-    expect(titleOf(false)).toBe('오늘의 결과');
+    const layer = new FakeEl();
+    void showResult(layer as unknown as HTMLElement, { average: null, reviews: [], shopScore: 10 });
+    const overlay = layer.children[0]!;
+    expect(overlay.children.some((c) => c.textContent === '다시 하기')).toBe(true);
+    expect(overlay.children[0]!.textContent).toBe('영업 종료');
   });
 });

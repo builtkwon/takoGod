@@ -154,11 +154,11 @@ describe('속재료 탭 선택', () => {
     c.down(1, { x: 50, y: 150 }); // 선택이 풀렸으니 이제는 굴리기
     expect(bus.sent.at(-1)).toEqual({ type: 'input/roll', payload: { hole: 0 } });
   });
-  it('넣을 수 없는 단계면 거부 연출(재료가 트레이로 돌아감)', () => {
-    const { c, bus, view } = setup(['empty']);
+  it('core가 넣기를 거부하면(함정 재료 등) 거부 연출: 재료가 트레이로 돌아감', () => {
+    const { c, bus, view } = setup(['cooked']);
     tapTray(c);
     c.down(1, { x: 50, y: 150 });
-    bus.emit('cook/rejected', { hole: 0, reason: 'invalid-stage' });
+    bus.emit('cook/rejected', { hole: 0, reason: 'tutorial-step' });
     expect(view.calls.at(-1)).toEqual(['fly', 'filling', { x: 50, y: 150 }, { x: 50, y: 350 }]);
   });
   it('빈 곳 탭은 선택 해제, 완성품 구멍 탭은 선택 유지', () => {
@@ -170,6 +170,19 @@ describe('속재료 탭 선택', () => {
     c.down(1, { x: 50, y: 20 }); // 아무것도 없는 곳
     c.up(1, { x: 50, y: 20 });
     expect(c.selected()).toBeNull();
+  });
+  it('선택 중 넣을 수 없는 단계(filled·rolled) 구멍 탭은 굴리기로 넘기고 선택은 유지', () => {
+    const { c, bus } = setup(['filled', 'rolled']);
+    tapTray(c);
+    c.down(1, { x: 50, y: 150 });
+    c.up(1, { x: 50, y: 150 });
+    c.down(1, { x: 150, y: 150 });
+    c.up(1, { x: 150, y: 150 });
+    expect(bus.sent).toEqual([
+      { type: 'input/roll', payload: { hole: 0 } },
+      { type: 'input/roll', payload: { hole: 1 } },
+    ]);
+    expect(c.selected()).toBe('octopus');
   });
   it('끌어 놓기는 그대로 동작하고 선택은 풀린다', () => {
     const { c, bus } = setup(['cooked']);

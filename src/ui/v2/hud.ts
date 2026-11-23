@@ -21,6 +21,8 @@ export interface HudView {
   /** 화난 손님 표시 문구와 0명 여부(0이면 흐리게). */
   readonly fumed: string;
   readonly fumedCount: number;
+  /** 튜토리얼에서는 화난 손님 표시를 숨긴다(GDD §진행). */
+  readonly fumedHidden: boolean;
 }
 
 /** HUD 표시값. 점수 비교만 하고 계산은 core가 한다. */
@@ -33,6 +35,7 @@ export function hudView(state: Pick<GameStateV2, 'phase' | 'level' | 'shopScore'
     reviews: hudText.reviews(state.reviews.length),
     fumed: hudText.fumed(state.fumedCount, state.fumedLimit),
     fumedCount: state.fumedCount,
+    fumedHidden: state.phase === 'tutorial',
   };
 }
 
@@ -107,6 +110,7 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[]): HudV2 {
         score.textContent = v.score;
       }
       reviews.textContent = v.reviews;
+      fumed.hidden = v.fumedHidden;
       fumed.textContent = v.fumed;
       fumed.classList.toggle('ui-dim', v.fumedCount === 0);
       if (v.fumedCount > lastFumed && lastFumed >= 0) {

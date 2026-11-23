@@ -17,7 +17,7 @@ import { bindReveal } from './reveal';
 import { CSS_V2 } from './styles';
 import { createTimingBar } from './timing-bar';
 import { createTrayLabels } from './tray-labels';
-import { trackGameOver, trackNewBest } from './new-best';
+import { trackNewBest } from './new-best';
 import { createTutorialView } from './tutorial-view';
 
 /** 장면 대상 주변을 답 버튼이 피할 반경(CSS px). 구멍·트레이 칸은 앵커 중심 기준이다. */
@@ -31,7 +31,6 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const disposers: (() => void)[] = [];
 
   const newBest = trackNewBest(bus, disposers);
-  const gameOver = trackGameOver(bus, disposers);
   const fx = createEffects(layer);
   const controller = createController({ bus, picker, getState, view: fx });
   const buckets = createBuckets(controller);
@@ -109,7 +108,6 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     hud.reset();
     controller.clearSelection();
     newBest.reset();
-    gameOver.reset();
   };
 
   return {
@@ -124,8 +122,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
         .finally(() => tutorial.setSuspended(false));
     },
     showResult: (result) =>
-      showResult(layer, { ...result, shopScore: getState().shopScore, newBest: newBest.value(), gameOver: gameOver.value() }, opts?.versionLabel).then((choice) => {
-        reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!"·패배 표시가 새 판에 남지 않게
+      showResult(layer, { ...result, shopScore: getState().shopScore, newBest: newBest.value() }, opts?.versionLabel).then((choice) => {
+        reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!" 표시가 새 판에 남지 않게
         return choice;
       }),
     destroy() {
