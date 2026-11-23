@@ -37,11 +37,14 @@ const status = (id: string, personality: Personality, face: PatienceLevel): Cust
 const item = (dark: boolean): FuneItem => ({ rolledPerfectly: true, filling: 'octopus', noFilling: false, dark });
 
 const base2: GameStateV2 = {
-  phase: 'P1',
+  phase: 'main',
+  level: 1,
+  fumedCount: 0,
+  fumedLimit: 4,
   holes: holes2(),
   tray: IDS.map(ing),
   barPosition: 0.5,
-  barZones: { w1: null, w2: null },
+  barZones: { w1: null, w2: null, shared: true },
   shopScore: 0,
   bestShopScore: null,
   combo: 0,
