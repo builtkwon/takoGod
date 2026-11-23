@@ -8,7 +8,7 @@ export const tutorialStepsV2: readonly TutorialStepV2[] = [
   { stage: 'filling', message: '문어를 탭해서 고르고, 구멍을 탭해 넣어요!' },
   { stage: 'roll-1', message: '구멍을 톡 눌러 첫 번째로 굴려요!' },
   { stage: 'roll-2', message: '한 번 더 눌러 동그랗게 굴려요!' },
-  { stage: 'fune', message: '완성품을 끌어 아래 후네에 담아요!' },
+  { stage: 'fune', message: '완성품을 끌어 아래 접시에 담아요!' },
 ];
 
 /** 튜토리얼 화살표 옆 동작 문구(GDD §튜토리얼). 문구가 없는 단계는 화살표만 보인다. */

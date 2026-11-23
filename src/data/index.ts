@@ -5,4 +5,5 @@ export { tutorialArrowHints, tutorialStepsV2, tutorialTapHint } from './tutorial
 export { tasteLines } from './taste-lines';
 export { titleText } from './title-text';
 export { hudText } from './hud-text';
+export { allergyText, avoidLines, groupLines, orderLines, orderResultLines, reportCard, rushText, vipLines } from './special-lines';
 export { fumedLines } from './fumed-lines';

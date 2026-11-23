@@ -16,6 +16,8 @@ import { createHudV2 } from './hud';
 import { bindReveal } from './reveal';
 import { CSS_V2 } from './styles';
 import { createTimingBar } from './timing-bar';
+import { createRushBadge } from './rush-badge';
+import { createCustomerBadges } from './customer-badges';
 import { createRestartConfirm } from './restart';
 import { createTrayLabels } from './tray-labels';
 import { trackNewBest } from './new-best';
@@ -43,6 +45,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   });
   const hud = createHudV2(bus, disposers, opts?.onRestart ? () => restartConfirm.open() : undefined);
   const trayLabels = createTrayLabels(layer, picker);
+  const badges = createCustomerBadges(layer, picker);
+  const rushBadge = createRushBadge();
   const tutorial = createTutorialView(layer, bus, picker, { margarine: () => buckets.origin('margarine'), batter: () => buckets.origin('batter') }, disposers);
 
   const sceneObstacles = (): readonly Rect[] => {
@@ -64,10 +68,10 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     });
   };
   const topBottom = (): number => top.getBoundingClientRect().bottom - layer.getBoundingClientRect().top;
-  const dialogues = createDialogues({ layer, bus, disposers, trayObstacles, topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
+  const dialogues = createDialogues({ layer, bus, disposers, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
   const top = el('div', 'ui-top');
-  top.append(hud.root, bar.root); // 타이밍 바는 점수판 바로 아래
+  top.append(hud.root, bar.root, rushBadge.root); // 타이밍 바는 점수판 바로 아래
   layer.append(top, buckets.margarine, buckets.batter);
   root.append(style, layer);
   const prevTouch = root.style.touchAction;
@@ -112,6 +116,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     syncTopStack();
     hud.update(state);
     trayLabels.update(state, controller.selected());
+    badges.update(state);
+    rushBadge.update(state);
     dialogues.update(state);
     tutorial.update(state, controller.selected());
     raf = requestAnimationFrame(frame);
@@ -125,6 +131,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     reveal.reset();
     fx.reset();
     hud.reset();
+    badges.reset();
+    rushBadge.reset();
     controller.clearSelection();
     restartConfirm.close();
     newBest.reset();

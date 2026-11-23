@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Personality, TasteKind, TutorialStage } from '../../contracts';
-import { dialogues, fumedLines, hudText, reviewComments, tasteLines, tutorialArrowHints, tutorialReviewComment, tutorialTapHint, tutorialStepsV2 } from '../index';
+import { avoidLines, dialogues, fumedLines, groupLines, orderLines, orderResultLines, reportCard, rushText, vipLines, hudText, reviewComments, tasteLines, tutorialArrowHints, tutorialReviewComment, tutorialTapHint, tutorialStepsV2 } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 
@@ -52,6 +52,40 @@ describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
     expect(new Set(all).size).toBe(8);
   });
 
+  it('v0.6.0 문구 수량: 주문 30·빼 주세요 10·결과 반응 16·신고 3·러시 2·단체 8·VIP 8', () => {
+    const order = Object.values(orderLines).flatMap((byCount) => Object.values(byCount).flat());
+    expect(order).toHaveLength(30);
+    expect(Object.values(avoidLines).flat()).toHaveLength(10);
+    expect(Object.values(orderResultLines).flatMap((byP) => Object.values(byP).flat())).toHaveLength(16);
+    expect(reportCard.lines).toHaveLength(3);
+    expect(rushText.notices).toHaveLength(2);
+    expect(Object.values(groupLines).flat()).toHaveLength(8);
+    expect(Object.values(vipLines).flat()).toHaveLength(8);
+  });
+
+  it('v0.6.0 문구는 비어 있지 않고 서로 다르며 말풍선 한 줄(28자 이내)에 들어간다', () => {
+    const groups = [
+      Object.values(orderLines).flatMap((byCount) => Object.values(byCount).flat()),
+      Object.values(avoidLines).flat(),
+      Object.values(orderResultLines).flatMap((byP) => Object.values(byP).flat()),
+      Object.values(groupLines).flat(),
+      Object.values(vipLines).flat(),
+    ];
+    for (const g of groups) {
+      expect(new Set(g).size).toBe(g.length);
+      for (const t of g) {
+        expect(t.trim()).not.toBe('');
+        expect(t.length).toBeLessThanOrEqual(28);
+      }
+    }
+  });
+
+  it('주문 대사에 사용자 예시 3개가 들어 있고 빼 주세요 대사는 "빼 주세요"를 말한다', () => {
+    const order = Object.values(orderLines).flatMap((byCount) => Object.values(byCount).flat());
+    for (const ex of ['3개는 매운 고추를 넣어주세요', '친구를 놀리기 위해 1개는 지우개를 넣어주세요', '저는 단 게 좋아요, 모두 마시멜로로 주세요']) expect(order).toContain(ex);
+    for (const t of Object.values(avoidLines).flat()) expect(t).toContain('빼 주세요');
+  });
+
   it('튜토리얼 안내문구는 7단계 각각 하나', () => {
     expect(tutorialStepsV2.map((s) => s.stage)).toEqual(STAGES);
     for (const s of tutorialStepsV2) expect(s.message.trim()).not.toBe('');
@@ -76,7 +110,7 @@ describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
       .split('\n')
       .map((l) => l.trim())
       .filter((l) => l !== '' && !l.startsWith('#') && !l.startsWith('!'));
-    const texts = [...Object.values(fumedLines).flat(), ...Object.values(tasteLines).flatMap((p) => Object.values(p).flat()), ...tutorialStepsV2.map((s) => s.message)];
+    const texts = [...Object.values(orderLines).flatMap((c) => Object.values(c).flat()), ...Object.values(avoidLines).flat(), ...Object.values(orderResultLines).flatMap((p) => Object.values(p).flat()), ...reportCard.lines, ...rushText.notices, ...Object.values(groupLines).flat(), ...Object.values(vipLines).flat(), ...Object.values(fumedLines).flat(), ...Object.values(tasteLines).flatMap((p) => Object.values(p).flat()), ...tutorialStepsV2.map((s) => s.message)];
     for (const t of texts) for (const w of banned) expect(t.toLowerCase()).not.toContain(w.toLowerCase());
   });
 });

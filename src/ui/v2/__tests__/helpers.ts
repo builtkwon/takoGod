@@ -27,7 +27,7 @@ export const hole = (index: number, stage: HoleStage = 'empty'): HoleStateV2 => 
 export function stateOf(stages: readonly HoleStage[], over: Partial<GameStateV2> = {}): GameStateV2 {
   return {
     phase: 'main', level: 1, fumedCount: 0, fumedLimit: 4, holes: stages.map((s, i) => hole(i, s)), tray: [{ id: 'octopus', isTrap: false }, { id: 'wasabi', isTrap: true }],
-    barPosition: 0.5, barZones: { w1: null, w2: null, shared: false }, fune: [], funeServing: false, holding: null, customers: [], activeDialogues: [], reviews: [], sessionAverage: null, shopScore: 0, bestShopScore: null, combo: 0,
+    barPosition: 0.5, barZones: { w1: null, w2: null, shared: false }, fune: [], funeServing: false, holding: null, customers: [], activeDialogues: [], reviews: [], sessionAverage: null, shopScore: 0, bestShopScore: null, combo: 0, rush: null,
     tutorialCompleted: true, tutorialStage: null, ...over,
   };
 }

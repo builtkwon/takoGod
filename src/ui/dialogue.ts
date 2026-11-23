@@ -1,11 +1,13 @@
 import type { EventBus, GameStateV2, Personality } from '../contracts';
 import { fumedLines } from '../data';
+import { entryLines } from './entry-lines';
 import { el } from './dom';
 import { PERSONALITY_LABEL } from './format';
 import { bubbleTop, placeAnswerButtons, topStack, type Rect } from './layout';
 
 const BTN = { w: 150, h: 52 };
 const FUMED_MS = 1200;
+const ENTRY_MS = 2600;
 
 interface Shown {
   readonly slot: number;
@@ -20,7 +22,7 @@ export interface Dialogues {
   reset(): void;
 }
 
-/** 말풍선과 랜덤 배치 답 버튼. 답 버튼은 fixed 요소와 obstacles(layer 기준 좌표, 장면의 구멍·트레이·후네 등)와 겹치지 않는다. */
+/** 말풍선과 랜덤 배치 답 버튼. 답 버튼은 fixed 요소와 obstacles(layer 기준 좌표, 장면의 구멍·트레이·접시 등)와 겹치지 않는다. */
 export function createDialogues(
   ctx: {
     readonly layer: HTMLElement;
@@ -46,12 +48,24 @@ export function createDialogues(
   /** 분노 말풍선: 손님당 하나, 약 1.2초. 말풍선 자리(slot)를 다이얼로그와 나눠 쓴다. */
   const fumed = new Map<string, { readonly slot: number; readonly bubble: HTMLElement; readonly timer: ReturnType<typeof setTimeout> }>();
   const usedSlots = (): Set<number> => new Set([...shown.values(), ...fumed.values()].map((x) => x.slot));
-  const removeFumed = (customerId: string): void => {
-    const f = fumed.get(customerId);
+  const removeFumed = (key: string): void => {
+    const f = fumed.get(key);
     if (!f) return;
     clearTimeout(f.timer);
     f.bubble.remove();
-    fumed.delete(customerId);
+    fumed.delete(key);
+  };
+  /** 짧게 떠 있는 말풍선(분노·입장 대사). key는 `${customerId}:종류`라서 같은 종류는 하나만 남는다. 답 버튼은 없다. */
+  const say = (key: string, personality: Personality, text: string, cls: string, ms: number): void => {
+    removeFumed(key);
+    const used = usedSlots();
+    let slot = 0;
+    while (used.has(slot)) slot++;
+    const bubble = el('div', `ui-bubble ${cls}`);
+    bubble.style.top = `${topFor(slot)}px`;
+    bubble.append(el('b', '', PERSONALITY_LABEL[personality]), el('p', '', text));
+    ctx.layer.append(bubble);
+    fumed.set(key, { slot, bubble, timer: setTimeout(() => removeFumed(key), ms) });
   };
 
   const rectOf = (e: HTMLElement): Rect => {
@@ -101,22 +115,16 @@ export function createDialogues(
     ctx.bus.on('dialogue/resolved', ({ customerId }) => remove(customerId)),
     ctx.bus.on('customer/left', ({ customerId }) => {
       remove(customerId);
-      removeFumed(customerId);
+      [...fumed.keys()].filter((k) => k.startsWith(`${customerId}:`)).forEach(removeFumed);
     }),
     ctx.bus.on('customer/fumed', ({ customerId }) => {
       const personality = ctx.personalityOf?.(customerId);
-      if (!personality) return;
-      removeFumed(customerId);
-      const used = usedSlots();
-      let slot = 0;
-      while (used.has(slot)) slot++;
-      const bubble = el('div', 'ui-bubble ui-fumed');
-      bubble.style.top = `${topFor(slot)}px`;
-      const lines = fumedLines[personality];
-      bubble.append(el('b', '', PERSONALITY_LABEL[personality]), el('p', '', lines[rng() < 0.5 ? 0 : 1]));
-      ctx.layer.append(bubble);
-      fumed.set(customerId, { slot, bubble, timer: setTimeout(() => removeFumed(customerId), FUMED_MS) });
+      if (personality) say(`${customerId}:fumed`, personality, fumedLines[personality][rng() < 0.5 ? 0 : 1], 'ui-fumed', FUMED_MS);
     }),
+    // 입장 때 주문·빼 주세요·단체·VIP 대사를 한 번씩 말풍선으로 보여 준다.
+    ctx.bus.on('customer/entered', ({ customer }) =>
+      entryLines(customer, rng).forEach((text, i) => say(`${customer.id}:entry:${i}`, customer.personality, text, 'ui-entry', ENTRY_MS)),
+    ),
     () => [...fumed.keys()].forEach(removeFumed),
   );
 

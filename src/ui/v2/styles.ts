@@ -39,6 +39,17 @@ export const CSS_V2 = `
 .ui-ghost,.ui-mark{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.FLOAT}}
 .ui-ghost{width:44px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 2px #000a)}
 .ui-ghost svg{display:block}
+.ui-badges{position:fixed;left:0;top:0;display:flex;gap:4px;pointer-events:none;z-index:${Z.FLOAT};padding:2px 4px;border-radius:8px;background:#000a}
+.ui-badge{position:relative;display:inline-flex;align-items:center;gap:1px;font-size:12px;font-weight:700;color:#fff}
+.ui-badge-ico svg{width:24px;height:24px;display:block}
+.ui-badge-n{margin-left:1px}
+.ui-badge-ban{position:absolute;left:-2px;top:-2px;font-size:22px;line-height:1;opacity:.9}
+.ui-badge-crown{font-size:20px;line-height:1}
+.ui-rush{text-align:center;font-weight:900;font-size:16px;color:#fff;background:#d32f2f;border-bottom:3px solid #000;animation:ui-new-blink .8s steps(2) infinite;pointer-events:none}
+.ui-card.ui-order-ok{background:#e6ffe9}.ui-card.ui-order-fail{background:#ffe9e6}
+.ui-card.ui-allergy{background:#ffb3a8;color:#7a1008;font-weight:700}
+.ui-card.ui-report{background:#fff3c4}
+.ui-card.ui-rush-notice{background:#ffd9d9;color:#7a1008}
 .ui-tray-label{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.TRAY_LABEL};padding:1px 6px;border-radius:8px;background:#000a;color:#fff;font-size:11px;line-height:14px;white-space:nowrap}
 .ui-tray-label[hidden]{display:none}
 .ui-tray-label-selected{background:#ffeb3b;color:#000;font-weight:700}

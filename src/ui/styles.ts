@@ -12,6 +12,7 @@ export const CSS = `
 .ui-shake{animation:ui-shake .4s}
 .ui-bubble{position:absolute;height:52px;box-sizing:border-box;overflow:hidden;left:12px;right:12px;padding:5px 12px;background:#fff;color:#222;border-radius:10px;font-size:13px;line-height:1.25}
 .ui-bubble p{margin:1px 0 0}
+.ui-entry{background:#fff3c4;pointer-events:none}
 .ui-fumed{background:#ffe0dc;color:#7a1008;font-weight:700;pointer-events:none}
 .ui-timer{position:absolute;right:10px;top:6px;font-size:12px;color:#c62828}
 .ui-answer{position:absolute;box-sizing:border-box;font-size:14px}
