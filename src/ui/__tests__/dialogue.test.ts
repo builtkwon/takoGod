@@ -48,4 +48,18 @@ describe('답 버튼 배치', () => {
     expect(buttons).toHaveLength(2);
     for (const b of buttons) expect(overlaps(b.getBoundingClientRect(), fumed!.getBoundingClientRect())).toBe(false);
   });
+
+  it('reset하면 대화 말풍선·답 버튼·분노 말풍선이 모두 사라진다(다시 하기 뒤 이전 판 UI 잔존 방지)', () => {
+    vi.stubGlobal('document', { createElement: () => new FakeEl() });
+    const layer = new FakeEl();
+    layer.className = 'layer';
+    const bus = stubBus();
+    const d = createDialogues({ layer: layer as unknown as HTMLElement, bus, disposers: [], personalityOf: () => 'salaryman' }, [], () => []);
+    bus.emit('customer/fumed', { customerId: 'a' });
+    bus.emit('dialogue/started', { customerId: 'b', line: { personality: 'grandma', prompt: 'q', good: 'g', bad: 'b' } } as never);
+    const shown = (): number => layer.children.filter((c) => /ui-bubble|ui-answer/.test(c.className)).length;
+    expect(shown()).toBe(4); // 분노 말풍선 1 + 대화 말풍선 1 + 답 버튼 2
+    d.reset();
+    expect(shown()).toBe(0);
+  });
 });

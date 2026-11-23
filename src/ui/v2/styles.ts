@@ -38,6 +38,9 @@ export const CSS_V2 = `
 .ui-ghost svg{display:block}
 .ui-tray-label{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.TRAY_LABEL};padding:1px 6px;border-radius:8px;background:#000a;color:#fff;font-size:11px;line-height:14px;white-space:nowrap}
 .ui-tray-label[hidden]{display:none}
+.ui-tray-label-selected{background:#ffeb3b;color:#000;font-weight:700}
+.ui-tray-ring{position:fixed;left:0;top:0;width:38px;height:38px;box-sizing:border-box;border:3px solid #ffeb3b;border-radius:50%;box-shadow:0 0 8px #ffeb3b;pointer-events:none;z-index:${Z.TRAY_LABEL}}
+.ui-tray-ring[hidden]{display:none}
 .ui-mark{font-weight:900;font-size:30px;line-height:34px;white-space:nowrap;-webkit-text-stroke:5px #000;paint-order:stroke fill;text-shadow:0 2px 4px #000}
 .ui-mark-good{color:#7dff8a}.ui-mark-bad{color:#ff7a7a}.ui-mark-neutral{color:#fff}
 .ui-arrow{position:fixed;height:6px;margin-top:-3px;background:#ffeb3b;transform-origin:0 50%;pointer-events:none;animation:ui-pulse .7s infinite alternate}

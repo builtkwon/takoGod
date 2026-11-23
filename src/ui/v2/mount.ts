@@ -50,7 +50,15 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       ...box(picker.anchor({ kind: 'fune' }), FUNE_R),
     ];
   };
-  const dialogues = createDialogues({ layer, bus, disposers, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
+  /** 트레이 칸과 그 아래 이름표(최대 ~62px)를 덮는 영역. 말풍선이 가리면 안 된다. */
+  const trayObstacles = (): readonly Rect[] => {
+    const base = layer.getBoundingClientRect();
+    return getState().tray.flatMap((_, slot) => {
+      const p = picker.anchor({ kind: 'tray', slot });
+      return p ? [{ x: p.x - base.left - TRAY_R, y: p.y - base.top - TRAY_R, w: 2 * TRAY_R, h: TRAY_R + 62 }] : [];
+    });
+  };
+  const dialogues = createDialogues({ layer, bus, disposers, trayObstacles, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
   const top = el('div', 'ui-top');
   top.append(hud.root, bar.root); // 타이밍 바는 점수판 바로 아래
@@ -59,7 +67,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const prevTouch = root.style.touchAction;
   root.style.touchAction = 'none'; // 끌기 중 스크롤·확대 방지
 
-  disposers.push(bindFeedback(bus, picker, fx), bindReveal(layer, bus, getState), () => controller.dispose());
+  const reveal = bindReveal(layer, bus, getState);
+  disposers.push(bindFeedback(bus, picker, fx), reveal.dispose, () => controller.dispose());
 
   // 장면(3D 캔버스) 입력. ui-hit 요소 위의 입력은 DOM 쪽 몫이다.
   const pt = (e: PointerEvent): { x: number; y: number } => ({ x: e.clientX, y: e.clientY });
@@ -84,24 +93,39 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     const state = getState();
     bar.update(state);
     hud.update(state);
-    trayLabels.update(state);
+    trayLabels.update(state, controller.selected());
     dialogues.update(state);
     tutorial.update(state);
     raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);
 
+  /** 판 단위 UI(대화·분노 말풍선·점수 공개·판정 글자·점수 팝업·끌기)를 모두 비운다. 다시 하기·튜토리얼 재시작 때 쓴다. */
+  const reset = (): void => {
+    controller.cancel();
+    dialogues.reset();
+    reveal.reset();
+    fx.reset();
+    hud.reset();
+    controller.clearSelection();
+    newBest.reset();
+    gameOver.reset();
+  };
+
   return {
     title: (titleOpts) => {
       tutorial.setSuspended(true); // 시작 버튼을 누르기 전에는 튜토리얼 안내가 보이지 않는다
       return showIosInstall(layer)
         .then(() => showTitle(layer, opts?.versionLabel, titleOpts))
+        .then((choice) => {
+          if (choice === 'tutorial') reset(); // 튜토리얼 재시작: 이전 판 UI를 남기지 않는다
+          return choice;
+        })
         .finally(() => tutorial.setSuspended(false));
     },
     showResult: (result) =>
       showResult(layer, { ...result, shopScore: getState().shopScore, newBest: newBest.value(), gameOver: gameOver.value() }, opts?.versionLabel).then((choice) => {
-        newBest.reset(); // 다음 판에 "최고 기록!"이 남지 않게
-        gameOver.reset(); // 패배 표시도 다음 판에 남지 않게
+        reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!"·패배 표시가 새 판에 남지 않게
         return choice;
       }),
     destroy() {
