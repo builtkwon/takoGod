@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Material } from '../../contracts';
 import type { RollZone } from '../../contracts';
-import { BATTER, MARGARINE, fill, playUntilLevel, reach, reachDone, rollHole, setupV2, tickTo, tickUntilBar, tickUntilZone } from './helpers-v2';
+import { BATTER, MARGARINE, fill, playUntilLevel, reach, reachDone, rollHole, setupV2, tickTo, tickUntilZone } from './helpers-v2';
 
 describe('구멍 상태기계(GDD §굽기 상태 흐름)', () => {
   it('빈칸 → 기름칠 → 익힘 → (3초) 익힘 완료', () => {
@@ -269,23 +269,19 @@ describe('영역(1~5단계): 하나를 단계 동안 고정', () => {
     expect(h.zoneDraws()).toBe(1);
   });
 
-  it('단계가 바뀔 때마다 새로 한 번 뽑고 폭이 단계별이다(1·2단계 0.30, 3~5단계 0.24)', () => {
+  it('폭이 단계별이다(1·2단계 0.30, 3~5단계 0.24)', () => {
     const h = setupV2();
     const width = (): number => {
       reach(h, 15, 2);
       const z = h.hole(15).rollZone as RollZone;
       return z.to - z.from;
     };
-    expect(h.zoneDraws()).toBe(1);
     expect(width()).toBeCloseTo(0.3, 9);
     playUntilLevel(h, 2);
-    expect(h.zoneDraws()).toBe(2);
     expect(width()).toBeCloseTo(0.3, 9);
     playUntilLevel(h, 3);
-    expect(h.zoneDraws()).toBe(3);
     expect(width()).toBeCloseTo(0.24, 9);
     playUntilLevel(h, 5);
-    expect(h.zoneDraws()).toBe(5);
     expect(width()).toBeCloseTo(0.24, 9);
   });
 
@@ -344,43 +340,41 @@ describe('영역(1~5단계): 하나를 단계 동안 고정', () => {
   });
 });
 
-/** 6단계~: W1·W2 두 영역, 굴릴 때마다 다시 뽑고 중심 최소 거리가 있다. */
-describe('영역(6단계~): W1·W2, 굴릴 때마다 재추첨', () => {
-  // 1~5단계 시작에 5회, 6단계 시작에 W1·W2 2회를 쓴다.
-  const five = [0.5, 0.5, 0.5, 0.5, 0.5];
-  const atLevel6 = (zoneValues: readonly number[] = []) => {
-    const h = setupV2({ zoneValues: [...five, ...zoneValues] });
+/** 6단계~: W1·W2 두 영역. 단계 시작과 가게 점수 200점마다 함께 다시 뽑고(굴리기로는 바뀌지 않는다) 중심 최소 거리가 있다. */
+describe('영역(6단계~): W1·W2, 굴리기로는 바뀌지 않는다', () => {
+  const atLevel6 = () => {
+    const h = setupV2();
     playUntilLevel(h, 6);
     return h;
   };
 
-  it('단계 시작 때 W1 → W2 순으로 뽑는다(6단계 폭 W1 0.24, W2 0.20)', () => {
-    const h = atLevel6([0.1, 0.9]);
-    expect(h.zoneDraws()).toBe(7);
+  it('폭은 6단계 W1 0.24·W2 0.20이다', () => {
+    const h = atLevel6();
     reach(h, 0, 4);
     const w1 = h.hole(0).rollZone as RollZone;
-    expect(w1.from).toBeCloseTo(0.1 * 0.76, 9);
     expect(w1.to - w1.from).toBeCloseTo(0.24, 9);
-    rollHole(h, 0); // W1은 새로 뽑히지만 이 구멍은 이제 W2
+    rollHole(h, 0);
     const w2 = h.hole(0).rollZone as RollZone;
     expect(w2.to - w2.from).toBeCloseTo(0.2, 9);
-    expect(w2.from).toBeCloseTo(0.72, 9); // 난수 0.9, d=0: 중심 0.5 + (0.72 − 0.4) = 0.82
   });
 
-  it('굴리기 1마다 W1을, 굴리기 2마다 W2를 새로 뽑는다(적중·빗나감, 속 없음 굴리기 무관)', () => {
+  it('굴리기 1·2를 해도(적중·빗나감, 속 없음 굴리기 포함) 영역을 새로 뽑지 않고 구멍들이 같은 영역을 쓴다', () => {
     const h = atLevel6();
     reach(h, [0, 1, 2], 4);
     h.place(3, MARGARINE);
     h.place(3, BATTER);
     const base = h.zoneDraws();
+    const w1 = h.hole(1).rollZone;
     h.roll(0);
-    expect(h.zoneDraws()).toBe(base + 1);
-    h.roll(3); // 속재료 전 굴리기(속 없음)도 W1 1회
-    expect(h.zoneDraws()).toBe(base + 2);
+    h.roll(3); // 속재료 전 굴리기(속 없음)
+    expect(h.hole(1).rollZone).toEqual(w1); // 앞 구멍을 굴려도 W1 그대로
+    expect(h.hole(2).rollZone).toEqual(w1);
+    const w2 = h.hole(0).rollZone;
+    expect(h.hole(3).rollZone).toEqual(w2);
     h.roll(1);
-    expect(h.zoneDraws()).toBe(base + 3);
-    h.roll(0); // 굴리기 2: W2 1회
-    expect(h.zoneDraws()).toBe(base + 4);
+    h.roll(0); // 굴리기 2
+    expect(h.hole(3).rollZone).toEqual(w2); // W2도 그대로
+    expect(h.zoneDraws()).toBe(base);
   });
 
   it('barZones: 6단계는 shared=false이고 W1은 W1로 굴릴 구멍이, W2는 굴림 1 구멍이 있을 때만 보인다', () => {
@@ -396,16 +390,15 @@ describe('영역(6단계~): W1·W2, 굴릴 때마다 재추첨', () => {
     expect(z.shared).toBe(false);
   });
 
-  it('판정은 누르는 순간의 공용 영역이다: 앞 구멍을 굴려 W1이 바뀌면 뒤 구멍은 새 W1로 판정한다', () => {
-    // 재추첨 난수 0 → W1 0~0.24(왼쪽 끝). 바 0.5는 새 W1 밖이다.
-    const h = atLevel6([0.5, 0.5, 0]);
+  it('앞 구멍을 굴려도 W1이 바뀌지 않아 같은 바 위치에서 뒤 구멍도 같은 영역으로 판정한다', () => {
+    const h = atLevel6();
     reach(h, [0, 1], 4);
-    tickUntilBar(h, [0.49, 0.51]);
+    tickUntilZone(h, 0, true); // 두 구멍 모두 W1 안쪽
     h.roll(0);
     h.roll(1);
     expect(h.of('cook/rolled').slice(-2)).toEqual([
       { hole: 0, hit: true },
-      { hole: 1, hit: false },
+      { hole: 1, hit: true },
     ]);
   });
 

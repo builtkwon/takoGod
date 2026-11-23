@@ -83,6 +83,8 @@ const TASTE_KINDS: readonly TasteKind[] = ['no-filling', 'trap', 'dark', 'roll-m
 /** 얼굴 단계 경계(경과 비율). */
 const ANNOYED_AT = 0.5;
 const ANGRY_AT = 0.8;
+/** 가게 점수가 이 값의 배수 경계를 넘을 때마다 타이밍 영역을 다시 뽑는다. */
+const ZONE_SCORE_STEP = 200;
 const FACES: readonly PatienceLevel[] = ['normal', 'annoyed', 'angry'];
 
 interface Hole {
@@ -140,6 +142,8 @@ export class GameV2 {
   /** 판 시작 때 읽은 최고 가게 점수(진행 중 불변). */
   private readonly best: number | null;
   private shopScore = 0;
+  /** 영역을 마지막으로 교체했을 때의 가게 점수 구간(floor(점수 / 200)). */
+  private zoneBand = 0;
   private combo = 0;
   /** 후네 각 알의 굴리기 적중 수(0~2). fune과 같은 순서. */
   private funeHits: number[] = [];
@@ -387,14 +391,9 @@ export class GameV2 {
   }
 
   private doRoll(index: number, hole: Hole, nth: 0 | 1): void {
-    // 판정은 누르는 순간의 공용 영역으로 하고, 그 뒤 쓴 영역을 새로 뽑는다(적중·빗나감 무관).
+    // 판정은 누르는 순간의 공용 영역으로 한다. 영역은 굴려도 바뀌지 않고 단계 시작·가게 점수 경계에서만 다시 뽑는다.
     const hit = inZone(trianglePosition(this.barCycles), nth === 0 || this.sharedZone ? this.zoneW1 : this.zoneW2);
     hole.rollHits[nth] = hit;
-    // 6단계부터는 굴릴 때마다 쓴 영역을 새로 뽑는다. 1~5단계는 단계 동안 고정이다.
-    if (difficulty(this.level).twoZones && this.level > 0) {
-      if (nth === 0) this.zoneW1 = this.drawTwoZone('w1');
-      else this.zoneW2 = this.drawTwoZone('w2');
-    }
     hole.stage = nth === 0 ? 'rolled' : 'done';
     if (nth === 1) hole.burnElapsed = 0;
     this.bus.emit('cook/rolled', { hole: index, hit });
@@ -563,6 +562,12 @@ export class GameV2 {
     this.combo = r.combo;
     this.shopScore += r.points;
     this.bus.emit('score/plate', { customerId, points: r.points, hits, combo: r.combo, multiplier: r.multiplier });
+    // 가게 점수가 200의 배수 경계를 넘으면(한 접시로 여러 개를 넘어도 한 번) score/plate 직후 영역을 다시 뽑는다.
+    const band = Math.floor(this.shopScore / ZONE_SCORE_STEP);
+    if (band > this.zoneBand) {
+      this.zoneBand = band;
+      this.redrawZones();
+    }
   }
 
   private afterPlate(): void {
@@ -582,6 +587,24 @@ export class GameV2 {
     }
   }
 
+  /**
+   * 현재 단계 규칙으로 영역을 뽑는다. 튜토리얼은 고정, 1~5단계는 영역 1개(굴리기 1·2 공용), 6단계부터 W1 → W2 순서다.
+   * 부르는 때: 단계가 시작될 때(폭이 바뀐다)와 가게 점수가 200의 배수 경계를 넘을 때.
+   */
+  private redrawZones(): void {
+    const d = difficulty(this.level);
+    if (this.level === 0) {
+      this.zoneW1 = TUTORIAL_ZONE;
+      this.zoneW2 = TUTORIAL_ZONE;
+    } else if (!d.twoZones) {
+      this.zoneW1 = drawZone(d.w1, this.rng);
+      this.zoneW2 = this.zoneW1;
+    } else {
+      this.zoneW1 = this.drawTwoZone('w1');
+      this.zoneW2 = this.drawTwoZone('w2');
+    }
+  }
+
   /** 두 영역 단계(6~)의 영역을 뽑는다. 폭과 중심 최소 거리는 난이도 곡선을 따른다. */
   private drawTwoZone(which: 'w1' | 'w2'): RollZone {
     const d = difficulty(this.level);
@@ -593,18 +616,7 @@ export class GameV2 {
     this.plates = 0;
     this.guests = [];
     this.spawnTimers = phaseConfig(level).dialogueIntervalsSec.map((_, slot) => (slot === 0 ? 0 : SECOND_CUSTOMER_DELAY_SEC));
-    const d = difficulty(level);
-    if (level === 0) {
-      this.zoneW1 = TUTORIAL_ZONE;
-      this.zoneW2 = TUTORIAL_ZONE;
-    } else if (!d.twoZones) {
-      // 1~5단계: 영역 하나를 단계 시작 때 한 번 뽑아 굴리기 1·2가 함께 쓴다.
-      this.zoneW1 = drawZone(d.w1, this.rng);
-      this.zoneW2 = this.zoneW1;
-    } else {
-      this.zoneW1 = this.drawTwoZone('w1');
-      this.zoneW2 = this.drawTwoZone('w2');
-    }
+    this.redrawZones();
     this.bus.emit('phase/changed', { phase: this.phase, level });
     this.tickSpawns(0);
   }
