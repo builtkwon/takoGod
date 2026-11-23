@@ -24,7 +24,7 @@ const HOLE_R = 46;
 const TRAY_R = 36;
 const FUNE_R = 70;
 
-export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => GameStateV2, picker: ScenePicker): UiHandle {
+export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => GameStateV2, picker: ScenePicker, opts?: { readonly versionLabel?: string }): UiHandle {
   const layer = el('div', 'ui-layer');
   const style = el('style', '', CSS + CSS_V2);
   const disposers: (() => void)[] = [];
@@ -92,8 +92,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   raf = requestAnimationFrame(frame);
 
   return {
-    title: () => showIosInstall(layer).then(() => showTitle(layer)),
-    showResult: (result) => showResult(layer, { ...result, shopScore: getState().shopScore, newBest }),
+    title: () => showIosInstall(layer).then(() => showTitle(layer, opts?.versionLabel)),
+    showResult: (result) => showResult(layer, { ...result, shopScore: getState().shopScore, newBest }, opts?.versionLabel),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);

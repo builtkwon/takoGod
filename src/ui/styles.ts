@@ -19,6 +19,7 @@ export const CSS = `
 .ui-card{background:#fff;color:#222;border-radius:12px;padding:12px 16px;max-width:80%}
 .ui-toasts{position:absolute;left:0;right:0;bottom:200px;display:flex;flex-direction:column-reverse;align-items:center;gap:6px}
 .ui-stars{color:#ffb300;font-size:24px}
+.ui-version{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:12px;color:#fff8;user-select:text;-webkit-user-select:text}
 .ui-score{font-size:56px;font-weight:700}
 @keyframes ui-shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 `;
