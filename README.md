@@ -1,6 +1,6 @@
 # takoyaki-truck
 
-모바일 세로화면 PWA 타코야끼 굽기 게임(Vite + TypeScript + Three.js). 설계: [docs/GDD.md](docs/GDD.md). 작업 안내: [AGENTS.md](AGENTS.md).
+모바일 세로화면 PWA 타코야끼 굽기 게임(Vite + TypeScript + Three.js). 설계: [docs/GDD.md](docs/GDD.md). 작업 안내: [AGENTS.md](AGENTS.md). 버전·릴리스: [versioning.md](docs/rules/collaboration/versioning.md).
 
 ## 구현 상태
 

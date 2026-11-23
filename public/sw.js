@@ -1,5 +1,5 @@
 // 최소 서비스 워커. 라이브러리 없음.
-// CACHE 이름은 sw.js 로직이나 STATIC 구성이 바뀔 때만 올린다(activate가 옛 이름 캐시를 지운다). 빌드 해시 변경은 올리지 않는다.
+// CACHE 이름은 sw.js 로직이나 STATIC 구성이 바뀔 때만 올린다(activate가 옛 이름 캐시를 지운다). 빌드 해시 변경은 올리지 않는다. 규칙: docs/rules/collaboration/versioning.md#sw-캐시-이름
 // 자산 정리 방식: 셸 HTML(./)이 참조하지 않는 /assets/ 항목을 새 셸을 받을 때마다 지운다.
 // 이유: 배포마다 sw.js 바이트가 같아 SW가 갱신되지 않으므로 install·activate에 정리를 걸 수 없고, 새 셸을 받는 내비게이션이 유일하게 확실한 시점이다.
 const CACHE = 'takoyaki-v3';

@@ -16,6 +16,7 @@
 | | [collaboration/review.md](collaboration/review.md) | 리뷰 종류·조건, 체크 5항목, 증거, 영수증 표기, 대화 한도 |
 | | [collaboration/ai-execution.md](collaboration/ai-execution.md) | 자동 수정 한도 |
 | | [collaboration/commits.md](collaboration/commits.md) | 커밋 타입·승인 |
+| | [collaboration/versioning.md](collaboration/versioning.md) | 앱 버전·릴리스·CHANGELOG·저장 형식 version |
 
 게임 규칙과 수치는 [GDD](../GDD.md)가 원본이다. 이 폴더에 수치를 옮겨 쓰지 않는다.
 
