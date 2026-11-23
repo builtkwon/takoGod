@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { customerEnteredAt, makePlate, playToEnd, playUntilLevel, setupV2, tickTo } from './helpers-v2';
+import { controlled, customerEnteredAt, makePlate, playToEnd, playUntilLevel, setupV2, tickTo } from './helpers-v2';
 
 describe('무한 단계(GDD §진행)', () => {
   it('튜토리얼은 0단계(phase tutorial), 본게임은 1단계부터(phase main)이고 단계 전환마다 phase/changed에 level이 실린다', () => {
@@ -117,16 +117,40 @@ describe('패배: 화난 손님 4명(GDD §진행)', () => {
     expect(h.bestStore.load()).toBe(score);
   });
 
-  it('같은 틱에 두 손님이 한계를 넘겨도 game-over는 한 번이다', () => {
-    // 5단계에서 손님 2명이 동시에 화나게 둔다. 4명 한도를 3·4번째가 같은 틱에 채운다.
-    const h = setupV2();
-    playUntilLevel(h, 5);
-    tickTo(h, h.now + 45); // 2명
-    expect(h.game.state.fumedCount).toBe(2);
-    makePlate(h); // 1명 서빙, 새 손님 입장
-    makePlate(h);
+  it('같은 틱에 두 손님이 인내 100%에 닿아 한계를 채워도 game-over는 한 번이고 그 뒤 이벤트가 없다', () => {
+    // 2단계에서 손님 둘이 차례로 화나 2명을 채운 뒤, 3단계 두 손님(3초 간격 입장)의 인내를 30초·27초로 맞춰 같은 틱에 닿게 한다.
+    const c = controlled(0.5); // 인내 20 + 0.5 × 20 = 30초
+    const h = setupV2({ rng: c.rng });
+    playUntilLevel(h, 2);
     tickTo(h, h.now + 45);
-    expect(h.of('session/game-over').length).toBeLessThanOrEqual(1);
-    expect(h.game.state.fumedCount).toBeLessThanOrEqual(4);
+    makePlate(h); // 첫 손님 서빙
+    tickTo(h, h.now + 45); // 두 번째 손님도 화남
+    expect(h.game.state.fumedCount).toBe(2);
+    makePlate(h); // 3단계 시작, 손님3 입장(인내 30초)
+    expect(h.game.state.level).toBe(3);
+    const t3 = customerEnteredAt(h, h.of('customer/entered').length - 1);
+    c.set(0.35); // 손님4 인내 20 + 0.35 × 20 = 27초: 입장 3초 + 27초 = 손님3과 같은 시각
+    tickTo(h, t3 + 3.1);
+    c.set(null);
+    // 전제: 두 손님이 있고 아직 아무도 더 화나지 않았다.
+    expect(h.game.state.customers).toHaveLength(2);
+    expect(h.game.state.fumedCount).toBe(2);
+    expect(h.game.finished).toBe(false);
+
+    tickTo(h, t3 + 40);
+
+    const fumed = h.log.filter((r) => r.type === 'customer/fumed');
+    expect(fumed).toHaveLength(4);
+    expect(fumed[2]?.t).toBe(fumed[3]?.t); // 같은 틱
+    expect(h.of('session/game-over')).toEqual([{ reason: 'fumed', fumedCount: 4 }]);
+    expect(h.game.state.fumedCount).toBe(4);
+    expect(h.game.finished).toBe(true);
+    const types = h.log.map((r) => r.type);
+    const over = types.indexOf('session/game-over');
+    expect(types.slice(over - 2, over)).toEqual(['customer/fumed', 'customer/fumed']);
+    expect(types.slice(over + 1)).toEqual(['score/new-best']); // 최고 기록 갱신 말고는 없다
+    const n = h.log.length;
+    h.tick(120);
+    expect(h.log.length).toBe(n);
   });
 });
