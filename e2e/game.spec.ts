@@ -258,6 +258,34 @@ test('새로고침 복원: finished 저장값이면 결과 화면을 다시 보�
 
 const PROFILE_KEY = 'takoyaki:profile';
 
+test('결과 화면 다시 하기: 새 판이 1단계·점수 0·리뷰 0으로 시작하고 최고 기록은 유지된다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  const reviews = [{ source: 'customer', stars: 3, comment: '무난', personality: 'gourmet' }];
+  await page.evaluate(
+    ([k, r, b, pk]) => {
+      sessionStorage.setItem(k as string, JSON.stringify({ version: 1, tutorialCompleted: true, finished: true, reviews: r }));
+      localStorage.setItem(b as string, '{"version":1,"best":1234}');
+      localStorage.setItem(pk as string, '{"version":1,"tutorialCompleted":true}');
+    },
+    [KEY, reviews, BEST_KEY, PROFILE_KEY],
+  );
+  await page.reload();
+  await page.clock.resume();
+  await page.getByRole('button', { name: '시작' }).click();
+  await expect(page.getByRole('heading', { name: '오늘의 결과' })).toBeVisible();
+  await page.getByRole('button', { name: '다시 하기' }).click();
+  await expect(page.getByRole('heading', { name: '오늘의 결과' })).toBeHidden();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  await expect(page.locator('.ui-hud-score')).toHaveText('0');
+  await expect(page.locator('.ui-hud2')).not.toContainText('튜토리얼');
+  const saved = await page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) ?? 'null'), KEY);
+  expect(saved?.finished).not.toBe(true);
+  expect(saved?.reviews ?? []).toHaveLength(0);
+  expect(await page.evaluate((k) => localStorage.getItem(k), BEST_KEY)).toBe('{"version":1,"best":1234}');
+  expect(errors).toEqual([]);
+});
+
 test('튜토리얼 완료 기억: 완료하면 profile이 쓰이고, 세션 저장값이 없는 새 탭은 튜토리얼 없이 1단계에 리뷰 0이다', async ({ page }) => {
   const errors = collectErrors(page);
   await start(page);

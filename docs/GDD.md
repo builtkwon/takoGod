@@ -7,6 +7,7 @@
 - 모바일 세로화면 PWA, 정적 배포(Cloudflare Pages). 백엔드·계정 없음.
 - 세션 점수 = 받은 리뷰 별점의 평균. sessionStorage 저장(탭 종료 시 초기화).
 - 가게 점수 = 별점과 별개의 상한 없는 점수(§가게 점수). 최고 가게 점수만 localStorage 키 `takoyaki:best`에 영구 저장한다. 값은 JSON `{version: 1, best: number}`이고 손상된 값(파싱 실패, version 불일치, best가 유한한 0 이상의 수가 아님)은 버린다(기록 없음) → [ADR 0004](adr/0004-best-shop-score-storage.md). 최고 기록은 세션이 끝날 때(결과 화면 도달) max로 갱신한다.
+- 결과 화면의 "다시 하기"는 이번 판 기록(리뷰·별점·가게 점수)을 지우고 1단계부터 새 판을 시작한다. 최고 기록과 튜토리얼 완료는 유지한다.
 - 튜토리얼 완료 여부는 기기에 기억한다. localStorage 키 `takoyaki:profile`, 값은 JSON `{version: 1, tutorialCompleted: true}`이고 손상된 값은 버린다 → [ADR 0005](adr/0005-profile-storage.md). 이번 판 점수·리뷰는 아래 sessionStorage 그대로다.
 - sessionStorage 키 `takoyaki:session`, 값은 JSON `{version: 1, tutorialCompleted, finished, reviews: ReviewResult[]}`(contracts `SessionSnapshot`) → [ADR 0002](adr/0002-session-storage.md). `reviews`는 contracts `ReviewResult`(source, stars, comment, personality)를 그대로 직렬화하고, 튜토리얼 리뷰의 personality는 null이다.
 - 복원: 파싱 실패나 version이 1이 아니면 값을 버리고 새로 시작한다. `finished`가 true면 결과 화면을 다시 보여준다. 본게임 도중 새로고침하면 본게임 P1부터 다시 시작하고 튜토리얼 리뷰만 남긴다.

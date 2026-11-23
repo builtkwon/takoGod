@@ -73,7 +73,17 @@ function frame(now: number): void {
   renderer.renderV2(state, now);
   if (g.finished && !resultShown) {
     resultShown = true;
-    ui.showResult({ average: state.sessionAverage, reviews: state.reviews });
+    void ui.showResult({ average: state.sessionAverage, reviews: state.reviews }).then(() => {
+      // 다시 하기: 세션 저장값을 지우고 새 판. 튜토리얼 완료 기기이므로 withProfile 대체값으로 P1부터 시작한다(리뷰 0). best·profile은 그대로.
+      try {
+        sessionStorage.removeItem(SESSION_KEY);
+      } catch {
+        // 접근 불가여도 아래 store가 load를 비워 profile 대체값(없으면 튜토리얼)으로 시작한다.
+      }
+      game = newGame(sessionStore); // 이전 GameV2 구독은 newGame이 해제한다.
+      resultShown = false;
+      last = performance.now(); // 결과 화면 동안 쌓인 시간이 큰 dt로 들어가지 않게
+    });
   }
   requestAnimationFrame(frame);
 }
