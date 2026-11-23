@@ -7,6 +7,8 @@ import type { Pt } from './controller';
 
 export interface TutorialViewV2 {
   update(state: GameStateV2): void;
+  /** 타이틀 화면 등 오버레이가 덮는 동안 안내·화살표·동작 문구·경고를 숨긴다. */
+  setSuspended(suspended: boolean): void;
 }
 
 const WARNING_MS = 2000;
@@ -29,6 +31,7 @@ export function createTutorialView(
   arrow.hidden = true;
   layer.append(guide, warning, arrow, hint);
 
+  let suspended = false;
   let warningTimer: ReturnType<typeof setTimeout> | undefined;
   disposers.push(
     bus.on('tutorial/invalid-action', () => {
@@ -46,8 +49,12 @@ export function createTutorialView(
   );
 
   return {
+    setSuspended(v) {
+      suspended = v;
+      if (v) warning.hidden = true;
+    },
     update(state) {
-      const stage = state.phase === 'tutorial' ? state.tutorialStage : null;
+      const stage = !suspended && state.phase === 'tutorial' ? state.tutorialStage : null;
       guide.hidden = stage === null;
       guide.textContent = stage ? (tutorialStepsV2.find((s) => s.stage === stage)?.message ?? '') : '';
       const a = stage ? tutorialArrow(stage, state, picker, buckets) : null;

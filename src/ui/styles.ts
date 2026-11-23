@@ -1,4 +1,6 @@
 // 오버레이 스타일. 레이어는 입력을 통과시키고 .ui-hit 요소만 입력을 받는다(아래 렌더 캔버스 입력 보호).
+import { Z } from './z';
+
 export const CSS = `
 .ui-layer{position:absolute;inset:0;pointer-events:none;font-family:system-ui,sans-serif;color:#fff;overflow:hidden;user-select:none}
 .ui-hit{pointer-events:auto}
@@ -13,7 +15,7 @@ export const CSS = `
 .ui-fumed{background:#ffe0dc;color:#7a1008;font-weight:700;pointer-events:none}
 .ui-timer{position:absolute;right:10px;top:6px;font-size:12px;color:#c62828}
 .ui-answer{position:absolute;box-sizing:border-box;font-size:14px}
-.ui-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000c;text-align:center}
+.ui-overlay{position:absolute;z-index:${Z.OVERLAY};inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000c;text-align:center}
 .ui-title h1{font-size:40px;margin:0}
 .ui-big{font-size:22px;padding:12px 36px!important}
 .ui-card{background:#fff;color:#222;border-radius:12px;padding:12px 16px;max-width:80%}

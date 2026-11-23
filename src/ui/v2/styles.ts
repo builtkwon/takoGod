@@ -1,4 +1,6 @@
 // 굽기 조작 개편 오버레이 스타일(기본 CSS 뒤에 붙인다). 끌기·연출 요소는 viewport 좌표를 쓰므로 position:fixed다.
+import { Z } from '../z';
+
 export const CSS_V2 = `
 .ui-top{position:absolute;top:0;left:0;right:0}
 .ui-bar{position:relative;height:44px;background:#1b1b1b;border-bottom:3px solid #000;box-shadow:inset 0 0 0 2px #888;box-sizing:border-box}
@@ -17,7 +19,7 @@ export const CSS_V2 = `
 .ui-hud-score.ui-bump{animation:ui-bump .3s ease-out}
 .ui-hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 .ui-hud-reviews{font-size:11px;opacity:.8}
-.ui-score-pop{position:absolute;left:50%;top:100%;transform:translateX(-50%);z-index:12;display:flex;flex-direction:column;align-items:center;pointer-events:none;white-space:nowrap;color:#ffeb3b;font-weight:900;font-size:22px;-webkit-text-stroke:4px #000;paint-order:stroke fill;animation:ui-pop 1.3s ease-out forwards}
+.ui-score-pop{position:absolute;left:50%;top:100%;transform:translateX(-50%);z-index:${Z.SCORE_POP};display:flex;flex-direction:column;align-items:center;pointer-events:none;white-space:nowrap;color:#ffeb3b;font-weight:900;font-size:22px;-webkit-text-stroke:4px #000;paint-order:stroke fill;animation:ui-pop 1.3s ease-out forwards}
 .ui-score-combo{font-size:15px;color:#7dff8a}
 .ui-shop-score{font-size:36px;font-weight:900}
 .ui-new-best{font-size:28px;font-weight:900;color:#ffeb3b;animation:ui-new-blink .6s steps(2) infinite}
@@ -27,10 +29,10 @@ export const CSS_V2 = `
 .ui-bucket{position:absolute;top:42%;width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-size:13px;font-weight:700;touch-action:none}
 .ui-bucket-margarine{left:6px;background:#f2d56b;color:#442}
 .ui-bucket-batter{right:6px;background:#e9dfc0;color:#442}
-.ui-ghost,.ui-mark{position:fixed;left:0;top:0;pointer-events:none;z-index:10}
+.ui-ghost,.ui-mark{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.FLOAT}}
 .ui-ghost{width:44px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 2px #000a)}
 .ui-ghost svg{display:block}
-.ui-tray-label{position:fixed;left:0;top:0;pointer-events:none;z-index:5;padding:1px 6px;border-radius:8px;background:#000a;color:#fff;font-size:11px;line-height:14px;white-space:nowrap}
+.ui-tray-label{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.TRAY_LABEL};padding:1px 6px;border-radius:8px;background:#000a;color:#fff;font-size:11px;line-height:14px;white-space:nowrap}
 .ui-tray-label[hidden]{display:none}
 .ui-mark{font-weight:900;font-size:30px;line-height:34px;white-space:nowrap;-webkit-text-stroke:5px #000;paint-order:stroke fill;text-shadow:0 2px 4px #000}
 .ui-mark-good{color:#7dff8a}.ui-mark-bad{color:#ff7a7a}.ui-mark-neutral{color:#fff}
@@ -40,7 +42,7 @@ export const CSS_V2 = `
 .ui-reveal{position:absolute;top:152px;left:12px;right:12px;max-width:none;text-align:left}
 .ui-reveal p{margin:4px 0}
 @keyframes ui-bar-flash{0%{background:#fff;box-shadow:0 0 0 6px #fff,0 0 18px 6px #ffeb3b;transform:scaleY(1.25)}60%{background:#ffeb3b}100%{transform:scaleY(1)}}
-.ui-arrow-label{position:fixed;left:0;top:0;pointer-events:none;z-index:6;padding:3px 10px;border-radius:12px;background:#000c;border:2px solid #ffeb3b;color:#fff;font-size:15px;font-weight:700;white-space:nowrap}
+.ui-arrow-label{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.ARROW_LABEL};padding:3px 10px;border-radius:12px;background:#000c;border:2px solid #ffeb3b;color:#fff;font-size:15px;font-weight:700;white-space:nowrap}
 .ui-star-row{display:inline-flex;gap:1px;font-size:18px;line-height:1}
 .ui-star{position:relative;display:inline-block;color:#555}
 .ui-star::before{content:'★';position:absolute;left:0;top:0;width:0;overflow:hidden;color:#ffb300}
