@@ -202,6 +202,7 @@ test('튜토리얼 한 판을 끝내면 5★ 리뷰가 저장된다', async ({ p
   const errors = collectErrors(page);
   await start(page);
   await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
+  await expect(page.locator('.ui-hud2')).not.toContainText('😠');
 
   await playTutorial(page);
 
@@ -252,7 +253,7 @@ test('새로고침 복원: finished 저장값이면 결과 화면을 다시 보�
   await page.evaluate(([k, r]) => sessionStorage.setItem(k as string, JSON.stringify({ version: 1, tutorialCompleted: true, finished: true, reviews: r })), [KEY, reviews]);
   await page.reload();
   await page.getByRole('button', { name: '시작' }).click();
-  await expect(page.getByRole('heading', { name: '오늘의 결과' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '영업 종료' })).toBeVisible();
   await expect(page.getByText('받은 리뷰 2개')).toBeVisible();
 });
 
@@ -273,9 +274,9 @@ test('결과 화면 다시 하기: 새 판이 1단계·점수 0·리뷰 0으로 
   await page.reload();
   await page.clock.resume();
   await page.getByRole('button', { name: '시작' }).click();
-  await expect(page.getByRole('heading', { name: '오늘의 결과' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '영업 종료' })).toBeVisible();
   await page.getByRole('button', { name: '다시 하기' }).click();
-  await expect(page.getByRole('heading', { name: '오늘의 결과' })).toBeHidden();
+  await expect(page.getByRole('heading', { name: '영업 종료' })).toBeHidden();
   await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
   await expect(page.locator('.ui-hud-score')).toHaveText('0');
   await expect(page.locator('.ui-hud2')).not.toContainText('튜토리얼');
