@@ -48,14 +48,14 @@ describe('placeAnswerButtons', () => {
 
 describe('bubbleTop: 말풍선은 트레이를 가리지 않는다', () => {
   const tray: Rect = { x: 20, y: 200, w: 300, h: 70 };
-  it('트레이가 없으면 기존 자리(120 + slot*84)', () => {
+  it('트레이가 없으면 자리(120 + slot*60)', () => {
     expect(bubbleTop(0, 390, [])).toBe(120);
-    expect(bubbleTop(1, 390, [])).toBe(204);
+    expect(bubbleTop(1, 390, [])).toBe(180);
   });
   it('트레이와 겹치는 자리는 건너뛰고, 어떤 slot도 트레이와 겹치지 않는다', () => {
     for (let slot = 0; slot < 4; slot++) {
       const t = bubbleTop(slot, 390, [tray]);
-      expect(overlaps({ x: 0, y: t, w: 390, h: 76 }, tray)).toBe(false);
+      expect(overlaps({ x: 0, y: t, w: 390, h: 52 }, tray)).toBe(false);
     }
     expect(bubbleTop(1, 390, [tray])).toBeGreaterThan(bubbleTop(0, 390, [tray]));
   });
@@ -64,11 +64,11 @@ describe('bubbleTop: 말풍선은 트레이를 가리지 않는다', () => {
     const tray320: Rect = { x: 10, y: 300, w: 300, h: 98 }; // 트레이+이름표가 가운데를 막음
     for (let slot = 0; slot < 6; slot++) {
       const t = bubbleTop(slot, 320, [tray320], 568);
-      expect(t + 76).toBeLessThanOrEqual(568);
+      expect(t + 52).toBeLessThanOrEqual(568);
       expect(t).toBeGreaterThanOrEqual(0);
     }
     // 아래쪽 자리는 막혀도 트레이 위쪽에서 가장 가까운 자리를 쓴다
-    expect(bubbleTop(5, 320, [tray320], 568) + 76).toBeLessThanOrEqual(300);
+    expect(bubbleTop(5, 320, [tray320], 568) + 52).toBeLessThanOrEqual(300);
   });
 });
 

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Personality, TasteKind, TutorialStage } from '../../contracts';
-import { dialogues, fumedLines, hudText, reviewComments, tasteLines, tutorialArrowHints, tutorialReviewComment, tutorialStepsV2 } from '../index';
+import { dialogues, fumedLines, hudText, reviewComments, tasteLines, tutorialArrowHints, tutorialReviewComment, tutorialTapHint, tutorialStepsV2 } from '../index';
 
 const PERSONALITIES: readonly Personality[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 
@@ -66,7 +66,8 @@ describe('굽기 개편 콘텐츠(GDD §콘텐츠)', () => {
   });
 
   it('튜토리얼 화살표 동작 문구와 표기: 버터(마가린 표기 없음)', () => {
-    expect(tutorialArrowHints).toEqual({ margarine: '끌어서 바르기', batter: '끌어서 붓기', filling: '끌어서 넣기' });
+    expect(tutorialArrowHints).toEqual({ margarine: '끌어서 바르기', batter: '끌어서 붓기' }); // 속재료는 탭 방식이라 끌기 문구가 없다
+    expect(tutorialTapHint).toBe('탭');
     for (const s of tutorialStepsV2) expect(s.message).not.toContain('마가린');
   });
 

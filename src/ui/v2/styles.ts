@@ -13,6 +13,9 @@ export const CSS_V2 = `
 .ui-hud-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:8px}
 .ui-hud-left{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-weight:700}
 .ui-hud-best-row{display:flex;align-items:center;gap:6px}
+.ui-hud-sub-row{display:flex;align-items:center;gap:10px}
+.ui-layer .ui-hud-restart{position:relative;font-size:11px;padding:1px 8px;border-radius:10px;border-width:1px;background:#000a;line-height:16px}
+.ui-hud-restart::after{content:'';position:absolute;inset:-14px -8px}
 .ui-hud-fumed{font-size:12px;display:inline-block}
 .ui-hud-fumed.ui-dim{opacity:.4}
 .ui-hud-fumed.ui-shake-s{animation:ui-shake-s .4s}
@@ -49,6 +52,8 @@ export const CSS_V2 = `
 .ui-reveal{position:absolute;top:var(--ui-reveal-top,152px);left:12px;right:12px;max-width:none;text-align:left}
 .ui-reveal p{margin:4px 0}
 @keyframes ui-bar-flash{0%{background:#fff;box-shadow:0 0 0 6px #fff,0 0 18px 6px #ffeb3b;transform:scaleY(1.25)}60%{background:#ffeb3b}100%{transform:scaleY(1)}}
+.ui-tap-ring{position:fixed;left:0;top:0;width:46px;height:46px;box-sizing:border-box;border:4px solid #ffeb3b;border-radius:50%;pointer-events:none;z-index:${Z.ARROW_LABEL};animation:ui-tap-pulse .7s infinite alternate}
+.ui-tap-ring[hidden]{display:none}
 .ui-arrow-label{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.ARROW_LABEL};padding:3px 10px;border-radius:12px;background:#000c;border:2px solid #ffeb3b;color:#fff;font-size:15px;font-weight:700;white-space:nowrap}
 .ui-star-row{display:inline-flex;gap:1px;font-size:18px;line-height:1}
 .ui-star{position:relative;display:inline-block;color:#555}
@@ -62,6 +67,7 @@ export const CSS_V2 = `
 @keyframes ui-bump{40%{transform:scale(1.35)}}
 @keyframes ui-pop{0%{opacity:0;transform:translate(-50%,0)}15%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translate(-50%,18px)}}
 @keyframes ui-shake-s{20%{transform:translateX(-5px)}60%{transform:translateX(5px)}}
+@keyframes ui-tap-pulse{to{box-shadow:0 0 0 8px #ffeb3b88;opacity:.6}}
 @keyframes ui-pulse{to{opacity:.45}}
 @keyframes ui-arrow-shake{25%{translate:-8px 0}75%{translate:8px 0}}
 `;
