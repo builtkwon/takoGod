@@ -4,7 +4,7 @@ import type { EventBus, GameStateV2, ScenePicker } from '../../contracts';
 import { createDialogues } from '../dialogue';
 import { el } from '../dom';
 import { showIosInstall } from '../install';
-import type { Rect } from '../layout';
+import { topStack, type Rect } from '../layout';
 import { showResult, showTitle } from '../screens';
 import { CSS } from '../styles';
 import type { UiHandle } from '../handle';
@@ -57,7 +57,8 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       return p ? [{ x: p.x - base.left - TRAY_R, y: p.y - base.top - TRAY_R, w: 2 * TRAY_R, h: TRAY_R + 62 }] : [];
     });
   };
-  const dialogues = createDialogues({ layer, bus, disposers, trayObstacles, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
+  const topBottom = (): number => top.getBoundingClientRect().bottom - layer.getBoundingClientRect().top;
+  const dialogues = createDialogues({ layer, bus, disposers, trayObstacles, topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
   const top = el('div', 'ui-top');
   top.append(hud.root, bar.root); // 타이밍 바는 점수판 바로 아래
@@ -88,9 +89,21 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   document.addEventListener('visibilitychange', onHidden);
 
   let raf = 0;
+  // 상단 고정 요소(안내·경고·점수 공개 카드)는 HUD+바 묶음의 실제 아래쪽 기준으로 놓는다(바 높이가 바뀌어도 가리지 않게).
+  let topKey = -1;
+  const syncTopStack = (): void => {
+    const b = Math.ceil(topBottom());
+    if (b === topKey) return;
+    topKey = b;
+    const s = topStack(b);
+    layer.style.setProperty('--ui-guide-top', `${s.guide}px`);
+    layer.style.setProperty('--ui-warning-top', `${s.warning}px`);
+    layer.style.setProperty('--ui-reveal-top', `${s.reveal}px`);
+  };
   const frame = (): void => {
     const state = getState();
     bar.update(state);
+    syncTopStack();
     hud.update(state);
     trayLabels.update(state, controller.selected());
     dialogues.update(state);

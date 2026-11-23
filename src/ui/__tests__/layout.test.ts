@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bubbleTop, overlaps, placeAnswerButtons, type Rect } from '../layout';
+import { topStack, bubbleTop, overlaps, placeAnswerButtons, type Rect } from '../layout';
 
 // 시드 고정 난수(mulberry32)
 function seeded(seed: number): () => number {
@@ -69,5 +69,16 @@ describe('bubbleTop: 말풍선은 트레이를 가리지 않는다', () => {
     }
     // 아래쪽 자리는 막혀도 트레이 위쪽에서 가장 가까운 자리를 쓴다
     expect(bubbleTop(5, 320, [tray320], 568) + 76).toBeLessThanOrEqual(300);
+  });
+});
+
+describe('topStack: 상단 묶음 아래에 쌓는다', () => {
+  it('묶음 아래쪽이 커져도 안내·경고·카드·말풍선이 그 아래에서 시작하고 서로 겹치지 않는 순서다', () => {
+    for (const bottom of [104, 118.4, 140]) {
+      const s = topStack(bottom);
+      expect(Math.min(s.guide, s.warning, s.reveal, s.bubble)).toBeGreaterThan(bottom);
+      expect(s.warning).toBeGreaterThan(s.guide);
+    }
+    expect(topStack(118.4).guide).toBe(127);
   });
 });

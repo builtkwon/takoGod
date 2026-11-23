@@ -63,3 +63,9 @@ export function bubbleTop(slot: number, areaW: number, trayRects: readonly Rect[
   const above = inScreen.filter((t) => t + BUBBLE_H <= trayTop);
   return above.at(-1) ?? inScreen.at(-1) ?? Math.max(0, Math.min(top, areaH - BUBBLE_H));
 }
+
+/** 상단 고정 요소(HUD+타이밍 바 묶음) 아래에 쌓는 요소들의 top. bottom은 그 묶음의 실제 아래쪽(layer 좌표)이다. */
+export function topStack(bottom: number): { readonly guide: number; readonly warning: number; readonly reveal: number; readonly bubble: number } {
+  const b = Math.ceil(bottom);
+  return { guide: b + 8, warning: b + 54, reveal: b + 36, bubble: b + 16 };
+}

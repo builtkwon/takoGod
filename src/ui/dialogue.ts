@@ -2,7 +2,7 @@ import type { EventBus, GameStateV2, Personality } from '../contracts';
 import { fumedLines } from '../data';
 import { el } from './dom';
 import { PERSONALITY_LABEL } from './format';
-import { bubbleTop, placeAnswerButtons, type Rect } from './layout';
+import { bubbleTop, placeAnswerButtons, topStack, type Rect } from './layout';
 
 const BTN = { w: 150, h: 52 };
 const FUMED_MS = 1200;
@@ -29,6 +29,8 @@ export function createDialogues(
     /** 분노 대사를 고를 성격. 손님이 이미 없으면 undefined. */
     readonly personalityOf?: (customerId: string) => Personality | undefined;
     /** 속재료 트레이 칸(이름표 포함) 영역(layer 좌표). 말풍선은 이 영역을 가리지 않는다. */
+    /** 상단 HUD+바 묶음의 아래쪽(layer 좌표). 말풍선은 그 아래부터 쌓는다. */
+    readonly topBottom?: () => number;
     readonly trayObstacles?: () => readonly Rect[];
   },
   fixed: readonly HTMLElement[],
@@ -38,7 +40,8 @@ export function createDialogues(
   const shown = new Map<string, Shown>();
   const topFor = (slot: number): number => (() => {
     const r = ctx.layer.getBoundingClientRect();
-    return bubbleTop(slot, r.width, ctx.trayObstacles?.() ?? [], r.height);
+    const top = ctx.topBottom ? topStack(ctx.topBottom()).bubble : undefined;
+    return bubbleTop(slot, r.width, ctx.trayObstacles?.() ?? [], r.height, top);
   })();
   /** 분노 말풍선: 손님당 하나, 약 1.2초. 말풍선 자리(slot)를 다이얼로그와 나눠 쓴다. */
   const fumed = new Map<string, { readonly slot: number; readonly bubble: HTMLElement; readonly timer: ReturnType<typeof setTimeout> }>();

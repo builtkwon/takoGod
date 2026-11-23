@@ -46,7 +46,7 @@ export const CSS_V2 = `
 .ui-arrow{position:fixed;height:6px;margin-top:-3px;background:#ffeb3b;transform-origin:0 50%;pointer-events:none;animation:ui-pulse .7s infinite alternate}
 .ui-arrow::after{content:"";position:absolute;right:-2px;top:-7px;border-left:14px solid #ffeb3b;border-top:10px solid transparent;border-bottom:10px solid transparent}
 .ui-arrow.ui-shake{animation:ui-arrow-shake .4s}
-.ui-reveal{position:absolute;top:152px;left:12px;right:12px;max-width:none;text-align:left}
+.ui-reveal{position:absolute;top:var(--ui-reveal-top,152px);left:12px;right:12px;max-width:none;text-align:left}
 .ui-reveal p{margin:4px 0}
 @keyframes ui-bar-flash{0%{background:#fff;box-shadow:0 0 0 6px #fff,0 0 18px 6px #ffeb3b;transform:scaleY(1.25)}60%{background:#ffeb3b}100%{transform:scaleY(1)}}
 .ui-arrow-label{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.ARROW_LABEL};padding:3px 10px;border-radius:12px;background:#000c;border:2px solid #ffeb3b;color:#fff;font-size:15px;font-weight:700;white-space:nowrap}

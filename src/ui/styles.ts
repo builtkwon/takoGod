@@ -7,8 +7,8 @@ export const CSS = `
 .ui-layer button{font:inherit;color:inherit;border:2px solid #fff;background:#3a2a1a;border-radius:8px;padding:6px 10px;touch-action:manipulation}
 .ui-layer [hidden]{display:none!important}
 .ui-hud-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
-.ui-guide{position:absolute;top:116px;left:12px;right:12px;padding:8px;background:#fff;color:#222;border-radius:8px;text-align:center;font-weight:700}
-.ui-warning{position:absolute;top:162px;left:12px;right:12px;padding:8px;background:#c62828;border-radius:8px;text-align:center;font-weight:700}
+.ui-guide{position:absolute;top:var(--ui-guide-top,116px);left:12px;right:12px;padding:8px;background:#fff;color:#222;border-radius:8px;text-align:center;font-weight:700}
+.ui-warning{position:absolute;top:var(--ui-warning-top,162px);left:12px;right:12px;padding:8px;background:#c62828;border-radius:8px;text-align:center;font-weight:700}
 .ui-shake{animation:ui-shake .4s}
 .ui-bubble{position:absolute;height:76px;box-sizing:border-box;overflow:hidden;left:12px;right:12px;padding:8px 12px;background:#fff;color:#222;border-radius:12px;font-size:15px}
 .ui-bubble p{margin:2px 0}
