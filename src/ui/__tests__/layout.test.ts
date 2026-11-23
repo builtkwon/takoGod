@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { overlaps, placeAnswerButtons, type Rect } from '../layout';
+import { bubbleTop, overlaps, placeAnswerButtons, type Rect } from '../layout';
 
 // 시드 고정 난수(mulberry32)
 function seeded(seed: number): () => number {
@@ -43,5 +43,20 @@ describe('placeAnswerButtons', () => {
 
   it('화면이 버튼보다 작아도 던지지 않는다', () => {
     expect(() => placeAnswerButtons({ w: 100, h: 30 }, SIZE, [], seeded(1))).not.toThrow();
+  });
+});
+
+describe('bubbleTop: 말풍선은 트레이를 가리지 않는다', () => {
+  const tray: Rect = { x: 20, y: 200, w: 300, h: 70 };
+  it('트레이가 없으면 기존 자리(120 + slot*84)', () => {
+    expect(bubbleTop(0, 390, [])).toBe(120);
+    expect(bubbleTop(1, 390, [])).toBe(204);
+  });
+  it('트레이와 겹치는 자리는 건너뛰고, 어떤 slot도 트레이와 겹치지 않는다', () => {
+    for (let slot = 0; slot < 4; slot++) {
+      const t = bubbleTop(slot, 390, [tray]);
+      expect(overlaps({ x: 0, y: t, w: 390, h: 76 }, tray)).toBe(false);
+    }
+    expect(bubbleTop(1, 390, [tray])).toBeGreaterThan(bubbleTop(0, 390, [tray]));
   });
 });

@@ -125,6 +125,63 @@ describe('마가린·반죽 끌어 칠하기', () => {
   });
 });
 
+describe('속재료 탭 선택', () => {
+  const tapTray = (c: ReturnType<typeof setup>['c'], x = 50): void => {
+    c.down(1, { x, y: 350 });
+    c.up(1, { x, y: 350 });
+  };
+  it('트레이 칸 탭은 선택(이벤트 없음), 같은 칸 다시 탭은 해제', () => {
+    const { c, bus } = setup(['cooked']);
+    tapTray(c);
+    expect(c.selected()).toBe('octopus');
+    expect(bus.sent).toEqual([]);
+    tapTray(c);
+    expect(c.selected()).toBeNull();
+  });
+  it('다른 칸을 탭하면 선택이 바뀐다', () => {
+    const { c } = setup(['cooked']);
+    tapTray(c, 50);
+    tapTray(c, 150);
+    expect(c.selected()).toBe('wasabi');
+  });
+  it('선택 중 구멍 탭은 굴리기가 아니라 넣기이고 선택이 바로 풀린다', () => {
+    const { c, bus } = setup(['cooked', 'cooked']);
+    tapTray(c);
+    c.down(1, { x: 150, y: 150 });
+    c.up(1, { x: 150, y: 150 });
+    expect(bus.sent).toEqual([{ type: 'input/place-material', payload: { hole: 1, material: { kind: 'filling', ingredient: 'octopus' } } }]);
+    expect(c.selected()).toBeNull();
+    c.down(1, { x: 50, y: 150 }); // 선택이 풀렸으니 이제는 굴리기
+    expect(bus.sent.at(-1)).toEqual({ type: 'input/roll', payload: { hole: 0 } });
+  });
+  it('넣을 수 없는 단계면 거부 연출(재료가 트레이로 돌아감)', () => {
+    const { c, bus, view } = setup(['empty']);
+    tapTray(c);
+    c.down(1, { x: 50, y: 150 });
+    bus.emit('cook/rejected', { hole: 0, reason: 'invalid-stage' });
+    expect(view.calls.at(-1)).toEqual(['fly', 'filling', { x: 50, y: 150 }, { x: 50, y: 350 }]);
+  });
+  it('빈 곳 탭은 선택 해제, 완성품 구멍 탭은 선택 유지', () => {
+    const { c } = setup(['done', 'cooked']);
+    tapTray(c);
+    c.down(1, { x: 50, y: 150 }); // done 구멍: 들기 쪽 조작
+    c.up(1, { x: 50, y: 150 });
+    expect(c.selected()).toBe('octopus');
+    c.down(1, { x: 50, y: 20 }); // 아무것도 없는 곳
+    c.up(1, { x: 50, y: 20 });
+    expect(c.selected()).toBeNull();
+  });
+  it('끌어 놓기는 그대로 동작하고 선택은 풀린다', () => {
+    const { c, bus } = setup(['cooked']);
+    tapTray(c, 150);
+    c.down(1, { x: 50, y: 350 });
+    c.move(1, { x: 50, y: 150 });
+    c.up(1, { x: 50, y: 150 });
+    expect(bus.sent).toEqual([{ type: 'input/place-material', payload: { hole: 0, material: { kind: 'filling', ingredient: 'octopus' } } }]);
+    expect(c.selected()).toBeNull();
+  });
+});
+
 describe('끌어 칠하기 보간', () => {
   it('pointermove 사이가 멀어도 사이의 구멍을 건너뛰지 않는다', () => {
     const { c, bus } = setup(['empty', 'empty', 'empty', 'empty', 'empty']);

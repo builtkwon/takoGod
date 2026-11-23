@@ -2,11 +2,9 @@ import type { EventBus, GameStateV2, Personality } from '../contracts';
 import { fumedLines } from '../data';
 import { el } from './dom';
 import { PERSONALITY_LABEL } from './format';
-import { placeAnswerButtons, type Rect } from './layout';
+import { bubbleTop, placeAnswerButtons, type Rect } from './layout';
 
 const BTN = { w: 150, h: 52 };
-const BUBBLE_TOP = 120;
-const BUBBLE_STEP = 84; // 말풍선 높이(CSS 76px) + 간격
 const FUMED_MS = 1200;
 
 interface Shown {
@@ -30,12 +28,15 @@ export function createDialogues(
     readonly disposers: (() => void)[];
     /** 분노 대사를 고를 성격. 손님이 이미 없으면 undefined. */
     readonly personalityOf?: (customerId: string) => Personality | undefined;
+    /** 속재료 트레이 칸(이름표 포함) 영역(layer 좌표). 말풍선은 이 영역을 가리지 않는다. */
+    readonly trayObstacles?: () => readonly Rect[];
   },
   fixed: readonly HTMLElement[],
   obstacles: () => readonly Rect[],
   rng: () => number = Math.random,
 ): Dialogues {
   const shown = new Map<string, Shown>();
+  const topFor = (slot: number): number => bubbleTop(slot, ctx.layer.getBoundingClientRect().width, ctx.trayObstacles?.() ?? []);
   /** 분노 말풍선: 손님당 하나, 약 1.2초. 말풍선 자리(slot)를 다이얼로그와 나눠 쓴다. */
   const fumed = new Map<string, { readonly slot: number; readonly bubble: HTMLElement; readonly timer: ReturnType<typeof setTimeout> }>();
   const usedSlots = (): Set<number> => new Set([...shown.values(), ...fumed.values()].map((x) => x.slot));
@@ -68,7 +69,7 @@ export function createDialogues(
       const used = usedSlots();
       let slot = 0;
       while (used.has(slot)) slot++;
-      bubble.style.top = `${BUBBLE_TOP + slot * BUBBLE_STEP}px`;
+      bubble.style.top = `${topFor(slot)}px`;
       const timer = el('span', 'ui-timer');
       bubble.append(el('b', '', PERSONALITY_LABEL[line.personality]), el('p', '', line.prompt), timer);
       ctx.layer.append(bubble);
@@ -104,7 +105,7 @@ export function createDialogues(
       let slot = 0;
       while (used.has(slot)) slot++;
       const bubble = el('div', 'ui-bubble ui-fumed');
-      bubble.style.top = `${BUBBLE_TOP + slot * BUBBLE_STEP}px`;
+      bubble.style.top = `${topFor(slot)}px`;
       const lines = fumedLines[personality];
       bubble.append(el('b', '', PERSONALITY_LABEL[personality]), el('p', '', lines[rng() < 0.5 ? 0 : 1]));
       ctx.layer.append(bubble);

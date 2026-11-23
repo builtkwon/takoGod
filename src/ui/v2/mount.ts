@@ -49,7 +49,15 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       ...box(picker.anchor({ kind: 'fune' }), FUNE_R),
     ];
   };
-  const dialogues = createDialogues({ layer, bus, disposers, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
+  /** 트레이 칸과 그 아래 이름표(최대 ~62px)를 덮는 영역. 말풍선이 가리면 안 된다. */
+  const trayObstacles = (): readonly Rect[] => {
+    const base = layer.getBoundingClientRect();
+    return getState().tray.flatMap((_, slot) => {
+      const p = picker.anchor({ kind: 'tray', slot });
+      return p ? [{ x: p.x - base.left - TRAY_R, y: p.y - base.top - TRAY_R, w: 2 * TRAY_R, h: TRAY_R + 62 }] : [];
+    });
+  };
+  const dialogues = createDialogues({ layer, bus, disposers, trayObstacles, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
   const top = el('div', 'ui-top');
   top.append(hud.root, bar.root); // 타이밍 바는 점수판 바로 아래
@@ -84,7 +92,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     const state = getState();
     bar.update(state);
     hud.update(state);
-    trayLabels.update(state);
+    trayLabels.update(state, controller.selected());
     dialogues.update(state);
     tutorial.update(state);
     raf = requestAnimationFrame(frame);
