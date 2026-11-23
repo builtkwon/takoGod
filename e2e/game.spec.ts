@@ -202,7 +202,7 @@ test('튜토리얼 한 판을 끝내면 5★ 리뷰가 저장된다', async ({ p
   const errors = collectErrors(page);
   await start(page);
   await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
-  await expect(page.locator('.ui-hud2')).not.toContainText('😠');
+  await expect(page.locator('.ui-hud-fumed')).toBeHidden();
 
   await playTutorial(page);
 
