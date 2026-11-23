@@ -62,4 +62,19 @@ describe('답 버튼 배치', () => {
     d.reset();
     expect(shown()).toBe(0);
   });
+
+  it('입장한 주문 손님은 대사 말풍선이 한 번 뜨고 reset하면 사라진다', () => {
+    vi.stubGlobal('document', { createElement: () => new FakeEl() });
+    const layer = new FakeEl();
+    layer.className = 'layer';
+    const bus = stubBus();
+    const d = createDialogues({ layer: layer as unknown as HTMLElement, bus, disposers: [], personalityOf: () => 'salaryman' }, [], () => []);
+    bus.emit('customer/entered', {
+      customer: { id: 'a', personality: 'salaryman', dialogueIntervalSec: 8, patience: 0, face: 'normal', awaitingRedo: false, order: { ingredient: 'chili', count: 3 }, avoid: 'wasabi' },
+    });
+    const entry = (): number => layer.children.filter((c) => c.className.includes('ui-entry')).length;
+    expect(entry()).toBe(2); // 주문 + 빼 주세요
+    d.reset();
+    expect(entry()).toBe(0);
+  });
 });

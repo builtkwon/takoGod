@@ -87,3 +87,9 @@ export const vipLines: Readonly<Record<Personality, readonly [string, string]>> 
   gourmet: ['저는 이 분야의 권위자입니다. 기대하죠.', '작은 흠도 놓치지 않습니다.'],
   tourist: ['I am VIP! 최고로 만들어 주세요!', '여행 블로거예요, 사진 찍을 거예요!'],
 };
+
+/** 빼 주세요 위반 연출(customer/allergy): 강한 분노 카드. */
+export const allergyText = {
+  title: '빼 주세요 위반!',
+  line: (ingredientLabel: string): string => `${ingredientLabel} 넣지 말랬잖아요!!`,
+} as const;
