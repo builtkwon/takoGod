@@ -19,8 +19,13 @@ function overlay(layer: HTMLElement, cls: string): HTMLElement {
   return o;
 }
 
+/** 버그 제보용 버전 라벨(하단 작은 글씨, 선택 가능). 문자열은 main이 만들어 넘기고 형식은 정하지 않는다. 없거나 비면 null. */
+export function versionTag(label: string | undefined): HTMLElement | null {
+  return label ? el('div', 'ui-version', label) : null;
+}
+
 /** 타이틀. 시작 버튼을 누르면 사라지고 resolve된다. */
-export function showTitle(layer: HTMLElement): Promise<void> {
+export function showTitle(layer: HTMLElement, versionLabel?: string): Promise<void> {
   return new Promise((resolve) => {
     const o = overlay(layer, 'ui-title');
     const start = el('button', 'ui-big', '시작');
@@ -29,6 +34,8 @@ export function showTitle(layer: HTMLElement): Promise<void> {
       resolve();
     });
     o.append(el('h1', '', '타코야끼트럭'), start);
+    const v = versionTag(versionLabel);
+    if (v) o.append(v);
   });
 }
 
@@ -58,6 +65,7 @@ export function showReviewCard(layer: HTMLElement, review: ReviewResult): void {
 export function showResult(
   layer: HTMLElement,
   result: { readonly average: number | null; readonly reviews: readonly ReviewResult[]; readonly shopScore?: number; readonly newBest?: boolean },
+  versionLabel?: string,
 ): void {
   const o = overlay(layer, 'ui-result');
   o.append(el('h2', '', '오늘의 결과'));
@@ -66,4 +74,6 @@ export function showResult(
   const text = sessionAverageText(result.average);
   if (result.average !== null && text !== null) o.append(el('div', 'ui-score', `${text}점`), starRow(result.average, `평균 ${starsLabel(result.average)}`));
   o.append(el('p', '', `받은 리뷰 ${result.reviews.length}개`));
+  const v = versionTag(versionLabel);
+  if (v) o.append(v);
 }
