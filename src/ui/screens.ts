@@ -1,5 +1,6 @@
 import type { ReviewResult } from '../contracts';
-import { hudText } from '../data';
+import { hudText, titleText } from '../data';
+import type { TitleChoice } from './handle';
 import { el } from './dom';
 import { PERSONALITY_LABEL, sessionAverageText } from './format';
 import { starRow, starsLabel } from './v2/stars';
@@ -24,16 +25,22 @@ export function versionTag(label: string | undefined): HTMLElement | null {
   return label ? el('div', 'ui-version', label) : null;
 }
 
-/** 타이틀. 시작 버튼을 누르면 사라지고 resolve된다. */
-export function showTitle(layer: HTMLElement, versionLabel?: string): Promise<void> {
+/** 타이틀. 버튼을 누르면 사라지고 선택을 resolve한다. 튜토리얼 버튼은 tutorialButton이 true일 때만 '시작' 아래에 둔다. */
+export function showTitle(layer: HTMLElement, versionLabel?: string, opts?: { readonly tutorialButton?: boolean }): Promise<TitleChoice> {
   return new Promise((resolve) => {
     const o = overlay(layer, 'ui-title');
-    const start = el('button', 'ui-big', '시작');
-    start.addEventListener('click', () => {
+    const choose = (choice: TitleChoice) => (): void => {
       o.remove();
-      resolve();
-    });
+      resolve(choice);
+    };
+    const start = el('button', 'ui-big', titleText.start);
+    start.addEventListener('click', choose('start'));
     o.append(el('h1', '', '타코야끼트럭'), start);
+    if (opts?.tutorialButton) {
+      const tutorial = el('button', 'ui-secondary', titleText.tutorial);
+      tutorial.addEventListener('click', choose('tutorial'));
+      o.append(tutorial);
+    }
     const v = versionTag(versionLabel);
     if (v) o.append(v);
   });

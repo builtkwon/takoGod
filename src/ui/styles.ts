@@ -17,6 +17,7 @@ export const CSS = `
 .ui-answer{position:absolute;box-sizing:border-box;font-size:14px}
 .ui-overlay{position:absolute;z-index:${Z.OVERLAY};inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000c;text-align:center}
 .ui-title h1{font-size:40px;margin:0}
+.ui-layer .ui-secondary{font-size:15px;padding:6px 20px;background:transparent;border-color:#fff8;color:#fffc}
 .ui-big{font-size:22px;padding:12px 36px!important}
 .ui-card{background:#fff;color:#222;border-radius:12px;padding:12px 16px;max-width:80%}
 .ui-toasts{position:absolute;left:0;right:0;bottom:200px;display:flex;flex-direction:column-reverse;align-items:center;gap:6px}
