@@ -11,7 +11,13 @@ export type PickTarget =
   /** 속재료 트레이 칸. slot은 GameStateV2.tray의 표시 순서 인덱스와 같은 기준이다. */
   | { readonly kind: 'tray'; readonly slot: number }
   /** 후네. */
-  | { readonly kind: 'fune' };
+  | { readonly kind: 'fune' }
+  /**
+   * 손님 머리 위. anchor 전용이고 pick은 이 값을 돌려주지 않는다.
+   * 이유: ui가 주문·빼 주세요·단체·VIP 아이콘을 DOM으로 그 좌표에 붙이는데, 손님 자리 매핑은 render만 안다.
+   * 해당 손님이 없으면 anchor는 null이다.
+   */
+  | { readonly kind: 'customer'; readonly customerId: string };
 
 /**
  * 화면 좌표 ↔ 장면 대상. render가 광선 판정으로 구현한다.
