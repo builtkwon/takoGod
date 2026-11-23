@@ -8,7 +8,7 @@ export interface UiHandle {
    * 생략·false면 버튼은 '시작' 하나다.
    */
   title(opts?: { readonly tutorialButton?: boolean }): Promise<TitleChoice>;
-  /** 결과 화면. average는 GameState.sessionAverage(core 계산)이고 null이면 점수를 표시하지 않는다. */
-  showResult(result: { readonly average: number | null; readonly reviews: readonly ReviewResult[] }): void;
+  /** 결과 화면. '다시 하기'를 누르면 화면을 닫고 'again'으로 resolve한다(반환을 무시해도 된다). */
+  showResult(result: { readonly average: number | null; readonly reviews: readonly ReviewResult[] }): Promise<'again'>;
   destroy(): void;
 }

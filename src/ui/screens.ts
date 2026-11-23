@@ -73,7 +73,7 @@ export function showResult(
   layer: HTMLElement,
   result: { readonly average: number | null; readonly reviews: readonly ReviewResult[]; readonly shopScore?: number; readonly newBest?: boolean },
   versionLabel?: string,
-): void {
+): Promise<'again'> {
   const o = overlay(layer, 'ui-result');
   o.append(el('h2', '', '오늘의 결과'));
   if (result.shopScore !== undefined) o.append(el('div', 'ui-shop-score', hudText.resultShopScore(result.shopScore)));
@@ -81,6 +81,14 @@ export function showResult(
   const text = sessionAverageText(result.average);
   if (result.average !== null && text !== null) o.append(el('div', 'ui-score', `${text}점`), starRow(result.average, `평균 ${starsLabel(result.average)}`));
   o.append(el('p', '', `받은 리뷰 ${result.reviews.length}개`));
+  const again = el('button', 'ui-big', titleText.replay);
   const v = versionTag(versionLabel);
+  o.append(again);
   if (v) o.append(v);
+  return new Promise((resolve) => {
+    again.addEventListener('click', () => {
+      o.remove();
+      resolve('again');
+    });
+  });
 }
