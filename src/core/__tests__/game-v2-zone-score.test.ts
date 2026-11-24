@@ -91,10 +91,10 @@ describe('타이밍 영역 교체: 단계 시작과 가게 점수 200점마다(G
     });
     playUntilLevel(h, 6);
     expect(h.zoneDraws()).toBe(n);
-    expect((w1 as RollZone | null)?.from).toBeCloseTo(0.1 * 0.76, 9); // W1 폭 0.24
-    expect((w1 as RollZone | null)?.to).toBeCloseTo(0.1 * 0.76 + 0.24, 9);
-    expect((w2 as RollZone | null)?.from).toBeCloseTo(0.72, 9); // 난수 0.9, W2 폭 0.20(중심 0.82)
-    expect((w2 as RollZone | null)?.to).toBeCloseTo(0.92, 9);
+    expect((w1 as RollZone | null)?.from).toBeCloseTo(0.1 * 0.64, 9); // W1 폭 0.36
+    expect((w1 as RollZone | null)?.to).toBeCloseTo(0.1 * 0.64 + 0.36, 9);
+    expect((w2 as RollZone | null)?.from).toBeCloseTo(0.63, 9); // 난수 0.9, W2 폭 0.30(중심 0.78)
+    expect((w2 as RollZone | null)?.to).toBeCloseTo(0.93, 9);
   });
 
   it('튜토리얼은 점수가 0이라 영역이 바뀌지 않는다(뽑기 없음)', () => {

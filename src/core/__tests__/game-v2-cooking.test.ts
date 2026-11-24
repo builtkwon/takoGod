@@ -73,11 +73,11 @@ describe('구멍 상태기계(GDD §굽기 상태 흐름)', () => {
   });
 });
 
-/** 1단계 영역은 폭 0.54이고 난수 0.5면 바 가운데(0.23~0.77)다. 주기는 2.2초다. */
-/** 상승 구간(4.4~5.5초)에서 바가 p에 오는 시각(reach 4가 끝난 3초 이후 첫 상승). */
-const up = (p: number) => 4.4 + p * 1.1;
-/** 하강 구간(5.5~6.6초)에서 바가 p에 오는 시각. */
-const down = (p: number) => 5.5 + (1 - p) * 1.1;
+/** 1단계 영역은 폭 0.54이고 난수 0.5면 바 가운데(0.23~0.77)다. 주기는 2.8초다. */
+/** 상승 구간(5.6~7.0초)에서 바가 p에 오는 시각(reach 4가 끝난 3초 이후 첫 상승). */
+const up = (p: number) => 5.6 + p * 1.4;
+/** 하강 구간(7.0~8.4초)에서 바가 p에 오는 시각. */
+const down = (p: number) => 7.0 + (1 - p) * 1.4;
 
 describe('굴리기', () => {
   it('속재료 후 구멍을 W1 안에서 탭하면 적중, 굴림 1', () => {
@@ -212,39 +212,39 @@ describe('굴리기', () => {
 describe('전역 타이밍 바(단계별 주기 왕복)', () => {
   it.each([
     [0, 0],
-    [0.55, 0.5],
-    [1.1, 1],
-    [1.65, 0.5],
-    [2.2, 0],
-    [2.75, 0.5],
-    [5.5, 1],
-  ] as const)('1단계(2.2초 주기) t=%f초 위치 %f', (t, pos) => {
+    [0.7, 0.5],
+    [1.4, 1],
+    [2.1, 0.5],
+    [2.8, 0],
+    [3.5, 0.5],
+    [7, 1],
+  ] as const)('1단계(2.8초 주기) t=%f초 위치 %f', (t, pos) => {
     const h = setupV2();
     h.tick(t);
     expect(h.game.state.barPosition).toBeCloseTo(pos, 6);
   });
 
-  it('튜토리얼도 2.2초 주기다', () => {
+  it('튜토리얼도 2.8초 주기다', () => {
     const h = setupV2({ tutorial: true });
-    h.tick(1.1);
+    h.tick(1.4);
     expect(h.game.state.barPosition).toBeCloseTo(1, 6);
   });
 
   it('구멍 상태와 무관하게 세션 내내 계속된다', () => {
     const h = setupV2();
     reach(h, 0, 3);
-    h.tick(16.5 - 3); // 총 16.5초 = 7.5주기 → 가운데에서 꼭대기
+    h.tick(18.2 - 3); // 총 18.2초 = 6.5주기 → 꼭대기
     expect(h.game.state.barPosition).toBeCloseTo(1, 6);
   });
 
-  it('단계가 바뀌어도 위치가 끊기지 않고 주기만 바뀐다(3단계 1.9초)', () => {
+  it('단계가 바뀌어도 위치가 끊기지 않고 주기만 바뀐다(3단계 2.5초)', () => {
     const h = setupV2();
     playUntilLevel(h, 3);
     for (let i = 0; i < 4000 && !(h.game.state.barPosition > 0.3 && h.game.state.barPosition < 0.45); i++) h.tick(0.001);
     const before = h.game.state.barPosition;
     h.tick(0.01);
     const delta = Math.abs(h.game.state.barPosition - before);
-    expect(delta).toBeCloseTo((2 * 0.01) / 1.9, 6);
+    expect(delta).toBeCloseTo((2 * 0.01) / 2.5, 6);
   });
 });
 
@@ -269,7 +269,7 @@ describe('영역(1~5단계): 하나를 단계 동안 고정', () => {
     expect(h.zoneDraws()).toBe(1);
   });
 
-  it('폭이 단계별이다(1·2단계 0.54, 3~5단계 0.24)', () => {
+  it('폭이 단계별이다(1·2단계 0.54, 3~5단계 0.36)', () => {
     const h = setupV2();
     const width = (): number => {
       reach(h, 15, 2);
@@ -280,9 +280,9 @@ describe('영역(1~5단계): 하나를 단계 동안 고정', () => {
     playUntilLevel(h, 2);
     expect(width()).toBeCloseTo(0.54, 9);
     playUntilLevel(h, 3);
-    expect(width()).toBeCloseTo(0.24, 9);
+    expect(width()).toBeCloseTo(0.36, 9);
     playUntilLevel(h, 5);
-    expect(width()).toBeCloseTo(0.24, 9);
+    expect(width()).toBeCloseTo(0.36, 9);
   });
 
   it('모든 구멍이 같은 영역이고 굴림 1 구멍도 같은 영역으로 판정한다', () => {
@@ -348,14 +348,14 @@ describe('영역(6단계~): W1·W2, 굴리기로는 바뀌지 않는다', () => 
     return h;
   };
 
-  it('폭은 6단계 W1 0.24·W2 0.20이다', () => {
+  it('폭은 6단계 W1 0.36·W2 0.30이다', () => {
     const h = atLevel6();
     reach(h, 0, 4);
     const w1 = h.hole(0).rollZone as RollZone;
-    expect(w1.to - w1.from).toBeCloseTo(0.24, 9);
+    expect(w1.to - w1.from).toBeCloseTo(0.36, 9);
     rollHole(h, 0);
     const w2 = h.hole(0).rollZone as RollZone;
-    expect(w2.to - w2.from).toBeCloseTo(0.2, 9);
+    expect(w2.to - w2.from).toBeCloseTo(0.3, 9);
   });
 
   it('굴리기 1·2를 해도(적중·빗나감, 속 없음 굴리기 포함) 영역을 새로 뽑지 않고 구멍들이 같은 영역을 쓴다', () => {
