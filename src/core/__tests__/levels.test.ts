@@ -7,15 +7,15 @@ import { createRng } from '../rng';
 describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
   // [단계, 주기, 영역 2개, W1, W2, d, 인내 하한, 인내 상한]
   it.each<[number, number, boolean, number, number, number, number, number]>([
-    [1, 2.2, false, 0.54, 0.54, 0, 30, 60],
-    [2, 2.2, false, 0.54, 0.54, 0, 30, 60],
-    [3, 1.9, false, 0.24, 0.24, 0, 30, 60],
-    [5, 1.6, false, 0.24, 0.24, 0, 30, 60],
-    [6, 1.6, true, 0.24, 0.2, 0, 30, 60],
-    [13, 1.6 - 0.49 * 0.5, true, 0.19, 0.15, 0.15, 26.25, 52.5],
-    [20, 1.11, true, 0.14, 0.1, 0.3, 22.5, 45],
-    [21, 1.11, true, 0.14, 0.1, 0.3, 22.5, 45],
-    [50, 1.11, true, 0.14, 0.1, 0.3, 22.5, 45],
+    [1, 2.8, false, 0.54, 0.54, 0, 30, 60],
+    [2, 2.8, false, 0.54, 0.54, 0, 30, 60],
+    [3, 2.5, false, 0.36, 0.36, 0, 30, 60],
+    [5, 2.2, false, 0.36, 0.36, 0, 30, 60],
+    [6, 2.2, true, 0.36, 0.3, 0, 30, 60],
+    [13, 1.9, true, 0.3, 0.25, 0.075, 26.25, 52.5],
+    [20, 1.6, true, 0.24, 0.2, 0.15, 22.5, 45],
+    [21, 1.6, true, 0.24, 0.2, 0.15, 22.5, 45],
+    [50, 1.6, true, 0.24, 0.2, 0.15, 22.5, 45],
   ])('%i단계: 주기 %f, 영역 2개 %s, W1 %f, W2 %f, d %f, 인내 %f~%f', (level, period, two, w1, w2, d, lo, hi) => {
     const x = difficulty(level);
     expect(x.periodSec).toBeCloseTo(period, 9);
@@ -28,21 +28,22 @@ describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
   });
 
   it('GDD 참고 표의 10단계·15단계 값과 맞는다', () => {
-    expect(difficulty(10).periodSec).toBeCloseTo(1.46, 2);
-    expect(difficulty(10).w1).toBeCloseTo(0.211, 3);
-    expect(difficulty(10).minCenterDistance).toBeCloseTo(0.086, 3);
-    expect(difficulty(15).periodSec).toBeCloseTo(1.285, 3);
+    // t = (단계 − 6) / 14: 10단계 4/14, 15단계 9/14
+    expect(difficulty(10).periodSec).toBeCloseTo(2.2 - (0.6 * 4) / 14, 9);
+    expect(difficulty(10).w1).toBeCloseTo(0.36 - (0.12 * 4) / 14, 9);
+    expect(difficulty(10).minCenterDistance).toBeCloseTo((0.15 * 4) / 14, 9);
+    expect(difficulty(15).periodSec).toBeCloseTo(2.2 - (0.6 * 9) / 14, 9);
     expect(difficulty(15).patienceMinSec).toBeCloseTo(25.18, 2);
     expect(difficulty(15).patienceMaxSec).toBeCloseTo(50.36, 2);
   });
 
-  it('6단계부터 주기는 단계마다 0.035초씩 줄고 20단계에서 멈춘다', () => {
-    for (let l = 6; l < MAX_DIFFICULTY_LEVEL; l++) expect(difficulty(l).periodSec - difficulty(l + 1).periodSec).toBeCloseTo(0.035, 9);
+  it('6단계부터 주기는 단계마다 0.6/14초씩 줄고 20단계에서 멈춘다', () => {
+    for (let l = 6; l < MAX_DIFFICULTY_LEVEL; l++) expect(difficulty(l).periodSec - difficulty(l + 1).periodSec).toBeCloseTo(0.6 / 14, 9);
     expect(difficulty(MAX_DIFFICULTY_LEVEL + 1)).toEqual(difficulty(MAX_DIFFICULTY_LEVEL));
   });
 
-  it('튜토리얼(0단계) 주기는 2.2초다(PM 결정)', () => {
-    expect(difficulty(0).periodSec).toBe(2.2);
+  it('튜토리얼(0단계) 주기는 1단계와 같은 2.8초다', () => {
+    expect(difficulty(0).periodSec).toBe(2.8);
   });
 
   it('패배 기준 화난 손님은 4명이다', () => {

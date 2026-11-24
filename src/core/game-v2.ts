@@ -675,7 +675,8 @@ export class GameV2 {
   }
 
   private afterPlate(): void {
-    if (this.plates < targetPlates(this.level)) return;
+    // 빼 주세요 위반으로 패배가 정해졌으면 다음 단계를 시작하지 않는다(serve가 접시 처리 직후 판을 끝낸다).
+    if (this.pendingDefeat || this.plates < targetPlates(this.level)) return;
     this.startLevel(this.level + 1);
   }
 
@@ -745,8 +746,8 @@ export class GameV2 {
     });
     const level = this.level;
     for (const slot of due) {
-      // 서빙이 단계를 넘겼으면(입장 중 접시 서빙) 남은 입장은 버린다.
-      if (this.level !== level) return;
+      // 서빙이 단계를 넘겼거나 입장한 손님이 받은 접시로 패배가 정해졌으면 남은 입장은 버린다.
+      if (this.level !== level || this.isFinished || this.pendingDefeat) return;
       // 입장 조건: 서빙한 접시 수 + 손님들이 더 받을 접시 수 + 새 손님이 받을 접시 수 ≤ 목표(일반 1개).
       const committed = this.plates + this.guests.reduce((n, g) => n + this.remainingPlates(g), 0);
       if (committed + 1 <= targetPlates(level)) this.spawn(slot, targetPlates(level) - committed);
@@ -755,6 +756,7 @@ export class GameV2 {
 
   /** 난수 순서(GDD §손님 대화): 성격 → 인내 → (10단계~) 주문 여부 → 재료 → 개수 → (13단계~) 빼 주세요 여부 → 재료 → (15단계~, 주문 없을 때) 단체 여부 → (17단계~) VIP 여부. */
   private spawn(slot: number, roomPlates: number): void {
+    if (this.isFinished) return; // 판이 끝났으면 입장하지 않는다
     const intervalSec = phaseConfig(this.level).dialogueIntervalsSec[slot] ?? 0;
     const personality = PERSONALITIES[randomIndex(PERSONALITIES.length, this.rng)] as Personality;
     const { patienceMinSec, patienceMaxSec } = difficulty(this.level);
