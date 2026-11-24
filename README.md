@@ -91,10 +91,10 @@ harness/
   pre-commit         커밋 시 하네스 full 검사
 src/
   contracts/         core와 render·ui 사이 타입·이벤트
-  core/              순수 게임 로직(GameV2, 시뮬레이터, scoring-v2.ts 접시 가게 점수·콤보, levels.ts 단계별 난이도 곡선, session.ts 메모리 저장소, three·DOM 금지)
+  core/              순수 게임 로직(GameV2, 시뮬레이터, scoring-v2.ts 접시 가게 점수·콤보, levels.ts 단계별 난이도 곡선, 주문·식품 신고·특별 손님 규칙, session.ts 메모리 저장소, three·DOM 금지)
   render/            Three.js 툰 셰이딩 렌더링(toon.ts 툰 재질·외곽선, effects.ts 폭죽·물음표·빠직, backdrop.ts 밤 도로 배경, slots.ts 손님 자리 id 고정, ADR 0003)
-  ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, v2/stars.ts 우상단 별 칸, v2/hud.ts HUD 3열, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, z.ts 레이어 z-index, iOS 설치 안내 포함)
-  data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구(fumed-lines.ts 분노 대사, hud-text.ts HUD·점수 문구)
+  ui/                DOM 오버레이(v2/ 끌어 칠하기·놓기 조작, v2/stars.ts 우상단 별 칸, v2/hud.ts HUD 3열, v2/customer-badges.ts 손님 머리 위 주문·특별 손님 아이콘, v2/rush-badge.ts 러시 아워 배지, icons.ts 재료 아이콘, tray-labels.ts 트레이 이름표, z.ts 레이어 z-index, iOS 설치 안내 포함)
+  data/              대사·리뷰 코멘트·맛보기 반응·튜토리얼 문구(fumed-lines.ts 분노 대사, special-lines.ts 주문·특별 손님·식품 신고 대사, hud-text.ts HUD·점수 문구)
   main.ts            조립·루프·서비스 워커 등록
   session-store.ts   브라우저 SessionStore(sessionStorage, ADR 0002)
   best-store.ts      브라우저 BestScoreStore(localStorage takoyaki:best, ADR 0004)

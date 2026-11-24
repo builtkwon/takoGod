@@ -64,12 +64,12 @@ export interface GameEvents {
     readonly lines: readonly { readonly defect: TasteKind; readonly text: string }[];
   };
   /**
-   * 점수 공개. delta는 손님이 입장한 뒤 받은 만족도 증감의 합(시작값 대비), stars는 어두워짐 상한 적용 뒤 이 접시의 별점이다.
+   * 점수 공개. delta는 손님이 입장한 뒤 받은 만족도 증감의 합(시작값 대비), stars는 어두워짐 상한 적용 뒤 이 접시의 별점이다(식품 신고 반영 전. 신고는 review/issued 별점에만 반영된다).
    * 다시해줘를 부르는 접시에도 낸다.
    */
   'plate/scored': { readonly customerId: string; readonly delta: number; readonly stars: number };
   /**
-   * 접시 가게 점수 확정(GDD §가게 점수). points는 이 접시가 더한 점수, hits는 굴리기 적중 수(0~12), combo는 이 접시 반영 뒤 연속 완벽 수, multiplier는 적용한 배수(1.0~2.0).
+   * 접시 가게 점수 확정(GDD §가게 점수). points는 이 접시가 더한 점수, hits는 굴리기 적중 수(0~12), combo는 이 접시 반영 뒤 연속 완벽 수, multiplier는 적용한 배수(콤보 1.0~2.0, 깐깐한 VIP의 완벽 접시는 ×2를 더 곱해 최대 4.0).
    * 손님 없는 페이즈(P1)의 접시는 customerId가 null이다. 튜토리얼 접시와 다시해줘를 부른 첫 접시에는 내지 않는다.
    */
   'score/plate': {
