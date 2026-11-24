@@ -100,24 +100,27 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
 
   let raf = 0;
   // 상단 고정 요소(안내·경고·점수 공개 카드)는 HUD+바 묶음의 실제 아래쪽 기준으로 놓는다(바 높이가 바뀌어도 가리지 않게).
-  let topKey = -1;
+  let topKey = '';
   const syncTopStack = (): void => {
     const b = Math.ceil(topBottom());
-    if (b === topKey) return;
-    topKey = b;
+    // 손님 머리 위 라벨이 있으면 점수 공개 카드는 그 아래로 내린다(라벨을 가리지 않게).
+    const labelsBottom = Math.ceil(Math.max(0, ...badges.rects().map((r) => r.y + r.h)));
+    const key = `${b}:${labelsBottom}`;
+    if (key === topKey) return;
+    topKey = key;
     const s = topStack(b);
     layer.style.setProperty('--ui-guide-top', `${s.guide}px`);
     layer.style.setProperty('--ui-warning-top', `${s.warning}px`);
-    layer.style.setProperty('--ui-reveal-top', `${s.reveal}px`);
+    layer.style.setProperty('--ui-reveal-top', `${labelsBottom > 0 ? Math.max(s.reveal, labelsBottom + 6) : s.reveal}px`);
   };
   const frame = (): void => {
     const state = getState();
     bar.update(state);
-    syncTopStack();
     hud.update(state);
-    trayLabels.update(state, controller.selected());
-    badges.update(state);
     rushBadge.update(state);
+    badges.update(state, top.getBoundingClientRect().bottom);
+    syncTopStack();
+    trayLabels.update(state, controller.selected());
     dialogues.update(state);
     tutorial.update(state, controller.selected());
     raf = requestAnimationFrame(frame);
