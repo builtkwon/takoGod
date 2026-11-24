@@ -436,3 +436,69 @@ describe('깐깐한 VIP(GDD §특별 손님, 17단계~)', () => {
     expect(g.h.of('score/plate').at(-1)).toMatchObject({ multiplier: 1, combo: 0 });
   });
 });
+
+/** 테스트 전용: 게임 내부 상태를 직접 맞춘다(자연스러운 진행으로 만들기 어려운 경계 상황용). */
+interface GameInternals {
+  fumedCount: number;
+  spawnTimers: (number | null)[];
+  guests: { avoid: string | null }[];
+  fune: unknown[];
+  funeHits: number[];
+  funeWait: number;
+}
+const internals = (h: ReturnType<typeof queued>['h']): GameInternals => h.game as unknown as GameInternals;
+
+describe('패배 경계(독립 리뷰 지적)', () => {
+  const wasabiPlate: HoleSpec[] = [{ filling: 'wasabi' }, ...withIngredient('octopus', 5).slice(0, 5)];
+
+  it('빼 주세요 위반의 4번째 화남이 단계의 마지막 접시에서 나와도 다음 단계를 시작하지 않고 접시 처리 직후 끝난다', () => {
+    const { h } = queued();
+    playUntilLevel(h, 13);
+    makePlate(h); // 13단계 첫 접시(서빙한 접시 1)
+    expect(h.game.state.level).toBe(13);
+    // 화난 손님 3명으로 맞추고 남은 손님을 와사비 금지 손님으로 만든다.
+    internals(h).fumedCount = 3;
+    const last = internals(h).guests[0];
+    expect(last).toBeDefined();
+    if (last) last.avoid = 'wasabi';
+    const phases = h.of('phase/changed').length;
+    const entered = h.of('customer/entered').length;
+    makePlate(h, wasabiPlate); // 13단계의 마지막 접시 → 위반으로 4번째 화남
+    expect(h.game.finished).toBe(true);
+    expect(h.game.state.fumedCount).toBe(4);
+    expect(h.game.state.level).toBe(13);
+    expect(h.of('phase/changed')).toHaveLength(phases);
+    expect(h.of('customer/entered')).toHaveLength(entered);
+    const types = h.log.map((r) => r.type);
+    const over = types.indexOf('session/game-over');
+    expect(over).toBeGreaterThan(types.lastIndexOf('review/issued'));
+    expect(over).toBeGreaterThan(types.lastIndexOf('customer/left'));
+    expect(types.slice(over + 1).includes('customer/entered')).toBe(false);
+  });
+
+  it('같은 tick에 두 슬롯이 입장할 때 첫 손님이 받은 접시로 패배하면 다음 슬롯은 입장하지 않는다', () => {
+    const { h, sq } = queued();
+    playUntilLevel(h, 4);
+    const g = internals(h);
+    // 손님을 비우고 두 슬롯의 입장을 같은 tick으로 맞춘다. 가득 찬 접시(와사비)가 입장하는 첫 손님에게 바로 서빙된다.
+    g.guests.length = 0;
+    g.spawnTimers = [0.05, 0.05];
+    g.fumedCount = 3;
+    g.fune = Array.from({ length: 6 }, (_, i) => ({ rolledPerfectly: true, filling: i === 0 ? 'wasabi' : 'octopus', noFilling: false, dark: false }));
+    g.funeHits = [2, 2, 2, 2, 2, 2];
+    g.funeWait = 0;
+    sq.push(0, 0.99, 0.99, 0, ING.wasabi); // 첫 손님: 빼 주세요 와사비(13단계 전이라 난수는 쓰이지 않는다)
+    const entered = h.of('customer/entered').length;
+    // 4단계에는 빼 주세요가 없으므로 입장 손님에게 직접 금지 재료를 건다.
+    h.bus.on('customer/entered', () => {
+      const first = g.guests[0];
+      if (first) first.avoid = 'wasabi';
+    });
+    h.tick(0.1);
+    expect(h.game.finished).toBe(true);
+    expect(h.of('customer/entered')).toHaveLength(entered + 1);
+    expect(h.of('session/game-over')).toHaveLength(1);
+    const types = h.log.map((r) => r.type);
+    expect(types.slice(types.indexOf('session/game-over') + 1).includes('customer/entered')).toBe(false);
+  });
+});
