@@ -83,7 +83,7 @@ export interface GameEvents {
   'order/resolved': { readonly customerId: string; readonly success: boolean };
   /** 식품 신고(GDD §점수): 지우개가 든 접시가 신고되어 별점이 깎였다. starsPenalty는 실제로 깎인 별 수(0~1. 최저 0.5★ 보호로 1보다 작을 수 있고, 이미 0.5★ 이하면 0이어도 카드는 뜬다). plate/scored 뒤·review/issued 앞에 낸다. */
   'plate/reported': { readonly customerId: string; readonly starsPenalty: number };
-  /** 빼 주세요 위반(GDD §특별 손님): 접시에 avoid 재료가 있었다. 만족도 -40과 즉시 화남은 이어서 나오는 customer/fumed(처음 화날 때만)와 plate/scored로 알린다. plate/tasted 다음에 낸다. */
+  /** 빼 주세요 위반(GDD §특별 손님): 접시에 avoid 재료가 있었다. 만족도 -40과 즉시 화남은 이어서 나오는 customer/fumed(처음 화날 때만, 연출용. 위반 손님은 접시를 받고 떠나 현재 화난 수에 남지 않는다)와 plate/scored로 알린다. plate/tasted 다음에 낸다. */
   'customer/allergy': { readonly customerId: string; readonly ingredient: IngredientId };
   /** 러시 아워가 시작됐다(GDD §특별 손님). 남은 시간은 GameStateV2.rush로 읽는다. */
   'rush/started': { readonly durationSec: number };
@@ -102,7 +102,7 @@ export interface GameEvents {
   /** 단계가 시작됐다(튜토리얼 포함). level은 튜토리얼 0, 본게임 1~ (GDD §진행). */
   'phase/changed': { readonly phase: PhaseId; readonly level: number };
   /**
-   * 판이 끝났다(패배, GDD §진행). fumedCount가 한도(GameStateV2.fumedLimit)에 닿은 customer/fumed 직후 한 번 낸다.
+   * 판이 끝났다(패배, GDD §진행). 현재 가게에 동시 손님 상한(4)만큼 차 있는 손님이 모두 화난(fumedCount가 fumedLimit에 닿은) customer/fumed 직후 한 번 낸다. fumedCount는 그 시점의 현재 가게 화난 수다.
    * 이어서 core는 finished를 true로 하고 결과 화면 흐름(최고 기록 갱신 score/new-best 포함)으로 간다.
    */
   'session/game-over': { readonly reason: 'fumed'; readonly fumedCount: number };

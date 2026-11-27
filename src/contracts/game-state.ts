@@ -13,10 +13,15 @@ export interface GameStateV2 {
   readonly phase: PhaseId;
   /** 단계 번호(GDD §진행). 튜토리얼 0, 본게임 1~. 20 이후도 계속 늘어난다(난이도만 고정). HUD의 현재 단계 표시에 쓴다. */
   readonly level: number;
-  /** 세션 동안 인내 100%에 도달한 손님 수 누적(튜토리얼 제외, 단계가 바뀌어도 유지. GDD §진행 패배). HUD "😠 N/4"의 N. */
+  /**
+   * 현재 가게에 있는 인내 100%(화난) 손님 수. 떠난 손님은 세지 않는다(누적 아님. GDD §진행 패배). HUD "😠 N/4"의 N.
+   * 화난 손님은 서빙받아 떠나면 빠지므로 값이 줄 수 있다. 이유: 패배를 "동시에 4명 모두 화남"으로 바꿨다.
+   */
   readonly fumedCount: number;
-  /** 패배 기준 화난 손님 수(GDD §진행: 4). fumedCount가 이 값에 닿으면 판이 끝난다. ui는 이 값을 읽어 표시하고 숫자를 따로 갖지 않는다. */
+  /** 패배 기준 화난 손님 수(GDD §진행: 4). 가게에 seatCount명이 차고 모두 화나 fumedCount가 이 값(= 상한 4)이 되면 판이 끝난다. ui는 이 값을 읽어 표시하고 숫자를 따로 갖지 않는다. */
   readonly fumedLimit: number;
+  /** 현재 단계의 동시 손님 상한 = 자리 수(GDD §진행: 1단계 0, 2단계 1, 3~5단계 2, 6~9단계 3, 10단계~ 4). render·ui가 손님을 나란히 배치하는 데 쓴다. */
+  readonly seatCount: number;
   /** 길이 16(4×4). */
   readonly holes: readonly HoleStateV2[];
   /** 트레이 표시 순서. core는 서빙 시점에 즉시 섞는다. 재료를 끌고 있는 중이면 화면 반영을 놓은 뒤로 미루는 것은 ui 책임이다. */
