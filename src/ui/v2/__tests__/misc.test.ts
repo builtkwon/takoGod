@@ -10,15 +10,16 @@ import { starFills, starsLabel } from '../stars';
 import { LABEL_OFFSET_Y, trayLabelPlan } from '../tray-labels';
 
 describe('barView', () => {
-  it('두 영역을 퍼센트로 동시에, null인 쪽은 null', () => {
+  it('영역은 하나(w1)만 퍼센트로 그린다. w2·shared는 무시한다', () => {
     const s = stateOf(['filled'], { barPosition: 0.25, barZones: { w1: { from: 0.4, to: 0.6 }, w2: null, shared: true } });
-    expect(barView(s)).toEqual({ markerPct: 25, w1: { leftPct: 40, widthPct: 20 }, w2: null, shared: true });
+    expect(barView(s)).toEqual({ markerPct: 25, zone: { leftPct: 40, widthPct: 20 } });
     const both = stateOf(['filled'], { barZones: { w1: { from: 0.1, to: 0.4 }, w2: { from: 0.5, to: 0.7 }, shared: false } });
-    expect(barView(both).w2).toEqual({ leftPct: 50, widthPct: 20 });
+    expect(barView(both).zone).toEqual({ leftPct: 10, widthPct: 30 });
+    expect(Object.keys(barView(both))).toEqual(['markerPct', 'zone']);
   });
   it('영역 없음·범위 밖·NaN', () => {
     const s = stateOf(['done'], { barPosition: Number.NaN });
-    expect(barView(s)).toEqual({ markerPct: 0, w1: null, w2: null, shared: false });
+    expect(barView(s)).toEqual({ markerPct: 0, zone: null });
     expect(barView(stateOf([], { barPosition: 2 })).markerPct).toBe(100);
   });
 });
