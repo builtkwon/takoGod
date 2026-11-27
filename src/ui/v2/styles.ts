@@ -37,6 +37,9 @@ export const CSS_V2 = `
 .ui-faces{display:flex;gap:6px;margin-top:4px;min-height:22px}
 .ui-face{padding:2px 8px;border-radius:10px;background:#3a8a3a}
 .ui-face-annoyed{background:#e68a00}.ui-face-angry{background:#d32f2f}
+.ui-rotate{position:absolute;inset:0;z-index:${Z.ROTATE};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#000e;text-align:center;font-weight:700}
+.ui-rotate-icon{font-size:48px;line-height:1;display:inline-block;animation:ui-rotate-turn 1.6s ease-in-out infinite}
+@keyframes ui-rotate-turn{0%,30%{transform:rotate(-90deg)}70%,100%{transform:rotate(0)}}
 .ui-bucket{position:absolute;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-size:13px;font-weight:700;touch-action:none}
 .ui-bucket-margarine{background:#f2d56b;color:#442}
 .ui-bucket-batter{background:#e9dfc0;color:#442}

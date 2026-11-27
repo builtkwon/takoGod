@@ -22,6 +22,7 @@ import { createRushBadge } from './rush-badge';
 import { createCustomerBadges } from './customer-badges';
 import { hudText } from '../../data';
 import { createRestartConfirm } from './restart';
+import { createRotateGuide } from './rotate-guide';
 import { createTrayLabels } from './tray-labels';
 import { trackNewBest } from './new-best';
 import { createTutorialView } from './tutorial-view';
@@ -150,7 +151,9 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     layer.style.setProperty('--ui-col-l', `${c.left}px`);
     layer.style.setProperty('--ui-col-w', `${c.width}px`);
   };
+  const rotate = createRotateGuide(layer);
   const frame = (): void => {
+    rotate.update(window.innerWidth, window.innerHeight);
     syncColumn();
     const state = getState();
     placeBuckets(state);
@@ -197,7 +200,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
         reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!" 표시가 새 판에 남지 않게
         return choice;
       }),
-    isPaused: () => restartConfirm.isOpen() || skipConfirm.isOpen(),
+    isPaused: () => restartConfirm.isOpen() || skipConfirm.isOpen() || rotate.isBlocking(),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);
@@ -208,6 +211,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       root.style.touchAction = prevTouch;
       controller.cancel();
       disposers.forEach((d) => d());
+      rotate.dispose();
       layer.remove();
       style.remove();
     },
