@@ -1,6 +1,7 @@
 // UI 진입점(GDD §굽기).
 // core와는 EventBus·GameStateV2(읽기)·ScenePicker로만 통신한다. 판정은 하지 않는다.
 import type { EventBus, GameStateV2, ScenePicker } from '../../contracts';
+import { columnOf, type Column } from '../column';
 import { createDialogues } from '../dialogue';
 import { el } from '../dom';
 import { showIosInstall } from '../install';
@@ -78,8 +79,13 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       return p ? [{ x: p.x - base.left - TRAY_R, y: p.y - base.top - TRAY_R, w: 2 * TRAY_R, h: TRAY_R + 62 }] : [];
     });
   };
+  /** UI 칸(캔버스 가로 범위, layer 좌표). 넓은 화면에서 HUD·답 영역·통이 캔버스 폭을 따른다. */
+  const column = (): Column => {
+    const l = layer.getBoundingClientRect();
+    return columnOf(l, root.querySelector('canvas')?.getBoundingClientRect() ?? null);
+  };
   const topBottom = (): number => top.getBoundingClientRect().bottom - layer.getBoundingClientRect().top;
-  const dialogues = createDialogues({ layer, bus, disposers, grillRect, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality });
+  const dialogues = createDialogues({ layer, bus, disposers, grillRect, column, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality });
 
   const top = el('div', 'ui-top');
   top.append(hud.root, bar.root, rushBadge.root); // 타이밍 바는 점수판 바로 아래
@@ -124,7 +130,17 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     layer.style.setProperty('--ui-warning-top', `${s.warning}px`);
     layer.style.setProperty('--ui-reveal-top', `${labelsBottom > 0 ? Math.max(s.reveal, labelsBottom + 6) : s.reveal}px`);
   };
+  let colKey = '';
+  const syncColumn = (): void => {
+    const c = column();
+    const key = `${c.left}:${c.width}`;
+    if (key === colKey) return;
+    colKey = key;
+    layer.style.setProperty('--ui-col-l', `${c.left}px`);
+    layer.style.setProperty('--ui-col-w', `${c.width}px`);
+  };
   const frame = (): void => {
+    syncColumn();
     const state = getState();
     bar.update(state);
     hud.update(state);

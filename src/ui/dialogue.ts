@@ -2,6 +2,7 @@ import type { EventBus, GameStateV2, Personality } from '../contracts';
 import { fumedLines } from '../data';
 import { entryLines } from './entry-lines';
 import { el } from './dom';
+import type { Column } from './column';
 import { PERSONALITY_LABEL } from './format';
 import { bubbleSpot, topStack, type Rect } from './layout';
 
@@ -37,6 +38,8 @@ export function createDialogues(
     /** 속재료 트레이 칸(이름표 포함) 영역(layer 좌표). 말풍선은 이 영역을 가리지 않는다. */
     /** 상단 HUD+바 묶음의 아래쪽(layer 좌표). 말풍선은 그 아래부터 쌓는다. */
     readonly topBottom?: () => number;
+    /** UI 칸(캔버스 가로 범위, layer 좌표). 말풍선은 이 칸 안에 놓인다. 없으면 layer 전체. */
+    readonly column?: () => Column;
     readonly trayObstacles?: () => readonly Rect[];
     /** 구이판(16구 전체) 영역(layer 좌표). 말풍선은 이 영역 가운데를 가리지 않는다. */
     readonly grillRect?: () => Rect | null;
@@ -53,8 +56,12 @@ export function createDialogues(
     // 화면 아래 고정 답 영역도 피한다(답이 떠 있을 때만).
     const ab = shown.size > 0 ? answerBox.getBoundingClientRect() : null;
     const answerRect = ab ? [{ x: ab.left - r.left, y: ab.top - r.top, w: ab.width, h: ab.height }] : [];
-    const spot = bubbleSpot(slot, { w: r.width, h: r.height }, [...(ctx.trayObstacles?.() ?? []), ...answerRect], ctx.grillRect?.() ?? null, top);
-    Object.assign(bubble.style, { top: `${spot.y}px`, left: `${spot.x}px`, width: `${spot.w}px`, right: 'auto' });
+    const col = ctx.column?.() ?? { left: 0, width: r.width };
+    // 장애물·구이판은 layer 좌표라 칸 기준(왼쪽 0)으로 옮겨서 고르고, 고른 자리는 다시 layer 좌표로 되돌린다.
+    const shift = (b: Rect): Rect => ({ ...b, x: b.x - col.left });
+    const grill = ctx.grillRect?.() ?? null;
+    const spot = bubbleSpot(slot, { w: col.width, h: r.height }, [...(ctx.trayObstacles?.() ?? []), ...answerRect].map(shift), grill ? shift(grill) : null, top);
+    Object.assign(bubble.style, { top: `${spot.y}px`, left: `${spot.x + col.left}px`, width: `${spot.w}px`, right: 'auto' });
   };
   /** 분노 말풍선: 손님당 하나, 약 1.2초. 말풍선 자리(slot)를 다이얼로그와 나눠 쓴다. */
   const fumed = new Map<string, { readonly slot: number; readonly bubble: HTMLElement; readonly timer: ReturnType<typeof setTimeout> }>();

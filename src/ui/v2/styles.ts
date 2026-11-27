@@ -1,13 +1,13 @@
 // 굽기 조작 개편 오버레이 스타일(기본 CSS 뒤에 붙인다). 끌기·연출 요소는 viewport 좌표를 쓰므로 position:fixed다.
 import { Z } from '../z';
 
-/** 타이밍 바 트랙 폭(CSS px)과 좁은 화면의 좌우 여백. 화면 폭과 무관하게 고정하고, 352px보다 좁으면 여백을 남기고 줄인다. */
+/** 타이밍 바 트랙 폭(CSS px)과 좁은 칸의 좌우 여백. 칸(캔버스 폭)과 무관하게 고정하고, 352px보다 좁으면 여백을 남기고 줄인다. */
 export const BAR_W = 320;
 export const BAR_MARGIN = 16;
 
 export const CSS_V2 = `
-.ui-top{position:absolute;top:0;left:0;right:0}
-.ui-bar{position:relative;width:min(${BAR_W}px,calc(100vw - ${BAR_MARGIN * 2}px));margin:0 auto;height:44px;background:#1b1b1b;border-bottom:3px solid #000;box-shadow:inset 0 0 0 2px #888;box-sizing:border-box}
+.ui-top{position:absolute;top:0;left:var(--ui-col-l,0px);width:var(--ui-col-w,100%)}
+.ui-bar{position:relative;width:min(${BAR_W}px,calc(100% - ${BAR_MARGIN * 2}px));margin:0 auto;height:44px;background:#1b1b1b;border-bottom:3px solid #000;box-shadow:inset 0 0 0 2px #888;box-sizing:border-box}
 .ui-bar-zone{position:absolute;top:4px;bottom:4px;border:2px solid #fff;border-radius:4px;box-sizing:border-box;display:flex;justify-content:center;color:#052;font-weight:700;font-size:14px;line-height:14px}
 .ui-bar-zone-w1{background:#2ee04d;border-color:#eaffea;align-items:flex-start;box-shadow:0 0 10px #2ee04d}
 .ui-bar-zone-w2{background:#35c4ff;border-color:#e6f8ff;border-style:dashed;align-items:flex-end;box-shadow:0 0 10px #35c4ff}
@@ -66,7 +66,7 @@ export const CSS_V2 = `
 .ui-arrow{position:fixed;height:6px;margin-top:-3px;background:#ffeb3b;transform-origin:0 50%;pointer-events:none;animation:ui-pulse .7s infinite alternate}
 .ui-arrow::after{content:"";position:absolute;right:-2px;top:-7px;border-left:14px solid #ffeb3b;border-top:10px solid transparent;border-bottom:10px solid transparent}
 .ui-arrow.ui-shake{animation:ui-arrow-shake .4s}
-.ui-reveal{position:absolute;top:var(--ui-reveal-top,152px);left:12px;right:12px;max-width:none;text-align:left}
+.ui-reveal{position:absolute;top:var(--ui-reveal-top,152px);left:calc(var(--ui-col-l,0px) + 12px);width:calc(var(--ui-col-w,100%) - 24px);box-sizing:border-box;max-width:none;text-align:left}
 .ui-reveal p{margin:4px 0}
 @keyframes ui-bar-flash{0%{background:#fff;box-shadow:0 0 0 6px #fff,0 0 18px 6px #ffeb3b;transform:scaleY(1.25)}60%{background:#ffeb3b}100%{transform:scaleY(1)}}
 .ui-tap-ring{position:fixed;left:0;top:0;width:46px;height:46px;box-sizing:border-box;border:4px solid #ffeb3b;border-radius:50%;pointer-events:none;z-index:${Z.ARROW_LABEL};animation:ui-tap-pulse .7s infinite alternate}
