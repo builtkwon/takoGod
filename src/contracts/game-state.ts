@@ -24,9 +24,9 @@ export interface GameStateV2 {
   /** 전역 타이밍 바 위치(0..1). 세션 내내 왕복한다(주기는 GDD §굽기). 굴리기 판정은 탭 순간의 이 값으로 한다. */
   readonly barPosition: number;
   /**
-   * 판 공용 영역(GDD §굽기). 그 영역으로 굴릴 수 있는 구멍이 없으면 null.
-   * shared가 true(1~5단계)이면 영역은 w1 하나이고 굴리기 1·2가 함께 쓴다(w2는 항상 null). ui는 번호 없이 하나만 그린다.
-   * shared가 false(튜토리얼, 6단계~)이면 ui는 둘 다 그린다(1·2 표시). 단계 번호로 ui가 규칙을 되풀이하지 않도록 core가 알려 준다.
+   * 판 공용 영역(GDD §굽기). 굴릴 수 있는 구멍이 없으면 null.
+   * 영역은 전 단계 w1 하나이고 굴리기 1·2가 함께 쓴다. w2는 항상 null, shared는 항상 true다
+   * (타입은 호환을 위해 유지). ui는 번호 없이 하나만 그린다.
    */
   readonly barZones: { readonly w1: RollZone | null; readonly w2: RollZone | null; readonly shared: boolean };
   /** 후네에 담긴 완성품. 가득 차면 가장 먼저 온 대기 손님에게 서빙된다(GDD §굽기). */
