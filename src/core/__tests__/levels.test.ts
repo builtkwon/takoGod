@@ -7,15 +7,15 @@ import { createRng } from '../rng';
 describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
   // [단계, 주기, 영역 2개, W1, W2, d, 인내 하한, 인내 상한]
   it.each<[number, number, boolean, number, number, number, number, number]>([
-    [1, 2.8, false, 0.54, 0.54, 0, 30, 60],
-    [2, 2.8, false, 0.54, 0.54, 0, 30, 60],
-    [3, 2.5, false, 0.36, 0.36, 0, 30, 60],
-    [5, 2.2, false, 0.36, 0.36, 0, 30, 60],
-    [6, 2.2, true, 0.36, 0.3, 0, 30, 60],
-    [13, 1.9, true, 0.3, 0.25, 0.075, 26.25, 52.5],
-    [20, 1.6, true, 0.24, 0.2, 0.15, 22.5, 45],
-    [21, 1.6, true, 0.24, 0.2, 0.15, 22.5, 45],
-    [50, 1.6, true, 0.24, 0.2, 0.15, 22.5, 45],
+    [1, 2.8, false, 0.54, 0.54, 0, 48, 96],
+    [2, 2.8, false, 0.54, 0.54, 0, 48, 96],
+    [3, 2.5, false, 0.36, 0.36, 0, 48, 96],
+    [5, 2.2, false, 0.36, 0.36, 0, 48, 96],
+    [6, 2.2, true, 0.36, 0.3, 0, 48, 96],
+    [13, 1.9, true, 0.3, 0.25, 0.075, 42, 84],
+    [20, 1.6, true, 0.24, 0.2, 0.15, 36, 72],
+    [21, 1.6, true, 0.24, 0.2, 0.15, 36, 72],
+    [50, 1.6, true, 0.24, 0.2, 0.15, 36, 72],
   ])('%i단계: 주기 %f, 영역 2개 %s, W1 %f, W2 %f, d %f, 인내 %f~%f', (level, period, two, w1, w2, d, lo, hi) => {
     const x = difficulty(level);
     expect(x.periodSec).toBeCloseTo(period, 9);
@@ -33,8 +33,8 @@ describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
     expect(difficulty(10).w1).toBeCloseTo(0.36 - (0.12 * 4) / 14, 9);
     expect(difficulty(10).minCenterDistance).toBeCloseTo((0.15 * 4) / 14, 9);
     expect(difficulty(15).periodSec).toBeCloseTo(2.2 - (0.6 * 9) / 14, 9);
-    expect(difficulty(15).patienceMinSec).toBeCloseTo(25.18, 2);
-    expect(difficulty(15).patienceMaxSec).toBeCloseTo(50.36, 2);
+    expect(difficulty(15).patienceMinSec).toBeCloseTo(40.29, 2);
+    expect(difficulty(15).patienceMaxSec).toBeCloseTo(80.57, 2);
   });
 
   it('6단계부터 주기는 단계마다 0.6/14초씩 줄고 20단계에서 멈춘다', () => {
