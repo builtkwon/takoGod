@@ -59,6 +59,20 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       ...box(picker.anchor({ kind: 'fune' }), FUNE_R),
     ];
   };
+  /** 구이판 16구 전체 영역(네 모서리 구멍 기준, 구멍 간격의 60%를 바깥 여백으로). layer 좌표. 구멍 앵커가 없으면 null. */
+  const grillRect = (): Rect | null => {
+    const pts = [0, 3, 12, 15].map((index) => picker.anchor({ kind: 'hole', index }));
+    if (pts.some((p) => p === null)) return null;
+    const [a, b, c] = pts as { x: number; y: number }[];
+    const padX = Math.abs((b!.x - a!.x) / 3) * 0.6;
+    const padY = Math.abs((c!.y - a!.y) / 3) * 0.6;
+    const xs = (pts as { x: number }[]).map((p) => p.x);
+    const ys = (pts as { y: number }[]).map((p) => p.y);
+    const base = layer.getBoundingClientRect();
+    const x = Math.min(...xs) - padX;
+    const y = Math.min(...ys) - padY;
+    return { x: x - base.left, y: y - base.top, w: Math.max(...xs) + padX - x, h: Math.max(...ys) + padY - y };
+  };
   /** 트레이 칸과 그 아래 이름표(최대 ~62px)를 덮는 영역. 말풍선이 가리면 안 된다. */
   const trayObstacles = (): readonly Rect[] => {
     const base = layer.getBoundingClientRect();
@@ -68,7 +82,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     });
   };
   const topBottom = (): number => top.getBoundingClientRect().bottom - layer.getBoundingClientRect().top;
-  const dialogues = createDialogues({ layer, bus, disposers, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
+  const dialogues = createDialogues({ layer, bus, disposers, grillRect, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
 
   const top = el('div', 'ui-top');
   top.append(hud.root, bar.root, rushBadge.root); // 타이밍 바는 점수판 바로 아래
@@ -157,6 +171,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
         reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!" 표시가 새 판에 남지 않게
         return choice;
       }),
+    isPaused: () => restartConfirm.isOpen(),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);

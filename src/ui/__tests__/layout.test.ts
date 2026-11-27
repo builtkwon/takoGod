@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { topStack, bubbleTop, overlaps, placeAnswerButtons, type Rect } from '../layout';
+import { topStack, bubbleSpot, overlaps, placeAnswerButtons, type Rect } from '../layout';
 
 // 시드 고정 난수(mulberry32)
 function seeded(seed: number): () => number {
@@ -46,29 +46,33 @@ describe('placeAnswerButtons', () => {
   });
 });
 
-describe('bubbleTop: 말풍선은 트레이를 가리지 않는다', () => {
-  const tray: Rect = { x: 20, y: 200, w: 300, h: 70 };
-  it('트레이가 없으면 자리(120 + slot*60)', () => {
-    expect(bubbleTop(0, 390, [])).toBe(120);
-    expect(bubbleTop(1, 390, [])).toBe(180);
-  });
-  it('트레이와 겹치는 자리는 건너뛰고, 어떤 slot도 트레이와 겹치지 않는다', () => {
-    for (let slot = 0; slot < 4; slot++) {
-      const t = bubbleTop(slot, 390, [tray]);
-      expect(overlaps({ x: 0, y: t, w: 390, h: 52 }, tray)).toBe(false);
-    }
-    expect(bubbleTop(1, 390, [tray])).toBeGreaterThan(bubbleTop(0, 390, [tray]));
-  });
-
-  it('작은 화면(320×568)에서 트레이가 자리를 막아도 말풍선은 화면 밖으로 나가지 않는다', () => {
-    const tray320: Rect = { x: 10, y: 300, w: 300, h: 98 }; // 트레이+이름표가 가운데를 막음
-    for (let slot = 0; slot < 6; slot++) {
-      const t = bubbleTop(slot, 320, [tray320], 568);
-      expect(t + 52).toBeLessThanOrEqual(568);
-      expect(t).toBeGreaterThanOrEqual(0);
-    }
-    // 아래쪽 자리는 막혀도 트레이 위쪽에서 가장 가까운 자리를 쓴다
-    expect(bubbleTop(5, 320, [tray320], 568) + 52).toBeLessThanOrEqual(300);
+describe('bubbleSpot: 말풍선은 구이판·트레이·라벨을 피하고 화면 밖으로 나가지 않는다', () => {
+  const inside = (r: Rect, w: number, h: number): boolean => r.x >= 0 && r.y >= 0 && r.x + r.w <= w && r.y + r.h <= h;
+  const cases = [
+    { name: '390x844', w: 390, h: 844, top: 124 + 16, slots: 3, grill: { x: 30, y: 312, w: 330, h: 190 }, tray: { x: 70, y: 510, w: 250, h: 70 }, label: { x: 90, y: 128, w: 130, h: 30 } },
+    { name: '320x568', w: 320, h: 568, top: 104 + 16, slots: 2, grill: { x: 20, y: 250, w: 280, h: 150 }, tray: { x: 50, y: 410, w: 220, h: 70 }, label: { x: 70, y: 108, w: 120, h: 30 } },
+  ];
+  for (const c of cases) {
+    it(`${c.name}: 손님 영역(HUD·바·라벨 아래 ~ 구이판 위)에 놓이고 구이판·트레이·라벨과 겹치지 않는다`, () => {
+      for (let slot = 0; slot < c.slots; slot++) {
+        const r = bubbleSpot(slot, { w: c.w, h: c.h }, [c.tray, c.label], c.grill, c.top);
+        expect(inside(r, c.w, c.h)).toBe(true);
+        for (const o of [c.grill, c.tray, c.label]) expect(overlaps(r, o)).toBe(false);
+        expect(r.w).toBeLessThanOrEqual(Math.floor(c.w * 0.55));
+      }
+    });
+    it(`${c.name}: 자리가 모자라도 화면 밖으로 나가지 않고 구이판 가운데를 최대한 피한다`, () => {
+      for (let slot = 0; slot < 12; slot++) {
+        const r = bubbleSpot(slot, { w: c.w, h: c.h }, [c.tray, c.label], c.grill, c.top);
+        expect(inside(r, c.w, c.h)).toBe(true);
+      }
+    });
+  }
+  it('구이판이 없으면(앵커 없음) 위에서부터 행을 쌓고 같은 slot은 같은 자리', () => {
+    const a = bubbleSpot(0, { w: 390, h: 844 }, [], null, 120);
+    expect(a.y).toBe(120);
+    expect(bubbleSpot(1, { w: 390, h: 844 }, [], null, 120).y).toBeGreaterThan(a.y);
+    expect(bubbleSpot(0, { w: 390, h: 844 }, [], null, 120)).toEqual(a);
   });
 });
 

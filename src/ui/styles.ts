@@ -10,11 +10,13 @@ export const CSS = `
 .ui-guide{position:absolute;top:var(--ui-guide-top,116px);left:12px;right:12px;padding:8px;background:#fff;color:#222;border-radius:8px;text-align:center;font-weight:700}
 .ui-warning{position:absolute;top:var(--ui-warning-top,162px);left:12px;right:12px;padding:8px;background:#c62828;border-radius:8px;text-align:center;font-weight:700}
 .ui-shake{animation:ui-shake .4s}
-.ui-bubble{position:absolute;height:52px;box-sizing:border-box;overflow:hidden;left:12px;right:12px;padding:5px 12px;background:#fff;color:#222;border-radius:10px;font-size:13px;line-height:1.25}
-.ui-bubble p{margin:1px 0 0}
+.ui-bubble{position:absolute;max-height:54px;box-sizing:border-box;overflow:hidden;left:8px;width:55%;padding:3px 8px;background:#fff;color:#222;border-radius:8px;font-size:12px;line-height:1.25;word-break:keep-all}
+.ui-bubble b{margin-right:5px;font-size:11px}
+.ui-bubble p{display:inline;margin:0}
+.ui-bubble .ui-timer{position:static;margin-left:6px}
 .ui-entry{background:#fff3c4;pointer-events:none}
 .ui-fumed{background:#ffe0dc;color:#7a1008;font-weight:700;pointer-events:none}
-.ui-timer{position:absolute;right:10px;top:6px;font-size:12px;color:#c62828}
+.ui-timer{font-size:12px;color:#c62828}
 .ui-answer{position:absolute;box-sizing:border-box;font-size:14px}
 .ui-overlay{position:absolute;z-index:${Z.OVERLAY};inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000c;text-align:center}
 .ui-title h1{font-size:40px;margin:0}

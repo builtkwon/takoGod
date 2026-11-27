@@ -56,4 +56,18 @@ describe('다시 하기 확인 모달', () => {
     c.open();
     expect(layer.children).toHaveLength(1);
   });
+
+  it('isOpen은 모달이 열린 동안 true, 예·아니오 뒤 false(일시정지 근거)', () => {
+    const a = setup();
+    expect(a.c.isOpen()).toBe(true);
+    a.button('아니오').handlers[0]!();
+    expect(a.c.isOpen()).toBe(false);
+    const b = setup();
+    expect(b.c.isOpen()).toBe(true);
+    b.button('예').handlers[0]!();
+    expect(b.c.isOpen()).toBe(false);
+    const c = setup();
+    c.c.close();
+    expect(c.c.isOpen()).toBe(false);
+  });
 });
