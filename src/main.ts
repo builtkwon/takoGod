@@ -1,5 +1,6 @@
 // bootstrap: 루프·조립·PWA 등록. 게임 규칙은 core에 있다. 경계: docs/rules/architecture/modules/contracts.md#bootstrap
 import { createBrowserBestStore } from './best-store';
+import { blockZoom } from './block-zoom';
 import type { EventBus, GameStateV2, SessionStore } from './contracts';
 import { GameV2, createEventBus, createRng } from './core';
 import { dialogues, reviewComments, tasteLines, tutorialReviewComment } from './data';
@@ -15,6 +16,8 @@ const MAX_DT = 0.1; // core.tick은 프레임 크기 dt를 전제로 한다.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
 }
+
+blockZoom(document);
 
 const app = document.getElementById('app');
 const stage = document.getElementById('stage');
