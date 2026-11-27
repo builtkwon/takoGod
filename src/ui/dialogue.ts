@@ -3,7 +3,7 @@ import { fumedLines } from '../data';
 import { entryLines } from './entry-lines';
 import { el } from './dom';
 import { PERSONALITY_LABEL } from './format';
-import { bubbleTop, placeAnswerButtons, topStack, type Rect } from './layout';
+import { bubbleSpot, placeAnswerButtons, topStack, type Rect } from './layout';
 
 const BTN = { w: 150, h: 52 };
 const FUMED_MS = 1200;
@@ -34,17 +34,21 @@ export function createDialogues(
     /** 상단 HUD+바 묶음의 아래쪽(layer 좌표). 말풍선은 그 아래부터 쌓는다. */
     readonly topBottom?: () => number;
     readonly trayObstacles?: () => readonly Rect[];
+    /** 구이판(16구 전체) 영역(layer 좌표). 말풍선은 이 영역 가운데를 가리지 않는다. */
+    readonly grillRect?: () => Rect | null;
   },
   fixed: readonly HTMLElement[],
   obstacles: () => readonly Rect[],
   rng: () => number = Math.random,
 ): Dialogues {
   const shown = new Map<string, Shown>();
-  const topFor = (slot: number): number => (() => {
+  /** 말풍선 자리(폭 화면의 55%): HUD·라벨 아래 손님 영역을 우선하고 트레이·라벨·구이판은 피한다. */
+  const place = (bubble: HTMLElement, slot: number): void => {
     const r = ctx.layer.getBoundingClientRect();
-    const top = ctx.topBottom ? topStack(ctx.topBottom()).bubble : undefined;
-    return bubbleTop(slot, r.width, ctx.trayObstacles?.() ?? [], r.height, top);
-  })();
+    const top = ctx.topBottom ? topStack(ctx.topBottom()).bubble : 120;
+    const spot = bubbleSpot(slot, { w: r.width, h: r.height }, ctx.trayObstacles?.() ?? [], ctx.grillRect?.() ?? null, top);
+    Object.assign(bubble.style, { top: `${spot.y}px`, left: `${spot.x}px`, width: `${spot.w}px`, right: 'auto' });
+  };
   /** 분노 말풍선: 손님당 하나, 약 1.2초. 말풍선 자리(slot)를 다이얼로그와 나눠 쓴다. */
   const fumed = new Map<string, { readonly slot: number; readonly bubble: HTMLElement; readonly timer: ReturnType<typeof setTimeout> }>();
   const usedSlots = (): Set<number> => new Set([...shown.values(), ...fumed.values()].map((x) => x.slot));
@@ -62,7 +66,7 @@ export function createDialogues(
     let slot = 0;
     while (used.has(slot)) slot++;
     const bubble = el('div', `ui-bubble ${cls}`);
-    bubble.style.top = `${topFor(slot)}px`;
+    place(bubble, slot);
     bubble.append(el('b', '', PERSONALITY_LABEL[personality]), el('p', '', text));
     ctx.layer.append(bubble);
     fumed.set(key, { slot, bubble, timer: setTimeout(() => removeFumed(key), ms) });
@@ -89,7 +93,7 @@ export function createDialogues(
       const used = usedSlots();
       let slot = 0;
       while (used.has(slot)) slot++;
-      bubble.style.top = `${topFor(slot)}px`;
+      place(bubble, slot);
       const timer = el('span', 'ui-timer');
       bubble.append(el('b', '', PERSONALITY_LABEL[line.personality]), el('p', '', line.prompt), timer);
       ctx.layer.append(bubble);

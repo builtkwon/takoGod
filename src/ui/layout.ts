@@ -44,24 +44,45 @@ export function placeAnswerButtons(
   return placed as [Rect, Rect];
 }
 
-const BUBBLE_H = 52; // CSS .ui-bubble 높이와 같다
+/** 말풍선 폭 비율(화면 폭 대비)과 예약 높이(CSS .ui-bubble의 max-height). 보통은 한두 줄이라 약 40px다. */
+export const BUBBLE_W_RATIO = 0.55;
+export const BUBBLE_H = 54;
+const BUBBLE_GAP = 4;
+const BUBBLE_MARGIN = 8;
+
+const overlapArea = (a: Rect, b: Rect): number => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
 
 /**
- * 말풍선 slot번째의 top(layer 좌표). 말풍선은 가로 전체를 쓰므로 속재료 트레이 칸(이름표 포함)을 가리는 자리는 건너뛴다.
- * 말풍선은 안내라 트레이를 가릴 수 없다(답 버튼은 예외: 배치는 placeAnswerButtons가 한다).
- * 화면 높이(areaH)를 넘는 자리는 쓰지 않는다. 트레이를 피하는 자리가 모자라면 트레이 위쪽에서 가장 가까운 자리,
- * 그것도 없으면 화면 안 마지막 자리를 쓴다(트레이와 겹침 허용, 화면 밖 금지).
+ * 말풍선 slot번째 자리(layer 좌표). 말풍선은 안내라 속재료 트레이·손님 주문 라벨(blockers)과 구이판(grill)을 가리지 않는다
+ * (답 버튼은 예외: 배치는 placeAnswerButtons가 한다).
+ * 우선순위: ① HUD·바·라벨 아래 ~ 구이판 위(손님 영역)의 빈 행 → ② 구이판 아래 빈 행(구이판 바깥)
+ * → ③ 그래도 없으면 화면 안에서 구이판·장애물과 겹치는 넓이가 가장 작은 자리. 화면 밖은 어떤 경우에도 쓰지 않는다.
+ * 폭이 화면의 55%라 한 행에 둘이 나란히 놓이지 않으므로 행을 위에서 아래로 쌓고 왼쪽·오른쪽을 번갈아 쓴다(후보끼리 겹치지 않는다).
  */
-export function bubbleTop(slot: number, areaW: number, trayRects: readonly Rect[], areaH = Number.POSITIVE_INFINITY, top = 120, step = 60, maxTries = 24): number {
-  const inScreen: number[] = [];
-  for (let i = 0, t = top; i < maxTries && t + BUBBLE_H <= areaH; i++, t += step) inScreen.push(t);
-  const hits = (t: number): boolean => trayRects.some((r) => overlaps({ x: 0, y: t, w: areaW, h: BUBBLE_H }, r));
-  const free = inScreen.filter((t) => !hits(t));
-  const chosen = free[slot];
-  if (chosen !== undefined) return chosen;
-  const trayTop = Math.min(...trayRects.map((r) => r.y));
-  const above = inScreen.filter((t) => t + BUBBLE_H <= trayTop);
-  return above.at(-1) ?? inScreen.at(-1) ?? Math.max(0, Math.min(top, areaH - BUBBLE_H));
+export function bubbleSpot(slot: number, area: { readonly w: number; readonly h: number }, blockers: readonly Rect[], grill: Rect | null, top: number): Rect {
+  const w = Math.max(1, Math.floor(area.w * BUBBLE_W_RATIO));
+  const left = BUBBLE_MARGIN;
+  const right = Math.max(left, area.w - w - BUBBLE_MARGIN);
+  const rows: number[] = [];
+  for (let y = top, i = 0; y + BUBBLE_H <= area.h && i < 40; y += BUBBLE_H + BUBBLE_GAP, i++) rows.push(y);
+  const at = (y: number, x: number): Rect => ({ x, y, w, h: BUBBLE_H });
+  const free = (r: Rect): boolean => !blockers.some((o) => overlaps(r, o)) && !(grill && overlaps(r, grill));
+  const rowX = rows.map((_, i) => (i % 2 === 0 ? left : right));
+  const aboveGrill = (y: number): boolean => !grill || y + BUBBLE_H <= grill.y;
+  const list: Rect[] = [];
+  const push = (r: Rect): void => {
+    if (!list.some((q) => q.x === r.x && q.y === r.y)) list.push(r);
+  };
+  rows.forEach((y, i) => aboveGrill(y) && free(at(y, rowX[i] ?? left)) && push(at(y, rowX[i] ?? left)));
+  rows.forEach((y, i) => !aboveGrill(y) && free(at(y, rowX[i] ?? left)) && push(at(y, rowX[i] ?? left)));
+  const chosen = list[slot];
+  if (chosen) return chosen;
+  // 최후: 화면 안 후보 중 구이판(가중 3)·장애물과 겹침이 가장 작은 자리.
+  const cost = (r: Rect): number => (grill ? 3 * overlapArea(r, grill) : 0) + blockers.reduce((sum, o) => sum + overlapArea(r, o), 0);
+  const all = rows.flatMap((y) => [at(y, left), at(y, right)]).filter((r) => !list.some((q) => q.x === r.x && q.y === r.y));
+  all.sort((a, b) => cost(a) - cost(b));
+  const rest = all[slot - list.length];
+  return rest ?? all.at(-1) ?? list.at(-1) ?? at(Math.max(0, Math.min(top, area.h - BUBBLE_H)), left);
 }
 
 /** 상단 고정 요소(HUD+타이밍 바 묶음) 아래에 쌓는 요소들의 top. bottom은 그 묶음의 실제 아래쪽(layer 좌표)이다. */
