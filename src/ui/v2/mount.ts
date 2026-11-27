@@ -23,10 +23,8 @@ import { createTrayLabels } from './tray-labels';
 import { trackNewBest } from './new-best';
 import { createTutorialView } from './tutorial-view';
 
-/** 장면 대상 주변을 답 버튼이 피할 반경(CSS px). 구멍·트레이 칸은 앵커 중심 기준이다. */
-const HOLE_R = 46;
+/** 트레이 칸 주변 반경(CSS px). 말풍선이 트레이를 가리지 않게 하는 영역 계산에 쓴다. */
 const TRAY_R = 36;
-const FUNE_R = 70;
 
 export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => GameStateV2, picker: ScenePicker, opts?: { readonly versionLabel?: string; readonly onRestart?: () => void }): UiHandle {
   const layer = el('div', 'ui-layer');
@@ -49,16 +47,6 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const rushBadge = createRushBadge();
   const tutorial = createTutorialView(layer, bus, picker, { margarine: () => buckets.origin('margarine'), batter: () => buckets.origin('batter') }, disposers);
 
-  const sceneObstacles = (): readonly Rect[] => {
-    const base = layer.getBoundingClientRect();
-    const state = getState();
-    const box = (p: { x: number; y: number } | null, r: number): Rect[] => (p ? [{ x: p.x - base.left - r, y: p.y - base.top - r, w: 2 * r, h: 2 * r }] : []);
-    return [
-      ...state.holes.flatMap((h) => box(picker.anchor({ kind: 'hole', index: h.index }), HOLE_R)),
-      ...state.tray.flatMap((_, slot) => box(picker.anchor({ kind: 'tray', slot }), TRAY_R)),
-      ...box(picker.anchor({ kind: 'fune' }), FUNE_R),
-    ];
-  };
   /** 구이판 16구 전체 영역(네 모서리 구멍 기준, 구멍 간격의 60%를 바깥 여백으로). layer 좌표. 구멍 앵커가 없으면 null. */
   const grillRect = (): Rect | null => {
     const pts = [0, 3, 12, 15].map((index) => picker.anchor({ kind: 'hole', index }));
@@ -82,7 +70,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     });
   };
   const topBottom = (): number => top.getBoundingClientRect().bottom - layer.getBoundingClientRect().top;
-  const dialogues = createDialogues({ layer, bus, disposers, grillRect, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality }, [hud.root, bar.root, buckets.margarine, buckets.batter], sceneObstacles);
+  const dialogues = createDialogues({ layer, bus, disposers, grillRect, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality });
 
   const top = el('div', 'ui-top');
   top.append(hud.root, bar.root, rushBadge.root); // 타이밍 바는 점수판 바로 아래

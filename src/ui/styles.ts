@@ -17,7 +17,11 @@ export const CSS = `
 .ui-entry{background:#fff3c4;pointer-events:none}
 .ui-fumed{background:#ffe0dc;color:#7a1008;font-weight:700;pointer-events:none}
 .ui-timer{font-size:12px;color:#c62828}
-.ui-answer{position:absolute;box-sizing:border-box;font-size:14px}
+.ui-answers{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.ui-answer-row{display:flex;flex-direction:column;gap:2px}
+.ui-answer-tag{align-self:flex-start;padding:0 8px;border-radius:8px;background:#000b;font-size:11px;font-weight:700;line-height:16px}
+.ui-answer-pair{display:flex;flex-wrap:wrap;gap:8px}
+.ui-answer{flex:1 1 140px;min-height:46px;box-sizing:border-box;font-size:14px}
 .ui-overlay{position:absolute;z-index:${Z.OVERLAY};inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000c;text-align:center}
 .ui-title h1{font-size:40px;margin:0}
 .ui-layer .ui-secondary{font-size:15px;padding:6px 20px;background:transparent;border-color:#fff8;color:#fffc}
