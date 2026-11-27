@@ -235,7 +235,7 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
     const { h, sq } = queued();
     const c = startAt(h, sq, 13, avoidWasabi);
     const t = customerEnteredAt(h, h.of('customer/entered').length - 1);
-    tickTo(h, t + 35); // 인내(약 28초)가 다 차서 화남(-20, 화난 손님 수 +1)
+    tickTo(h, t + 50); // 인내(약 42초)가 다 차서 화남(-20, 화난 손님 수 +1)
     expect(h.game.state.customers.find((x) => x.id === c.id)?.patience).toBe(1);
     const fumed = h.game.state.fumedCount;
     makePlate(h, wasabiPlate);
@@ -255,7 +255,7 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
   it('위반으로 화난 손님이 4명이 되면 접시의 점수·리뷰·퇴장을 처리한 직후 판이 끝난다', () => {
     const { h, sq } = queued();
     playUntilLevel(h, 13);
-    tickTo(h, h.now + 80); // 13단계 두 손님이 화남: 2명
+    tickTo(h, h.now + 130); // 13단계 두 손님이 화남: 2명
     expect(h.game.state.fumedCount).toBe(2);
     makePlate(h);
     // 14단계 시작: 손님1은 빼 주세요 와사비에 인내가 크고, 손님2(3초 뒤)는 평범하고 인내가 작다.
@@ -264,7 +264,7 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
     h.tick(3.1);
     expect(h.game.state.level).toBe(14);
     expect(h.game.state.customers.map((x) => x.avoid)).toEqual(['wasabi', null]);
-    tickTo(h, h.now + 40); // 손님2가 화남 → 3명
+    tickTo(h, h.now + 70); // 손님2가 화남 → 3명
     expect(h.game.state.fumedCount).toBe(3);
     expect(h.game.finished).toBe(false);
     makePlate(h, wasabiPlate); // 손님1에게 위반 → 4명
@@ -350,9 +350,9 @@ describe('러시 아워(GDD §특별 손님, 12단계~)', () => {
     const { h } = queued();
     playUntilLevel(h, 12);
     startRush(h);
-    tickTo(h, h.now + 70); // 손님을 방치해 패배로 간다(러시는 이미 30초가 지나 끝났을 수 있다)
+    tickTo(h, h.now + 110); // 손님을 방치해 패배로 간다(러시는 이미 30초가 지나 끝났을 수 있다)
     for (let i = 0; i < 6 && !h.game.finished; i++) {
-      tickTo(h, h.now + 70);
+      tickTo(h, h.now + 110);
       if (!h.game.finished) makePlate(h);
     }
     expect(h.game.state.rush).toBeNull();
@@ -370,7 +370,7 @@ describe('단체 주문(GDD §특별 손님, 15단계~)', () => {
     expect(c.order).toBeNull();
     const t = customerEnteredAt(h, h.of('customer/entered').length - 1);
     tickTo(h, t + 10);
-    const min = 30 - (7.5 * 9) / 14; // 15단계 인내 하한
+    const min = 48 - (12 * 9) / 14; // 15단계 인내 하한
     const rushMult = rush.at(-1) ? 1.5 : 1; // 러시 아워 중에 입장했으면 ×1.5도 곱한다
     expect(h.game.state.customers[0]?.patience).toBeCloseTo(10 / (min * 1.6 * rushMult), 3);
   });
@@ -440,7 +440,7 @@ describe('깐깐한 VIP(GDD §특별 손님, 17단계~)', () => {
     expect(c.vip).toBe(true);
     const t = customerEnteredAt(h, h.of('customer/entered').length - 1);
     tickTo(h, t + 10);
-    const min = 30 - (7.5 * 11) / 14;
+    const min = 48 - (12 * 11) / 14;
     const rushMult = rushAtEntry ? 1.5 : 1;
     expect(h.game.state.customers[0]?.patience).toBeCloseTo(10 / (min * 0.7 * rushMult), 3);
   });

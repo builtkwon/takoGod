@@ -7,24 +7,24 @@ const toP2 = (h: H) => playUntilLevel(h, 2);
 
 describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   it('입장 시 성격 → 인내 시간 순서로 뽑는다', () => {
-    const a = setupV2({ rng: scripted([0.9, 0]).rng }); // 관광객, 30초
+    const a = setupV2({ rng: scripted([0.9, 0]).rng }); // 관광객, 48초
     toP2(a);
     expect(a.game.state.customers[0]?.personality).toBe('tourist');
     a.tick(10);
-    expect(a.game.state.customers[0]?.patience).toBeCloseTo(10 / 30);
+    expect(a.game.state.customers[0]?.patience).toBeCloseTo(10 / 48);
 
-    const b = setupV2({ rng: scripted([0, 0.5]).rng }); // 직장인, 45초
+    const b = setupV2({ rng: scripted([0, 0.5]).rng }); // 직장인, 72초
     toP2(b);
     expect(b.game.state.customers[0]?.personality).toBe('salaryman');
     b.tick(10);
-    expect(b.game.state.customers[0]?.patience).toBeCloseTo(10 / 45);
+    expect(b.game.state.customers[0]?.patience).toBeCloseTo(10 / 72);
   });
 
   it.each([
-    [0, 30],
-    [0.5, 45],
-    [0.999, 59.97],
-  ] as const)('인내 시간은 30~60초: 난수 %f → %f초', (v, total) => {
+    [0, 48],
+    [0.5, 72],
+    [0.999, 95.95],
+  ] as const)('인내 시간은 48~96초: 난수 %f → %f초', (v, total) => {
     const h = setupV2({ rng: scripted([SAL, v]).rng });
     toP2(h);
     h.tick(10);
@@ -51,18 +51,18 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   });
 
   it('얼굴이 기본 → 주황(50%) → 빨강(80%)으로 한 번씩 바뀌고 되돌아가지 않는다', () => {
-    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 30초
+    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 48초
     toP2(h);
     const t0 = customerEnteredAt(h);
     const id = h.game.state.customers[0]?.id;
-    tickTo(h, t0 + 14.9);
+    tickTo(h, t0 + 23.9);
     expect(h.of('customer/patience-changed')).toEqual([]);
     expect(h.game.state.customers[0]?.face).toBe('normal');
-    tickTo(h, t0 + 15);
-    expect(h.of('customer/patience-changed')).toEqual([{ customerId: id, face: 'annoyed' }]);
-    tickTo(h, t0 + 23.9);
-    expect(h.game.state.customers[0]?.face).toBe('annoyed');
     tickTo(h, t0 + 24);
+    expect(h.of('customer/patience-changed')).toEqual([{ customerId: id, face: 'annoyed' }]);
+    tickTo(h, t0 + 38.3);
+    expect(h.game.state.customers[0]?.face).toBe('annoyed');
+    tickTo(h, t0 + 38.4);
     expect(h.of('customer/patience-changed')).toEqual([
       { customerId: id, face: 'annoyed' },
       { customerId: id, face: 'angry' },
@@ -82,13 +82,13 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   });
 
   it('인내 100%에 도달하면 customer/fumed를 그 손님에게 한 번만 낸다(떠나지 않음)', () => {
-    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 30초
+    const h = setupV2({ rng: scripted([SAL, 0]).rng }); // 48초
     toP2(h);
     const t0 = customerEnteredAt(h);
     const id = h.game.state.customers[0]?.id;
-    tickTo(h, t0 + 29.9);
+    tickTo(h, t0 + 47.9);
     expect(h.of('customer/fumed')).toEqual([]);
-    tickTo(h, t0 + 30);
+    tickTo(h, t0 + 48);
     expect(h.of('customer/fumed')).toEqual([{ customerId: id }]);
     h.tick(60);
     expect(h.of('customer/fumed')).toHaveLength(1);
@@ -96,8 +96,8 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
   });
 
   it('인내 100% -20은 한 번만 적용된다(손님 입장 기준으로 시작)', () => {
-    // 직장인·30초. 12초·24초 대화에 좋은 답 두 번(+20=100), 30초 인내 -20(80), 31초에 완벽 접시 +20 → 100 → delta +20(5★).
-    // 인내 -20이 두 번 적용되면 80 → delta 0.
+    // 직장인·48초. 12·24·36초 대화에 좋은 답 세 번(+30), 48초 인내 -20(+10), 49초에 완벽 접시 +20 → delta +30(5★).
+    // 인내 -20이 두 번 적용되면 delta +10.
     const h = setupV2({ rng: scripted([SAL, 0]).rng });
     toP2(h);
     const t0 = customerEnteredAt(h);
@@ -108,9 +108,11 @@ describe('손님 입장 난수 순서와 인내(GDD §손님 대화)', () => {
     h.answer(d?.customerId ?? '', 'good');
     tickTo(h, t0 + 24.1);
     h.answer(h.game.state.activeDialogues[0]?.customerId ?? '', 'good');
-    tickTo(h, t0 + 31);
+    tickTo(h, t0 + 36.1);
+    h.answer(h.game.state.activeDialogues[0]?.customerId ?? '', 'good');
+    tickTo(h, t0 + 49);
     finish();
-    expect(h.of('plate/scored')[0]).toMatchObject({ delta: 20, stars: 5 });
+    expect(h.of('plate/scored')[0]).toMatchObject({ delta: 30, stars: 5 });
   });
 
   it('손님 입장 시각부터 센다(P2 첫 손님은 페이즈 시작 직후)', () => {
