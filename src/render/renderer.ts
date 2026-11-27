@@ -44,7 +44,9 @@ import type { EffectKind, EffectOptions } from './effects';
 import { FACE_TINT, RIM_COLOR, holeTint, rimOf, rimVisible, showsFilling, showsNoFilling } from './holes';
 import { buildBackdrop } from './backdrop';
 import { createScenePicker } from './pick';
-import { MAX_PIXEL_RATIO, VIEW_ASPECT } from './dims';
+import type { CameraSpec } from './pick';
+import { canvasSize, fitCamera } from './fit';
+import { MAX_PIXEL_RATIO } from './dims';
 import { addOutline, createOutline, setGeometry, setMap, setOutlineRes, toon } from './toon';
 import { assignSlots } from './slots';
 import { createTextures } from './textures';
@@ -204,15 +206,25 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   let slotIds: (string | null)[] = slots.map(() => null);
   const pending: { kind: EffectKind; id: string; opts: EffectOptions | undefined }[] = [];
   let drawn = false;
+  let camSpec: CameraSpec = CAMERA;
   function draw(): void {
     renderer.render(scene, camera);
     drawn = true;
   }
 
   const fit = () => {
-    const w = Math.floor(Math.min(container.clientWidth, container.clientHeight * VIEW_ASPECT));
-    if (w <= 0) return;
-    const h = Math.floor(w / VIEW_ASPECT);
+    const { w, h } = canvasSize(container.clientWidth, container.clientHeight);
+    if (w <= 0 || h <= 0) return;
+    camSpec = fitCamera(w, h);
+    camera.aspect = camSpec.aspect;
+    camera.updateProjectionMatrix();
+    // 오프축 맞춤: NDC x,y = scale*기본값 + shift (pick.ts makeProjector와 같은 식).
+    const m = camera.projectionMatrix.elements;
+    m[0] = m[0]! * camSpec.scale!;
+    m[5] = m[5]! * camSpec.scale!;
+    m[8] = -camSpec.shiftX!;
+    m[9] = -camSpec.shiftY!;
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
     renderer.setSize(w, h); // 버퍼 w*pixelRatio, CSS w px. 버퍼가 비워지므로 다시 그린다.
     setOutlineRes(outline, w * pixelRatio, h * pixelRatio, pixelRatio);
     if (drawn) draw();
@@ -222,7 +234,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   ro.observe(container);
 
   return {
-    picker: createScenePicker(canvas, () => trayCount, CAMERA, (id) => slotIds.indexOf(id)),
+    picker: createScenePicker(canvas, () => trayCount, () => camSpec, (id) => slotIds.indexOf(id)),
     renderV2(state, nowMs = performance.now()) {
       state.holes.forEach((h) => updateHoleV2(h.index, h, state.holding === h.index, nowMs));
       updateTrayFune(

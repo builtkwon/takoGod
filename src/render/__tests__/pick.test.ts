@@ -70,7 +70,7 @@ describe('createScenePicker (CSS 크기·위치)', () => {
   const at = (left: number, top: number, scale: number) => ({ getBoundingClientRect: () => ({ left, top, width: RT_W * scale, height: RT_H * scale }) as DOMRect });
   it('CSS 배율·오프셋이 달라도 같은 대상을 잡고 anchor는 뷰포트 좌표다', () => {
     for (const [l, t, s] of [[0, 0, 1], [37, 12, 2.5], [100, 40, 3]] as const) {
-      const p = createScenePicker(at(l, t, s), () => 6);
+      const p = createScenePicker(at(l, t, s), () => 6, CAMERA);
       for (const target of ALL) {
         const a = p.anchor(target)!;
         expect(p.pick(a.x, a.y)).toEqual(target);
@@ -81,14 +81,14 @@ describe('createScenePicker (CSS 크기·위치)', () => {
     }
   });
   it('캔버스 밖 좌표는 null이다', () => {
-    const p = createScenePicker(at(10, 10, 2), () => 6);
+    const p = createScenePicker(at(10, 10, 2), () => 6, CAMERA);
     expect(p.pick(5, 100)).toBeNull();
     expect(p.pick(10 + RT_W * 2, 100)).toBeNull();
     expect(p.pick(-50, -50)).toBeNull();
   });
   it('트레이 칸 수는 호출 시점의 값을 쓴다', () => {
     let n = 6;
-    const p = createScenePicker(at(0, 0, 2), () => n);
+    const p = createScenePicker(at(0, 0, 2), () => n, CAMERA);
     const a = p.anchor({ kind: 'tray', slot: 5 })!;
     n = 3;
     expect(p.pick(a.x, a.y)).toBeNull();
@@ -100,7 +100,7 @@ describe('customer anchor', () => {
   const at = () => ({ getBoundingClientRect: () => ({ left: 0, top: 0, width: RT_W, height: RT_H }) as DOMRect });
   const slotOf = (id: string) => ['a', 'b'].indexOf(id);
   it('손님 id의 자리 위 화면 좌표를 돌려주고, 자리가 바뀌면 따라간다', () => {
-    const p = createScenePicker(at(), () => 0, undefined, slotOf);
+    const p = createScenePicker(at(), () => 0, CAMERA, slotOf);
     const a = p.anchor({ kind: 'customer', customerId: 'a' })!;
     const b = p.anchor({ kind: 'customer', customerId: 'b' })!;
     expect(a.x).toBeLessThan(b.x);
@@ -108,7 +108,7 @@ describe('customer anchor', () => {
     expect(a.y).toBeGreaterThan(0);
   });
   it('없는 손님은 null이고 pick은 customer를 돌려주지 않는다', () => {
-    const p = createScenePicker(at(), () => 0, undefined, slotOf);
+    const p = createScenePicker(at(), () => 0, CAMERA, slotOf);
     expect(p.anchor({ kind: 'customer', customerId: 'zzz' })).toBeNull();
     const a = p.anchor({ kind: 'customer', customerId: 'a' })!;
     expect(p.pick(a.x, a.y)?.kind).not.toBe('customer');
