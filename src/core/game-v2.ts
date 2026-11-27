@@ -563,8 +563,9 @@ export class GameV2 {
     const cap = darkCapRange(items.filter((i) => i.dark).length);
     if (cap !== null) stars = Math.min(stars, cap.min + 0.5 * randomIndex((cap.max - cap.min) / 0.5 + 1, this.rng));
 
-    // 단체 손님은 다시해줘·0~1점 떠남을 판정하지 않는다.
-    const redo = g.group === null && !g.redoUsed && stars <= REDO_MAX_STARS && this.rng() < REDO_CHANCE;
+    // 단체 손님은 다시해줘·0~1점 떠남을, 빼 주세요 위반 접시는 다시해줘를 판정하지 않는다(난수도 뽑지 않는다).
+    const violated = g.avoid !== null && allergyViolated(items, g.avoid);
+    const redo = g.group === null && !violated && !g.redoUsed && stars <= REDO_MAX_STARS && this.rng() < REDO_CHANCE;
     let walkedOutStars: number | null = null;
     if (g.group === null && !redo && stars <= WALKOUT_MAX_STARS && this.rng() < WALKOUT_CHANCE) walkedOutStars = 0.5 * randomIndex(3, this.rng);
 
@@ -576,7 +577,7 @@ export class GameV2 {
 
     this.bus.emit('plate/tasted', { customerId: g.id, defects: defects as readonly PlateDefect[], lines });
     if (g.order !== null) this.bus.emit('order/resolved', { customerId: g.id, success: orderSucceeded(items, g.order) });
-    if (g.avoid !== null && allergyViolated(items, g.avoid)) {
+    if (violated && g.avoid !== null) {
       this.bus.emit('customer/allergy', { customerId: g.id, ingredient: g.avoid });
       this.angerByAllergy(g);
     }
