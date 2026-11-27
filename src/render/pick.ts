@@ -2,56 +2,12 @@
 import type { PickTarget, ScenePicker } from '../contracts';
 import { BOARD_K, CAMERA, CUSTOMER_POS, FUNE_S, FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
 import type { V3 } from './layout';
+import { fitCamera } from './fit';
+import { makeProjector } from './projector';
+import type { CameraSpec, Projector, Uv } from './projector';
 
-export interface CameraSpec {
-  readonly pos: V3;
-  readonly target: V3;
-  /** 세로 시야각(도). */
-  readonly fovDeg: number;
-  readonly aspect: number;
-}
-
-/** 캔버스 정규화 좌표: u는 왼→오, v는 위→아래, 0..1. */
-export interface Uv {
-  readonly u: number;
-  readonly v: number;
-}
-
-const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const dot = (a: V3, b: V3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm = (a: V3): V3 => {
-  const l = Math.hypot(...a);
-  return [a[0] / l, a[1] / l, a[2] / l];
-};
-
-export interface Projector {
-  /** 월드 점 → 캔버스 uv. 카메라 뒤면 null. */
-  project(p: V3): Uv | null;
-  /** 캔버스 uv → 월드 광선(방향은 정규화하지 않음: p = o + d*t). */
-  ray(u: number, v: number): { readonly o: V3; readonly d: V3 };
-}
-
-/** three의 PerspectiveCamera.lookAt(up=+y)과 같은 규약의 핀홀 투영. */
-export function makeProjector(cam: CameraSpec): Projector {
-  const f = norm(sub(cam.target, cam.pos));
-  const r = norm(cross(f, [0, 1, 0]));
-  const up = cross(r, f);
-  const th = Math.tan((cam.fovDeg * Math.PI) / 360);
-  return {
-    project(p) {
-      const d = sub(p, cam.pos);
-      const z = dot(d, f);
-      if (z <= 0) return null;
-      return { u: (dot(d, r) / (z * th * cam.aspect) + 1) / 2, v: (1 - dot(d, up) / (z * th)) / 2 };
-    },
-    ray(u, v) {
-      const x = (u * 2 - 1) * th * cam.aspect;
-      const y = (1 - v * 2) * th;
-      return { o: cam.pos, d: [f[0] + r[0] * x + up[0] * y, f[1] + r[1] * x + up[1] * y, f[2] + r[2] * x + up[2] * y] };
-    },
-  };
-}
+export { makeProjector } from './projector';
+export type { CameraSpec, Projector, Uv } from './projector';
 
 // 판정 면: 모델 중심 높이의 수평면. 서 있는 모델 윗부분을 눌러도 같은 대상으로 잡히게 한다.
 const HOLE_Y = PLATE_TOP + 0.2;
@@ -129,8 +85,13 @@ export function anchorUv(proj: Projector, target: PickTarget, trayCount: number,
  * canvas의 현재 CSS 위치·크기로 뷰포트 좌표를 변환한다(렌더 해상도와 무관하게 rect 비율만 쓴다).
  * getTrayCount: 현재 화면에 있는 트레이 칸 수(렌더러가 마지막으로 그린 GameStateV2.tray 길이).
  */
-export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRect'>, getTrayCount: () => number, cam: CameraSpec = CAMERA, customerSlot: CustomerSlotOf = () => -1): ScenePicker {
-  const proj = makeProjector(cam);
+export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRect'>, getTrayCount: () => number, cam?: CameraSpec | (() => CameraSpec), customerSlot: CustomerSlotOf = () => -1): ScenePicker {
+  // cam을 생략하면 canvas 현재 CSS 크기로 fitCamera를 계산한다(렌더러와 같은 식이라 e2e처럼 boundingBox만 아는 쪽도 맞는다).
+  const proj = () => {
+    if (cam !== undefined) return makeProjector(typeof cam === 'function' ? cam() : cam);
+    const r = canvas.getBoundingClientRect();
+    return makeProjector(r.width > 0 && r.height > 0 ? fitCamera(r.width, r.height) : CAMERA);
+  };
   return {
     pick(clientX, clientY) {
       const r = canvas.getBoundingClientRect();
@@ -138,11 +99,11 @@ export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRe
       const u = (clientX - r.left) / r.width;
       const v = (clientY - r.top) / r.height;
       if (u < 0 || u >= 1 || v < 0 || v >= 1) return null;
-      return pickUv(proj, u, v, getTrayCount());
+      return pickUv(proj(), u, v, getTrayCount());
     },
     anchor(target) {
       const r = canvas.getBoundingClientRect();
-      const uv = anchorUv(proj, target, getTrayCount(), customerSlot);
+      const uv = anchorUv(proj(), target, getTrayCount(), customerSlot);
       return uv === null ? null : { x: r.left + uv.u * r.width, y: r.top + uv.v * r.height };
     },
   };
