@@ -341,21 +341,20 @@ describe('영역(1~5단계): 하나를 단계 동안 고정', () => {
 });
 
 /** 6단계~: W1·W2 두 영역. 단계 시작과 가게 점수 200점마다 함께 다시 뽑고(굴리기로는 바뀌지 않는다) 중심 최소 거리가 있다. */
-describe('영역(6단계~): W1·W2, 굴리기로는 바뀌지 않는다', () => {
+describe('영역(6단계~): 영역 1개를 굴리기 1·2가 함께 쓰고, 굴리기로는 바뀌지 않는다', () => {
   const atLevel6 = () => {
     const h = setupV2();
     playUntilLevel(h, 6);
     return h;
   };
 
-  it('폭은 6단계 W1 0.36·W2 0.30이다', () => {
+  it('폭은 6단계 0.36이고 굴림 1 뒤에도 같은 폭이다(W2 없음)', () => {
     const h = atLevel6();
     reach(h, 0, 4);
-    const w1 = h.hole(0).rollZone as RollZone;
-    expect(w1.to - w1.from).toBeCloseTo(0.36, 9);
+    const z = h.hole(0).rollZone as RollZone;
+    expect(z.to - z.from).toBeCloseTo(0.36, 9);
     rollHole(h, 0);
-    const w2 = h.hole(0).rollZone as RollZone;
-    expect(w2.to - w2.from).toBeCloseTo(0.3, 9);
+    expect(h.hole(0).rollZone).toEqual(z);
   });
 
   it('굴리기 1·2를 해도(적중·빗나감, 속 없음 굴리기 포함) 영역을 새로 뽑지 않고 구멍들이 같은 영역을 쓴다', () => {
@@ -364,36 +363,35 @@ describe('영역(6단계~): W1·W2, 굴리기로는 바뀌지 않는다', () => 
     h.place(3, MARGARINE);
     h.place(3, BATTER);
     const base = h.zoneDraws();
-    const w1 = h.hole(1).rollZone;
+    const z = h.hole(1).rollZone;
     h.roll(0);
     h.roll(3); // 속재료 전 굴리기(속 없음)
-    expect(h.hole(1).rollZone).toEqual(w1); // 앞 구멍을 굴려도 W1 그대로
-    expect(h.hole(2).rollZone).toEqual(w1);
-    const w2 = h.hole(0).rollZone;
-    expect(h.hole(3).rollZone).toEqual(w2);
+    expect(h.hole(1).rollZone).toEqual(z);
+    expect(h.hole(2).rollZone).toEqual(z);
+    expect(h.hole(0).rollZone).toEqual(z);
+    expect(h.hole(3).rollZone).toEqual(z);
     h.roll(1);
     h.roll(0); // 굴리기 2
-    expect(h.hole(3).rollZone).toEqual(w2); // W2도 그대로
+    expect(h.hole(3).rollZone).toEqual(z);
     expect(h.zoneDraws()).toBe(base);
   });
 
-  it('barZones: 6단계는 shared=false이고 W1은 W1로 굴릴 구멍이, W2는 굴림 1 구멍이 있을 때만 보인다', () => {
+  it('barZones: 6단계도 shared=true이고 W2는 항상 null이다. 영역은 굴릴 구멍이 있을 때 보인다', () => {
     const h = atLevel6();
-    expect(h.game.state.barZones).toEqual({ w1: null, w2: null, shared: false });
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null, shared: true });
     reach(h, 0, 4);
     expect(h.game.state.barZones.w1).not.toBeNull();
-    expect(h.game.state.barZones.w2).toBeNull();
     rollHole(h, 0);
     const z = h.game.state.barZones;
-    expect(z.w1).toBeNull();
-    expect(z.w2).toEqual(h.hole(0).rollZone);
-    expect(z.shared).toBe(false);
+    expect(z.w1).toEqual(h.hole(0).rollZone);
+    expect(z.w2).toBeNull();
+    expect(z.shared).toBe(true);
   });
 
-  it('앞 구멍을 굴려도 W1이 바뀌지 않아 같은 바 위치에서 뒤 구멍도 같은 영역으로 판정한다', () => {
+  it('앞 구멍을 굴려도 영역이 바뀌지 않아 같은 바 위치에서 뒤 구멍도 같은 영역으로 판정한다', () => {
     const h = atLevel6();
     reach(h, [0, 1], 4);
-    tickUntilZone(h, 0, true); // 두 구멍 모두 W1 안쪽
+    tickUntilZone(h, 0, true); // 두 구멍 모두 영역 안쪽
     h.roll(0);
     h.roll(1);
     expect(h.of('cook/rolled').slice(-2)).toEqual([
@@ -408,6 +406,6 @@ describe('영역(6단계~): W1·W2, 굴리기로는 바뀌지 않는다', () => 
     h.pick(0);
     h.drop('other');
     expect(h.hole(0).rollZone).toBeNull();
-    expect(h.game.state.barZones).toEqual({ w1: null, w2: null, shared: false });
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null, shared: true });
   });
 });

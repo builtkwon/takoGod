@@ -64,37 +64,26 @@ describe('타이밍 영역 교체: 단계 시작과 가게 점수 200점마다(G
     expect(zoneAt(h).from).toBeCloseTo(0.2 * 0.46, 9);
   });
 
-  it('6단계부터 단계 시작에 W1 → W2 순으로 함께 뽑는다', () => {
-    // 같은 진행을 두 번 돌린다. 먼저 6단계 시작 직전까지의 뽑기 횟수를 센 뒤, 마지막 두 번(W1·W2)만 지정한다.
-    const holes = (h: ReturnType<typeof setupV2>) => {
-      reach(h, 15, 3); // W1 구경꾼: 익힘 완료
-      reach(h, 14, 5); // 굴림 1 구멍: W2를 보여 준다
-    };
+  it('6단계부터도 단계 시작에 영역 하나만(난수 1회) 뽑는다', () => {
+    // 같은 진행을 두 번 돌린다. 먼저 6단계 시작 시점의 뽑기 횟수 n을 세고, 마지막 한 번만 0.1로 지정한다.
     const dry = setupV2();
-    holes(dry);
+    reach(dry, 15, 3);
     let n = -1;
     dry.bus.on('phase/changed', (e) => {
       if (e.level === 6) n = dry.zoneDraws();
     });
     playUntilLevel(dry, 6);
-    expect(n).toBeGreaterThan(2);
 
-    const values = [...Array.from({ length: n - 2 }, () => 0.5), 0.1, 0.9];
-    const h = setupV2({ zoneValues: values });
-    holes(h);
-    let w1: RollZone | null = null;
-    let w2: RollZone | null = null;
+    const h = setupV2({ zoneValues: [...Array.from({ length: n - 1 }, () => 0.5), 0.1] });
+    reach(h, 15, 3);
+    let z: RollZone | null = null;
     h.bus.on('phase/changed', (e) => {
-      if (e.level !== 6) return;
-      w1 = h.hole(15).rollZone;
-      w2 = h.hole(14).rollZone;
+      if (e.level === 6) z = h.hole(15).rollZone;
     });
     playUntilLevel(h, 6);
-    expect(h.zoneDraws()).toBe(n);
-    expect((w1 as RollZone | null)?.from).toBeCloseTo(0.1 * 0.64, 9); // W1 폭 0.36
-    expect((w1 as RollZone | null)?.to).toBeCloseTo(0.1 * 0.64 + 0.36, 9);
-    expect((w2 as RollZone | null)?.from).toBeCloseTo(0.63, 9); // 난수 0.9, W2 폭 0.30(중심 0.78)
-    expect((w2 as RollZone | null)?.to).toBeCloseTo(0.93, 9);
+    expect((z as RollZone | null)?.from).toBeCloseTo(0.1 * 0.64, 9); // 폭 0.36
+    expect((z as RollZone | null)?.to).toBeCloseTo(0.1 * 0.64 + 0.36, 9);
+    expect(h.game.state.barZones.w2).toBeNull();
   });
 
   it('튜토리얼은 점수가 0이라 영역이 바뀌지 않는다(뽑기 없음)', () => {
