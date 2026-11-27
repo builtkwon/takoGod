@@ -1,9 +1,12 @@
 import { el } from '../dom';
+import type { Rect } from '../layout';
 import type { BucketSource, Controller, Pt } from './controller';
 
 export interface Buckets {
   readonly margarine: HTMLElement;
   readonly batter: HTMLElement;
+  /** 두 통의 자리(layer 좌표)를 정한다. 같은 값이면 DOM을 건드리지 않는다. */
+  place(r: { readonly margarine: Rect; readonly batter: Rect }): void;
   origin(kind: 'margarine' | 'batter'): Pt | null;
 }
 
@@ -28,5 +31,16 @@ export function createBuckets(controller: Controller): Buckets {
   };
   const margarine = make('margarine', '버터');
   const batter = make('batter', '반죽');
-  return { margarine, batter, origin: (k) => center(k === 'margarine' ? margarine : batter) };
+  let key = '';
+  const put = (e: HTMLElement, r: Rect): void => {
+    Object.assign(e.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px` });
+  };
+  const place: Buckets['place'] = (r) => {
+    const k = JSON.stringify(r);
+    if (k === key) return;
+    key = k;
+    put(margarine, r.margarine);
+    put(batter, r.batter);
+  };
+  return { margarine, batter, place, origin: (k) => center(k === 'margarine' ? margarine : batter) };
 }

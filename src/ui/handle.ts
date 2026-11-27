@@ -13,6 +13,7 @@ export interface UiHandle {
   /**
    * 확인 모달('다시 하기' 확인)이 열려 있는 동안 true. main은 프레임에서 isPaused()이면 core tick을 건너뛰고 렌더만 한다(일시정지).
    * 모달을 닫으면(예·아니오·판 초기화) false로 돌아온다.
+   * 가로 모드("화면을 세로로 돌려 주세요" 오버레이)가 떠 있는 동안에도 true이고, 세로로 돌아오면 false다.
    */
   isPaused(): boolean;
   destroy(): void;

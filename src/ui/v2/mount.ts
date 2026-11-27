@@ -1,6 +1,7 @@
 // UI 진입점(GDD §굽기).
 // core와는 EventBus·GameStateV2(읽기)·ScenePicker로만 통신한다. 판정은 하지 않는다.
 import type { EventBus, GameStateV2, ScenePicker } from '../../contracts';
+import { columnOf, type Column } from '../column';
 import { createDialogues } from '../dialogue';
 import { el } from '../dom';
 import { showIosInstall } from '../install';
@@ -9,6 +10,7 @@ import { showResult, showTitle } from '../screens';
 import { CSS } from '../styles';
 import type { UiHandle } from '../handle';
 import { createBuckets } from './buckets';
+import { bucketLayout } from './bucket-layout';
 import { createController } from './controller';
 import { createEffects } from './effects';
 import { bindFeedback } from './feedback';
@@ -20,6 +22,7 @@ import { createRushBadge } from './rush-badge';
 import { createCustomerBadges } from './customer-badges';
 import { hudText } from '../../data';
 import { createRestartConfirm } from './restart';
+import { createRotateGuide } from './rotate-guide';
 import { createTrayLabels } from './tray-labels';
 import { trackNewBest } from './new-best';
 import { createTutorialView } from './tutorial-view';
@@ -51,7 +54,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     { title: hudText.skipConfirm },
   );
   const hud = createHudV2(bus, disposers, opts?.onRestart ? () => restartConfirm.open() : undefined, opts?.onSkipTutorial ? () => skipConfirm.open() : undefined);
-  const trayLabels = createTrayLabels(layer, picker);
+  const trayLabels = createTrayLabels(layer, picker, () => column().width);
   const badges = createCustomerBadges(layer, picker);
   const rushBadge = createRushBadge();
   const tutorial = createTutorialView(layer, bus, picker, { margarine: () => buckets.origin('margarine'), batter: () => buckets.origin('batter') }, disposers);
@@ -78,8 +81,13 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       return p ? [{ x: p.x - base.left - TRAY_R, y: p.y - base.top - TRAY_R, w: 2 * TRAY_R, h: TRAY_R + 62 }] : [];
     });
   };
+  /** UI 칸(캔버스 가로 범위, layer 좌표). 넓은 화면에서 HUD·답 영역·통이 캔버스 폭을 따른다. */
+  const column = (): Column => {
+    const l = layer.getBoundingClientRect();
+    return columnOf(l, root.querySelector('canvas')?.getBoundingClientRect() ?? null);
+  };
   const topBottom = (): number => top.getBoundingClientRect().bottom - layer.getBoundingClientRect().top;
-  const dialogues = createDialogues({ layer, bus, disposers, grillRect, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality });
+  const dialogues = createDialogues({ layer, bus, disposers, grillRect, column, trayObstacles: () => [...trayObstacles(), ...badges.rects()], topBottom, personalityOf: (id) => getState().customers.find((c) => c.id === id)?.personality });
 
   const top = el('div', 'ui-top');
   top.append(hud.root, bar.root, rushBadge.root); // 타이밍 바는 점수판 바로 아래
@@ -124,8 +132,31 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     layer.style.setProperty('--ui-warning-top', `${s.warning}px`);
     layer.style.setProperty('--ui-reveal-top', `${labelsBottom > 0 ? Math.max(s.reveal, labelsBottom + 6) : s.reveal}px`);
   };
+  /** 통(버터·반죽)을 구이판 기준으로 놓는다(구멍을 덮지 않게). */
+  const placeBuckets = (state: GameStateV2): void => {
+    const base = layer.getBoundingClientRect();
+    const ts = state.tray.flatMap((_, slot) => {
+      const p = picker.anchor({ kind: 'tray', slot });
+      return p ? [{ x: p.x - base.left, y: p.y - base.top }] : [];
+    });
+    const tray = ts.length ? { minX: Math.min(...ts.map((p) => p.x)), maxX: Math.max(...ts.map((p) => p.x)), y: ts[0]!.y } : null;
+    buckets.place(bucketLayout({ col: column(), layerH: base.height, grill: grillRect(), tray }));
+  };
+  let colKey = '';
+  const syncColumn = (): void => {
+    const c = column();
+    const key = `${c.left}:${c.width}`;
+    if (key === colKey) return;
+    colKey = key;
+    layer.style.setProperty('--ui-col-l', `${c.left}px`);
+    layer.style.setProperty('--ui-col-w', `${c.width}px`);
+  };
+  const rotate = createRotateGuide(layer);
   const frame = (): void => {
+    rotate.update(window.innerWidth, window.innerHeight);
+    syncColumn();
     const state = getState();
+    placeBuckets(state);
     bar.update(state);
     hud.update(state);
     rushBadge.update(state);
@@ -169,7 +200,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
         reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!" 표시가 새 판에 남지 않게
         return choice;
       }),
-    isPaused: () => restartConfirm.isOpen() || skipConfirm.isOpen(),
+    isPaused: () => restartConfirm.isOpen() || skipConfirm.isOpen() || rotate.isBlocking(),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);
@@ -180,6 +211,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
       root.style.touchAction = prevTouch;
       controller.cancel();
       disposers.forEach((d) => d());
+      rotate.dispose();
       layer.remove();
       style.remove();
     },
