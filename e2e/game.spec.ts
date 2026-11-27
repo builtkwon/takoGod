@@ -309,7 +309,31 @@ test('튜토리얼 완료 기억: 완료하면 profile이 쓰이고, 세션 저�
 test('타이틀 튜토리얼 버튼: 처음 방문에는 없다', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('button', { name: '시작' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '튜토리얼' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '튜토리얼', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '튜토리얼 건너뛰기' })).toBeVisible();
+});
+
+test('튜토리얼 건너뛰기(타이틀): 1단계·리뷰 0으로 시작하고, 새로고침하면 타이틀에 튜토리얼 버튼이 있다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: '튜토리얼 건너뛰기' }).click();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  const saved = await page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) ?? 'null'), KEY);
+  expect(saved?.reviews ?? []).toHaveLength(0);
+  await page.reload();
+  await expect(page.getByRole('button', { name: '튜토리얼', exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('튜토리얼 건너뛰기(튜토리얼 중): 건너뛰기 → 예 → 1단계', async ({ page }) => {
+  const errors = collectErrors(page);
+  await start(page);
+  await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');
+  await page.getByRole('button', { name: '건너뛰기', exact: true }).click();
+  await page.getByRole('button', { name: '예' }).click();
+  await page.clock.runFor(100); // 시계가 멈춰 있어 HUD 갱신 프레임을 돌린다
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  expect(errors).toEqual([]);
 });
 
 test('타이틀 튜토리얼 버튼: 튜토리얼 완료 뒤 새로고침하면 버튼이 있고, 누르면 튜토리얼부터 다시 시작한다', async ({ page }) => {
