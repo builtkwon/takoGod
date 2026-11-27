@@ -1,9 +1,13 @@
 // 굽기 조작 개편 오버레이 스타일(기본 CSS 뒤에 붙인다). 끌기·연출 요소는 viewport 좌표를 쓰므로 position:fixed다.
 import { Z } from '../z';
 
+/** 타이밍 바 트랙 폭(CSS px)과 좁은 화면의 좌우 여백. 화면 폭과 무관하게 고정하고, 352px보다 좁으면 여백을 남기고 줄인다. */
+export const BAR_W = 320;
+export const BAR_MARGIN = 16;
+
 export const CSS_V2 = `
 .ui-top{position:absolute;top:0;left:0;right:0}
-.ui-bar{position:relative;height:44px;background:#1b1b1b;border-bottom:3px solid #000;box-shadow:inset 0 0 0 2px #888;box-sizing:border-box}
+.ui-bar{position:relative;width:min(${BAR_W}px,calc(100vw - ${BAR_MARGIN * 2}px));margin:0 auto;height:44px;background:#1b1b1b;border-bottom:3px solid #000;box-shadow:inset 0 0 0 2px #888;box-sizing:border-box}
 .ui-bar-zone{position:absolute;top:4px;bottom:4px;border:2px solid #fff;border-radius:4px;box-sizing:border-box;display:flex;justify-content:center;color:#052;font-weight:700;font-size:14px;line-height:14px}
 .ui-bar-zone-w1{background:#2ee04d;border-color:#eaffea;align-items:flex-start;box-shadow:0 0 10px #2ee04d}
 .ui-bar-zone-w2{background:#35c4ff;border-color:#e6f8ff;border-style:dashed;align-items:flex-end;box-shadow:0 0 10px #35c4ff}
