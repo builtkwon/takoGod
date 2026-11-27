@@ -27,3 +27,14 @@ describe('setMap', () => {
     expect(m.version).toBe(v0 + 2);
   });
 });
+
+describe('seatCount', () => {
+  it('자리가 늘어도 기존 손님은 자리를 지키고 새 손님은 새 자리로 간다', () => {
+    let s = assignSlots([null, null, null, null], ['a', 'b'], 2);
+    s = assignSlots(s, ['a', 'b', 'c', 'd'], 4);
+    expect(s).toEqual(['a', 'b', 'c', 'd']);
+  });
+  it('seatCount 밖 자리에는 배정하지 않는다', () => {
+    expect(assignSlots([null, null, null, null], ['a', 'b', 'c'], 2)).toEqual(['a', 'b', null, null]);
+  });
+});

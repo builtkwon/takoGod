@@ -25,11 +25,21 @@ export const TRAY_Z = 2.8;
 export const FUNE_Z = 4.0;
 /** 후네(와 안의 볼·가쓰오부시)를 6구 때보다 줄이는 배율. 후네는 6알 그대로다. */
 export const FUNE_S = 0.85;
-/** 손님 서 있는 위치(뒤쪽 카운터). */
-export const CUSTOMER_POS: readonly V3[] = [
-  [-1.5, 0, -2.9],
-  [1.5, 0, -2.9],
-];
+/** 동시 손님 최대 수(GDD §진행: 단계별 1~4). 모델·이펙트 자리는 이 수만큼 만들어 두고 seatCount만 보인다. */
+export const MAX_SEATS = 4;
+/** 손님 줄 z(뒤쪽 카운터). */
+const SEAT_Z = -2.9;
+/** 자리 수(인덱스)별 손님 간격과 크기. 4명은 카운터(±3)·화면 폭 안에서 겹치지 않도록 0.8배로 줄인다. */
+const SEAT_SPACING = [0, 0, 3.0, 2.2, 1.6] as const;
+const SEAT_SCALE = [1, 1, 1, 1, 0.8] as const;
+export const clampSeats = (n: number): number => Math.min(MAX_SEATS, Math.max(1, Math.round(n)));
+/** 자리 수에 따라 구이판 위(뒤쪽 카운터)에 나란히 선 손님 위치. 가운데 기준 좌우 대칭, 인덱스 0이 화면 왼쪽. */
+export function seatPositions(count: number): V3[] {
+  const n = clampSeats(count);
+  return Array.from({ length: n }, (_, i): V3 => [(i - (n - 1) / 2) * SEAT_SPACING[n]!, 0, SEAT_Z]);
+}
+/** 자리 수에 따른 손님 모델·머리 위 기준점 배율. */
+export const seatScale = (count: number): number => SEAT_SCALE[clampSeats(count)]!;
 
 /** 렌더 카메라(4×4 철판·트레이·후네가 세로 화면에 들어오도록 철판 기준으로 높이고 뒤로 뺐다). fov는 세로. */
 export const CAMERA = { pos: [0, 8.2, 8.0], target: [0, 0.3, 0.7], fovDeg: 45, aspect: VIEW_ASPECT } as const;
