@@ -5,23 +5,21 @@ import { phaseConfig, targetPlates } from '../phases';
 import { createRng } from '../rng';
 
 describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
-  // [단계, 주기, 영역 2개, W1, W2, d, 인내 하한, 인내 상한]
-  it.each<[number, number, boolean, number, number, number, number, number]>([
-    [1, 2.8, false, 0.54, 0.54, 0, 48, 96],
-    [2, 2.8, false, 0.54, 0.54, 0, 48, 96],
-    [3, 2.5, false, 0.36, 0.36, 0, 48, 96],
-    [5, 2.2, false, 0.36, 0.36, 0, 48, 96],
-    [6, 2.2, true, 0.36, 0.3, 0, 48, 96],
-    [13, 1.9, true, 0.3, 0.25, 0.075, 42, 84],
-    [20, 1.6, true, 0.24, 0.2, 0.15, 36, 72],
-    [21, 1.6, true, 0.24, 0.2, 0.15, 36, 72],
-    [50, 1.6, true, 0.24, 0.2, 0.15, 36, 72],
-  ])('%i단계: 주기 %f, 영역 2개 %s, W1 %f, W2 %f, d %f, 인내 %f~%f', (level, period, two, w1, w2, d, lo, hi) => {
+  // [단계, 주기, 영역 폭, d, 인내 하한, 인내 상한]
+  it.each<[number, number, number, number, number, number]>([
+    [1, 2.8, 0.54, 0, 48, 96],
+    [2, 2.8, 0.54, 0, 48, 96],
+    [3, 2.5, 0.36, 0, 48, 96],
+    [5, 2.2, 0.36, 0, 48, 96],
+    [6, 2.2, 0.36, 0, 48, 96],
+    [13, 1.9, 0.3, 0.075, 42, 84],
+    [20, 1.6, 0.24, 0.15, 36, 72],
+    [21, 1.6, 0.24, 0.15, 36, 72],
+    [50, 1.6, 0.24, 0.15, 36, 72],
+  ])('%i단계: 주기 %f, 영역 폭 %f, d %f, 인내 %f~%f', (level, period, width, d, lo, hi) => {
     const x = difficulty(level);
     expect(x.periodSec).toBeCloseTo(period, 9);
-    expect(x.twoZones).toBe(two);
-    expect(x.w1).toBeCloseTo(w1, 9);
-    expect(x.w2).toBeCloseTo(w2, 9);
+    expect(x.width).toBeCloseTo(width, 9);
     expect(x.minCenterDistance).toBeCloseTo(d, 9);
     expect(x.patienceMinSec).toBeCloseTo(lo, 9);
     expect(x.patienceMaxSec).toBeCloseTo(hi, 9);
@@ -30,7 +28,7 @@ describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
   it('GDD 참고 표의 10단계·15단계 값과 맞는다', () => {
     // t = (단계 − 6) / 14: 10단계 4/14, 15단계 9/14
     expect(difficulty(10).periodSec).toBeCloseTo(2.2 - (0.6 * 4) / 14, 9);
-    expect(difficulty(10).w1).toBeCloseTo(0.36 - (0.12 * 4) / 14, 9);
+    expect(difficulty(10).width).toBeCloseTo(0.36 - (0.12 * 4) / 14, 9);
     expect(difficulty(10).minCenterDistance).toBeCloseTo((0.15 * 4) / 14, 9);
     expect(difficulty(15).periodSec).toBeCloseTo(2.2 - (0.6 * 9) / 14, 9);
     expect(difficulty(15).patienceMinSec).toBeCloseTo(40.29, 2);
@@ -75,7 +73,7 @@ describe('단계 표(GDD §진행)', () => {
 
 describe('1·2단계 영역(폭 0.54) 뽑기', () => {
   it('영역 전체가 0..1 안에 든다(난수 전 구간, 양 끝값 포함)', () => {
-    const w = difficulty(1).w1;
+    const w = difficulty(1).width;
     expect(w).toBeCloseTo(0.54, 9);
     for (const v of [0, 0.25, 0.5, 0.75, 0.999999]) {
       const z = drawZone(w, () => v);

@@ -10,12 +10,8 @@ const TUTORIAL_PERIOD_SEC = 2.8;
 export interface Difficulty {
   /** 바 왕복 주기(초). */
   readonly periodSec: number;
-  /** true면 영역이 W1·W2 두 개(6단계~), false면 하나를 굴리기 1·2가 함께 쓴다(1~5단계). */
-  readonly twoZones: boolean;
-  /** W1 폭(바 전체 길이 1 기준). 영역 1개일 때는 그 영역의 폭이다. */
-  readonly w1: number;
-  /** W2 폭. 영역 1개일 때는 w1과 같다. */
-  readonly w2: number;
+  /** 타이밍 영역 폭(바 전체 길이 1 기준). 모든 단계가 영역 1개를 굴리기 1·2가 함께 쓴다. */
+  readonly width: number;
   /** 영역 중심이 바 가운데에서 떨어져야 하는 최소 거리 d(두 영역 단계만 의미). */
   readonly minCenterDistance: number;
   /** 손님 인내 범위(초). */
@@ -25,18 +21,16 @@ export interface Difficulty {
 
 /** 단계(튜토리얼 0, 본게임 1~)의 난이도. 20단계 이후는 20단계 값이다. 튜토리얼 영역은 고정이라 폭·거리는 쓰지 않는다. */
 export function difficulty(level: number): Difficulty {
-  if (level <= 0) return { periodSec: TUTORIAL_PERIOD_SEC, twoZones: true, w1: 0.5, w2: 0.5, minCenterDistance: 0, patienceMinSec: 48, patienceMaxSec: 96 };
+  if (level <= 0) return { periodSec: TUTORIAL_PERIOD_SEC, width: 0.5, minCenterDistance: 0, patienceMinSec: 48, patienceMaxSec: 96 };
   if (level <= 5) {
     const periodSec = level <= 2 ? 2.8 : level === 3 ? 2.5 : 2.2;
     const w = level <= 2 ? 0.54 : 0.36;
-    return { periodSec, twoZones: false, w1: w, w2: w, minCenterDistance: 0, patienceMinSec: 48, patienceMaxSec: 96 };
+    return { periodSec, width: w, minCenterDistance: 0, patienceMinSec: 48, patienceMaxSec: 96 };
   }
   const t = (Math.min(level, MAX_DIFFICULTY_LEVEL) - 6) / (MAX_DIFFICULTY_LEVEL - 6);
   return {
     periodSec: 2.2 - 0.6 * t,
-    twoZones: true,
-    w1: 0.36 - 0.12 * t,
-    w2: 0.3 - 0.1 * t,
+    width: 0.36 - 0.12 * t,
     minCenterDistance: 0.15 * t,
     patienceMinSec: 48 - 12 * t,
     patienceMaxSec: 96 - 24 * t,

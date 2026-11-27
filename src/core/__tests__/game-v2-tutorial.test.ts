@@ -260,21 +260,21 @@ describe('튜토리얼: 어두움·탐 없음, 고정 영역 0.50', () => {
     expect(sc.used()).toBe(0);
   });
 
-  it('영역은 W1·W2 모두 0.25~0.75(폭 0.50, 가운데) 고정이다', () => {
+  it('영역은 하나이고 0.25~0.75(폭 0.50, 가운데) 고정이다', () => {
     const h = tut();
     advanceTo(h, 'roll-1');
     const z = { from: 0.25, to: 0.75 };
-    expect(h.game.state.barZones).toEqual({ w1: z, w2: null, shared: false });
+    expect(h.game.state.barZones).toEqual({ w1: z, w2: null, shared: true });
     expect(h.hole(1).rollZone).toEqual(z);
     all((i) => h.roll(i));
-    expect(h.game.state.barZones).toEqual({ w1: null, w2: z, shared: false });
+    expect(h.game.state.barZones).toEqual({ w1: z, w2: null, shared: true });
     expect(h.hole(1).rollZone).toEqual(z);
   });
 
-  it('튜토리얼 W1은 익힘·익힘 완료 구멍만 있을 때는 보이지 않는다(그 구멍은 굴릴 수 없다)', () => {
+  it('튜토리얼 영역은 익힘·익힘 완료 구멍만 있을 때는 보이지 않는다(그 구멍은 굴릴 수 없다)', () => {
     const h = tut();
     advanceTo(h, 'cook-wait');
-    expect(h.game.state.barZones).toEqual({ w1: null, w2: null, shared: false });
+    expect(h.game.state.barZones).toEqual({ w1: null, w2: null, shared: true });
   });
 
   it('영역 안에서 굴리면 적중, 밖이면 빗나감이지만 진행은 막지 않는다', () => {

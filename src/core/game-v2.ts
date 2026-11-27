@@ -199,9 +199,8 @@ export class GameV2 {
   private holding: number | null = null;
   /** 타이밍 바 누적 위상(한 주기 = 1). 주기가 단계마다 달라도 위치가 끊기지 않는다. */
   private barCycles = 0;
-  /** 판 공용 영역(GDD §굽기). 굴리기 1용 W1과 굴리기 2용 W2. 튜토리얼은 고정. */
-  private zoneW1: RollZone = TUTORIAL_ZONE;
-  private zoneW2: RollZone = TUTORIAL_ZONE;
+  /** 판 공용 영역 하나(GDD §굽기). 굴리기 1·2가 함께 쓴다. 튜토리얼은 고정. */
+  private zone: RollZone = TUTORIAL_ZONE;
   private tutorialIndex = 0;
   private guests: Guest[] = [];
   /** 슬롯별 다음 입장까지 남은 초. null이면 입장 예약 없음. */
@@ -283,9 +282,8 @@ export class GameV2 {
       if (g.dialogue) activeDialogues.push({ customerId: g.id, line: g.dialogue.line, remainingSec: g.dialogue.remaining });
     }
     const stageIs = (...stages: HoleStage[]) => this.holes.some((h) => stages.includes(h.stage));
-    // 각 영역은 그 영역으로 굴릴 수 있는 구멍이 있을 때만 보인다(튜토리얼은 속재료 전 굴리기를 받지 않는다).
-    const shared = this.sharedZone;
-    const w1Stages: HoleStage[] = this.phase === 'tutorial' ? ['filled'] : shared ? ['cooking', 'cooked', 'filled', 'rolled'] : ['cooking', 'cooked', 'filled'];
+    // 영역은 굴릴 수 있는 구멍이 있을 때만 보인다(튜토리얼은 속재료 전 굴리기를 받지 않는다).
+    const zoneStages: HoleStage[] = this.phase === 'tutorial' ? ['filled', 'rolled'] : ['cooking', 'cooked', 'filled', 'rolled'];
     return {
       phase: this.phase,
       level: this.level,
@@ -294,7 +292,7 @@ export class GameV2 {
       holes,
       tray: [...this.tray],
       barPosition: trianglePosition(this.barCycles),
-      barZones: { w1: stageIs(...w1Stages) ? this.zoneW1 : null, w2: !shared && stageIs('rolled') ? this.zoneW2 : null, shared },
+      barZones: { w1: stageIs(...zoneStages) ? this.zone : null, w2: null, shared: true },
       fune: [...this.fune],
       funeServing: this.fune.length >= FUNE_SIZE,
       holding: this.holding,
@@ -334,16 +332,10 @@ export class GameV2 {
 
   // ── 구멍 ──────────────────────────────────────────────
 
-  /** 1~5단계는 영역 하나를 굴리기 1·2가 함께 쓴다(튜토리얼은 고정 영역 둘이라 해당 없음). */
-  private get sharedZone(): boolean {
-    return this.level > 0 && !difficulty(this.level).twoZones;
-  }
-
   private zoneOf(h: Hole): RollZone | null {
-    // 익힘·익힘 완료 탭도 W1로 판정한다(속재료 전 굴리기). 튜토리얼은 이 탭을 거부하므로 영역이 없다.
-    if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : this.zoneW1;
-    if (h.stage === 'filled') return this.zoneW1;
-    if (h.stage === 'rolled') return this.sharedZone ? this.zoneW1 : this.zoneW2;
+    // 익힘·익힘 완료 탭도 같은 영역으로 판정한다(속재료 전 굴리기). 튜토리얼은 이 탭을 거부하므로 영역이 없다.
+    if (h.stage === 'cooking' || h.stage === 'cooked') return this.phase === 'tutorial' ? null : this.zone;
+    if (h.stage === 'filled' || h.stage === 'rolled') return this.zone;
     return null;
   }
 
@@ -435,7 +427,7 @@ export class GameV2 {
 
   private doRoll(index: number, hole: Hole, nth: 0 | 1): void {
     // 판정은 누르는 순간의 공용 영역으로 한다. 영역은 굴려도 바뀌지 않고 단계 시작·가게 점수 경계에서만 다시 뽑는다.
-    const hit = inZone(trianglePosition(this.barCycles), nth === 0 || this.sharedZone ? this.zoneW1 : this.zoneW2);
+    const hit = inZone(trianglePosition(this.barCycles), this.zone);
     hole.rollHits[nth] = hit;
     hole.stage = nth === 0 ? 'rolled' : 'done';
     if (nth === 1) hole.burnElapsed = 0;
@@ -695,27 +687,14 @@ export class GameV2 {
   }
 
   /**
-   * 현재 단계 규칙으로 영역을 뽑는다. 튜토리얼은 고정, 1~5단계는 영역 1개(굴리기 1·2 공용), 6단계부터 W1 → W2 순서다.
+   * 현재 단계 규칙으로 영역 하나를 뽑는다(난수 1회). 튜토리얼은 고정, 1~5단계는 균등, 6단계부터 바 가운데에서 d 이상 떨어진다.
    * 부르는 때: 단계가 시작될 때(폭이 바뀐다)와 가게 점수가 200의 배수 경계를 넘을 때.
    */
   private redrawZones(): void {
     const d = difficulty(this.level);
-    if (this.level === 0) {
-      this.zoneW1 = TUTORIAL_ZONE;
-      this.zoneW2 = TUTORIAL_ZONE;
-    } else if (!d.twoZones) {
-      this.zoneW1 = drawZone(d.w1, this.rng);
-      this.zoneW2 = this.zoneW1;
-    } else {
-      this.zoneW1 = this.drawTwoZone('w1');
-      this.zoneW2 = this.drawTwoZone('w2');
-    }
-  }
-
-  /** 두 영역 단계(6~)의 영역을 뽑는다. 폭과 중심 최소 거리는 난이도 곡선을 따른다. */
-  private drawTwoZone(which: 'w1' | 'w2'): RollZone {
-    const d = difficulty(this.level);
-    return drawZoneAwayFromCenter(which === 'w1' ? d.w1 : d.w2, d.minCenterDistance, this.rng);
+    if (this.level === 0) this.zone = TUTORIAL_ZONE;
+    else if (this.level <= 5) this.zone = drawZone(d.width, this.rng);
+    else this.zone = drawZoneAwayFromCenter(d.width, d.minCenterDistance, this.rng);
   }
 
   private startLevel(level: number): void {
