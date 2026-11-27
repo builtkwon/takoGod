@@ -8,7 +8,7 @@ export const hudText = {
   plateGain: (points: number): string => `+${points}`,
   /** 콤보 2 이상일 때만 "콤보 ×1.2". 아니면 null. */
   combo: (combo: number, multiplier: number): string | null => (combo >= 2 ? `콤보 ×${multiplier.toFixed(1)}` : null),
-  /** 화난 손님 수. 한도는 core가 정한 값(GameStateV2.fumedLimit)을 받아 쓴다. */
+  /** 지금 가게에 있는 화난 손님 수(서빙받아 떠나면 줄어든다. 누적 아님). 한도는 core가 정한 값(GameStateV2.fumedLimit)을 받아 쓴다. */
   fumed: (count: number, limit: number): string => `😠 ${count}/${limit}`,
   /** 판이 끝나는 길은 패배(화난 손님 한도) 하나뿐이라 결과 화면 제목은 항상 이것이다(새로고침 복원 포함). */
   resultTitle: '영업 종료',
