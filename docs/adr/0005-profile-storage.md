@@ -29,7 +29,7 @@
 C를 채택한다. 새 ADR로 둔 이유는 0002의 대상이 sessionStorage 세션이고, 수명이 다른 영구 값은 ADR 0004와 같은 방식으로 분리하는 것이 선례이기 때문이다.
 
 1. 키는 `takoyaki:profile`(localStorage)이다.
-2. 값은 JSON `{version: 1, tutorialCompleted: true}`다. 완료했을 때만 쓰고 `false`는 쓰지 않는다.
+2. 값은 JSON `{version: 1, tutorialCompleted: true}`다. 완료했을 때만 쓰고 `false`는 쓰지 않는다. 튜토리얼 건너뛰기(GDD §튜토리얼)도 완료로 쓴다.
 3. 손상된 값(파싱 실패, version이 1이 아님, tutorialCompleted가 true가 아님)은 버리고 키를 지운다. 읽기는 "기록 없음"이 된다.
 4. 쓰기·접근 실패(쿼터, 비활성)는 무시한다. 게임은 계속하고 기억만 못 한다.
 5. core·contracts는 바꾸지 않는다. main이 세션 저장 포트(`SessionStore`)를 감싼다.
