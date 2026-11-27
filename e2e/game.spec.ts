@@ -1,4 +1,5 @@
 // 원본: docs/rules/development/testing.md#e2e, docs/GDD.md §튜토리얼, §제품
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import type { PickTarget, ScenePicker } from '../src/contracts';
 import { createScenePicker } from '../src/render/pick';
@@ -196,6 +197,42 @@ test('PWA: install 중 셸 요청이 500이면 설치를 실패시키고 오류 
     return hit ? await hit.text() : null;
   });
   expect({ state, cachedShell }).toEqual({ state: 'redundant', cachedShell: null });
+});
+
+test('PWA: 매니페스트·아이콘으로 최상위 이동해도 셸 캐시는 HTML로 유지되고 오프라인 셸이 뜬다', async ({ page, context }) => {
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+  for (const p of ['/manifest.webmanifest', '/icon-192.png']) await page.goto(p);
+  const type = await page.evaluate(async () => {
+    const name = (await caches.keys()).find((k) => k.startsWith('takoyaki-')) as string;
+    return (await (await caches.open(name)).match('/'))?.headers.get('content-type') ?? null;
+  });
+  expect(type).toContain('text/html');
+  await context.setOffline(true);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: '타코야끼트럭' })).toBeVisible();
+  await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('CSP: public/_headers의 CSP를 문서에 붙이면 시작→튜토리얼 진행 중 위반이 0건이다', async ({ page }) => {
+  const csp = /Content-Security-Policy: (.+)/.exec(readFileSync('public/_headers', 'utf8'))?.[1];
+  expect(csp).toBeTruthy();
+  await page.route('**/*', async (route) => {
+    if (route.request().resourceType() !== 'document') return route.continue();
+    const res = await route.fetch();
+    await route.fulfill({ response: res, headers: { ...res.headers(), 'content-security-policy': csp as string } });
+  });
+  const violations: string[] = [];
+  page.on('console', (m) => /Content Security Policy/i.test(m.text()) && violations.push(m.text()));
+  await page.addInitScript(() =>
+    document.addEventListener('securitypolicyviolation', (e) => console.error(`Content Security Policy: ${e.violatedDirective} ${e.blockedURI}`)),
+  );
+  const errors = collectErrors(page);
+  await start(page);
+  await playTutorial(page);
+  expect(violations).toEqual([]);
+  expect(errors).toEqual([]);
 });
 
 test('튜토리얼 한 판을 끝내면 5★ 리뷰가 저장된다', async ({ page }) => {

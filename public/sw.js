@@ -2,9 +2,13 @@
 // CACHE 이름은 sw.js 로직이나 STATIC 구성이 바뀔 때만 올린다(activate가 옛 이름 캐시를 지운다). 빌드 해시 변경은 올리지 않는다. 규칙: docs/rules/collaboration/versioning.md#sw-캐시-이름
 // 자산 정리 방식: 셸 HTML(./)이 참조하지 않는 /assets/ 항목을 새 셸을 받을 때마다 지운다.
 // 이유: 배포마다 sw.js 바이트가 같아 SW가 갱신되지 않으므로 install·activate에 정리를 걸 수 없고, 새 셸을 받는 내비게이션이 유일하게 확실한 시점이다.
-const CACHE = 'takoyaki-v3';
+// v4: 셸 저장을 셸 경로의 text/html로 제한하고, 앱 파일(STATIC·/assets/) 밖 GET은 캐시하지 않는다.
+const CACHE = 'takoyaki-v4';
 const SCOPE = self.registration.scope;
+const SHELL_PATHS = [new URL(SCOPE).pathname, new URL('index.html', SCOPE).pathname];
 const STATIC = ['manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
+const STATIC_PATHS = STATIC.map((p) => new URL(p, SCOPE).pathname);
+const ASSETS_PATH = new URL('assets/', SCOPE).pathname;
 
 /**
  * 셸 HTML이 참조하는 같은 출처 URL(해시 자산 포함).
@@ -59,14 +63,22 @@ self.addEventListener('fetch', (e) => {
 
   if (req.mode === 'navigate') {
     // 내비게이션: 네트워크 우선. 성공한 셸은 정리와 함께 저장하고, 오프라인이면 캐시된 셸.
-    // status 200만 저장한다(오류 페이지·206 부분 응답 제외).
-    const net = fetch(req).then((res) => ({ res, copy: res.status === 200 ? res.clone() : null }));
+    // 셸 경로의 text/html 200만 저장한다(오류 페이지·206 부분 응답, 매니페스트·아이콘 등 다른 파일로의 이동 제외). 그 밖은 네트워크 결과를 반환만 한다.
+    const isShell = SHELL_PATHS.includes(new URL(req.url).pathname);
+    const net = fetch(req).then((res) => ({
+      res,
+      copy: isShell && res.status === 200 && (res.headers.get('content-type') ?? '').includes('text/html') ? res.clone() : null,
+    }));
     e.respondWith(net.then((x) => x.res).catch(() => caches.match('./').then((hit) => hit ?? Response.error())));
     e.waitUntil(net.then((x) => x.copy && syncShell(x.copy)).catch(() => undefined));
     return;
   }
 
-  // 그 밖의 같은 출처 GET: 캐시 우선, 동시에 네트워크로 갱신(갱신 쓰기는 waitUntil 안에서 끝낸다).
+  // 앱 파일(STATIC·/assets/) 밖은 캐시하지 않고 네트워크 패스스루.
+  const { pathname } = new URL(req.url);
+  if (!STATIC_PATHS.includes(pathname) && !pathname.startsWith(ASSETS_PATH)) return;
+
+  // 앱 파일 GET: 캐시 우선, 동시에 네트워크로 갱신(갱신 쓰기는 waitUntil 안에서 끝낸다).
   const work = (async () => {
     const cache = await caches.open(CACHE);
     // ignoreVary: 모듈 스크립트(crossorigin)는 Origin 헤더가 붙어, install에서 받은 항목과 Vary가 어긋나 못 찾을 수 있다.
