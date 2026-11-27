@@ -171,6 +171,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
         reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!" 표시가 새 판에 남지 않게
         return choice;
       }),
+    isPaused: () => restartConfirm.isOpen(),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);
