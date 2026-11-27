@@ -30,7 +30,7 @@ const renderer = createRenderer(stage);
 // 이펙트 구독도 GameV2 생성 전에 건다(생성자가 이벤트를 낼 수 있다).
 bus.on('dialogue/resolved', (e) => renderer.effect(e.outcome === 'good' ? 'firework' : 'confused', e.customerId));
 bus.on('customer/fumed', (e) => renderer.effect('fumed', e.customerId));
-const ui = mountUiV2(app, bus, getState, renderer.picker, { versionLabel: versionLabel(__APP_VERSION__, __APP_COMMIT__), onRestart: restart });
+const ui = mountUiV2(app, bus, getState, renderer.picker, { versionLabel: versionLabel(__APP_VERSION__, __APP_COMMIT__), onRestart: restart, onSkipTutorial: skipTutorial });
 const profileStore = createBrowserProfileStore();
 const sessionStore = withProfile(createBrowserSessionStore(), profileStore);
 
@@ -77,6 +77,11 @@ function restart(): void {
   resultShown = false;
   last = performance.now(); // 새 판 첫 프레임의 dt 기준을 지금으로 맞춘다
 }
+// 튜토리얼 건너뛰기(타이틀 'skip'·튜토리얼 중 공용): 완료로 기록하고 restart와 같이 1단계부터(리뷰 0, 5★ 없음).
+function skipTutorial(): void {
+  profileStore.markTutorialCompleted();
+  restart();
+}
 function frame(now: number): void {
   const g = game as GameV2;
   // 확인 창이 떠 있는 동안은 tick을 건너뛴다. last는 계속 갱신해, 풀린 첫 프레임에 큰 dt가 들어가지 않게 한다.
@@ -92,7 +97,8 @@ function frame(now: number): void {
 }
 
 void ui.title({ tutorialButton: profileStore.load()?.tutorialCompleted === true }).then((choice) => {
-  if (choice === 'tutorial') {
+  if (choice === 'skip') skipTutorial();
+  else if (choice === 'tutorial') {
     // 튜토리얼부터 다시: 세션 저장값을 지우고 profile 대체 없이 만든다. profile·best는 그대로.
     try {
       sessionStorage.removeItem(SESSION_KEY);
