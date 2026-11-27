@@ -25,6 +25,8 @@ export interface HudView {
   readonly fumedHidden: boolean;
   /** 게임 중 다시 하기 버튼은 본게임에서만 보인다(튜토리얼 제외). */
   readonly restartVisible: boolean;
+  /** 튜토리얼에서는 같은 자리에 건너뛰기 버튼이 보인다. */
+  readonly skipVisible: boolean;
 }
 
 /** HUD 표시값. 점수 비교만 하고 계산은 core가 한다. */
@@ -39,6 +41,7 @@ export function hudView(state: Pick<GameStateV2, 'phase' | 'level' | 'shopScore'
     fumedCount: state.fumedCount,
     fumedHidden: state.phase === 'tutorial',
     restartVisible: state.phase !== 'tutorial',
+    skipVisible: state.phase === 'tutorial',
   };
 }
 
@@ -48,7 +51,7 @@ const POP_MS = 1300;
  * 상단 HUD: 왼쪽 최고 가게 점수(+NEW), 가운데 단계와 현재 가게 점수, 오른쪽 별 칸과 작은 리뷰 수.
  * 진행 중인 만족도는 표시하지 않는다(GDD §손님 대화 점수 비공개). score/plate 때 가운데 점수 아래에 "+N"(콤보 2 이상이면 배수)을 잠깐 띄운다.
  */
-export function createHudV2(bus: EventBus, disposers: (() => void)[], onRestartClick?: () => void): HudV2 {
+export function createHudV2(bus: EventBus, disposers: (() => void)[], onRestartClick?: () => void, onSkipClick?: () => void): HudV2 {
   const root = el('div', 'ui-hud2 ui-hit');
   const best = el('span', 'ui-hud-best');
   const newBadge = el('span', 'ui-hud-new', hudText.newBadge);
@@ -60,8 +63,12 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[], onRestartC
   const restart = el('button', 'ui-hud-restart', hudText.restartButton);
   restart.hidden = true;
   if (onRestartClick) restart.addEventListener('click', onRestartClick);
+  // 튜토리얼 중 건너뛰기: 다시 하기와 같은 자리·모양.
+  const skip = el('button', 'ui-hud-restart', hudText.skipButton);
+  skip.hidden = true;
+  if (onSkipClick) skip.addEventListener('click', onSkipClick);
   const subRow = el('div', 'ui-hud-sub-row');
-  subRow.append(fumed, restart);
+  subRow.append(fumed, restart, skip);
   const left = el('div', 'ui-hud-left');
   left.append(bestRow, subRow);
   const phase = el('div', 'ui-hud-phase');
@@ -120,6 +127,7 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[], onRestartC
       }
       reviews.textContent = v.reviews;
       restart.hidden = !onRestartClick || !v.restartVisible;
+      skip.hidden = !onSkipClick || !v.skipVisible;
       fumed.hidden = v.fumedHidden;
       fumed.textContent = v.fumed;
       fumed.classList.toggle('ui-dim', v.fumedCount === 0);

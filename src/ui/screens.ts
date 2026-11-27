@@ -25,7 +25,7 @@ export function versionTag(label: string | undefined): HTMLElement | null {
   return label ? el('div', 'ui-version', label) : null;
 }
 
-/** 타이틀. 버튼을 누르면 사라지고 선택을 resolve한다. 튜토리얼 버튼은 tutorialButton이 true일 때만 '시작' 아래에 둔다. */
+/** 타이틀. 버튼을 누르면 사라지고 선택을 resolve한다. tutorialButton이 true면 '시작' 아래에 '튜토리얼', 명시적 false면 '튜토리얼 건너뛰기'를 둔다. */
 export function showTitle(layer: HTMLElement, versionLabel?: string, opts?: { readonly tutorialButton?: boolean }): Promise<TitleChoice> {
   return new Promise((resolve) => {
     const o = overlay(layer, 'ui-title');
@@ -40,6 +40,10 @@ export function showTitle(layer: HTMLElement, versionLabel?: string, opts?: { re
       const tutorial = el('button', 'ui-secondary', titleText.tutorial);
       tutorial.addEventListener('click', choose('tutorial'));
       o.append(tutorial);
+    } else if (opts?.tutorialButton === false) {
+      const skip = el('button', 'ui-secondary', titleText.skipTutorial);
+      skip.addEventListener('click', choose('skip'));
+      o.append(skip);
     }
     const v = versionTag(versionLabel);
     if (v) o.append(v);

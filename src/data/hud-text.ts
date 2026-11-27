@@ -17,6 +17,9 @@ export const hudText = {
   restartConfirm: '처음부터 다시 할까요?',
   restartYes: '예',
   restartNo: '아니오',
+  /** 튜토리얼 중 건너뛰기 버튼(다시 하기 자리)과 확인 모달. 예·아니오는 restartYes·restartNo를 쓴다. */
+  skipButton: '건너뛰기',
+  skipConfirm: '튜토리얼을 건너뛸까요?',
   /** 손님 머리 위 라벨(손님이 있는 동안 계속 보인다). 개수 6은 "모두". */
   orderLabel: (ingredientLabel: string, count: 1 | 3 | 6): string => (count === 6 ? `모두 ${ingredientLabel}` : `${ingredientLabel} ×${count}`),
   avoidLabel: (ingredientLabel: string): string => `${ingredientLabel} 빼기`,
