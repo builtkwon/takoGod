@@ -688,6 +688,9 @@ export class GameV2 {
   }
 
   private afterPlate(): void {
+    // 접시 처리로 패배가 정해졌으면 다음 단계를 시작하지 않는다(game-over가 phase/changed보다 앞선다).
+    this.checkDefeat();
+    if (this.isFinished) return;
     if (this.plates < targetPlates(this.level)) return;
     this.startLevel(this.level + 1);
   }

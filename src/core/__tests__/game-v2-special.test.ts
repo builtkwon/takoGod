@@ -302,6 +302,31 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
   });
 });
 
+describe('패배와 단계 전환 순서', () => {
+  const wasabiPlate: HoleSpec[] = [{ filling: 'wasabi' }, ...withIngredient('octopus', 5).slice(0, 5)];
+
+  it('단체 첫 접시 위반으로 4명 모두 화남이 되고 그 접시가 단계의 마지막 접시여도 다음 단계를 시작하지 않는다', () => {
+    const { h, sq } = queued();
+    playUntilLevel(h, 15);
+    makePlate(h); // 15단계 접시 1개(목표 2개)
+    expect(h.game.state.level).toBe(15);
+    clearShop(h);
+    sq.push(0, 0.99, 0.99, 0, ING.wasabi, 0, ...[0, 0, 0.99, 0.99, 0.99, 0, 0, 0.99, 0.99, 0.99, 0, 0, 0.99, 0.99, 0.99]);
+    tickTo(h, h.now + 10);
+    expect(h.game.state.customers[0]?.group).not.toBeNull();
+    for (let i = 0; i < 2000 && h.game.state.fumedCount < 3; i++) h.tick(0.1);
+    expect(h.game.state.fumedCount).toBe(3);
+    const phases = h.of('phase/changed').length;
+    makePlate(h, wasabiPlate); // 단체 손님 첫 접시 = 15단계 마지막 접시
+    expect(h.game.finished).toBe(true);
+    expect(h.game.state.level).toBe(15);
+    expect(h.of('phase/changed')).toHaveLength(phases);
+    expect(h.of('session/game-over')).toEqual([{ reason: 'fumed', fumedCount: 4 }]);
+    const types = h.log.map((r) => r.type);
+    expect(types.slice(types.indexOf('session/game-over') + 1).includes('phase/changed')).toBe(false);
+  });
+});
+
 describe('러시 아워(GDD §특별 손님, 12단계~)', () => {
   const startRush = (h: ReturnType<typeof queued>['h']) => {
     for (let i = 0; i < 14 && h.of('rush/started').length === 0; i++) makePlate(h);

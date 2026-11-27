@@ -4,7 +4,7 @@ import { customerEnteredAt, makePlate, playUntilLevel, setupV2, tickTo } from '.
 type H = ReturnType<typeof setupV2>;
 
 /** 테스트 전용: 대화 타이머를 직접 맞춘다(여러 손님이 같은 틱에 대화를 열게 하는 상황). */
-const internals = (h: H) => h.game as unknown as { guests: { id: string; untilDialogue: number }[] };
+const internals = (h: H) => h.game as unknown as { guests: { id: string; untilDialogue: number }[]; spawnTimer: number | null; startLevel(level: number): void };
 
 const enteredTimes = (h: H) => h.log.filter((r) => r.type === 'customer/entered').map((r) => r.t);
 
@@ -84,6 +84,43 @@ describe('입장 타이밍(GDD §손님 대화 손님 흐름)', () => {
     expect(h.game.state.seatCount).toBe(3);
     tickTo(h, h.now + 8);
     expect(h.game.state.customers).toHaveLength(3); // 늘어난 자리는 3초 간격으로 채운다
+  });
+});
+
+describe('입장 타이머 경우 정리(GDD §손님 대화 손님 흐름)', () => {
+  it('단계 시작 때 손님이 있고 상한이 늘어 빈 자리가 생기면 단계 시작부터 3초 뒤 입장한다', () => {
+    const h = setupV2();
+    playUntilLevel(h, 5);
+    tickTo(h, h.now + 4);
+    const g = internals(h);
+    expect(h.game.state.customers).toHaveLength(2);
+    expect(g.spawnTimer).toBeNull(); // 자리가 찼고 예약된 입장이 없다
+    const before = h.of('customer/entered').length;
+    g.startLevel(6); // 상한 2 → 3, 손님은 이월
+    const start = h.now;
+    tickTo(h, start + 2.8);
+    expect(h.of('customer/entered')).toHaveLength(before);
+    tickTo(h, start + 3.2);
+    expect(h.of('customer/entered')).toHaveLength(before + 1);
+    expect(h.game.state.customers).toHaveLength(3);
+  });
+
+  it('퇴장 2초 타이머가 돌고 있으면 단계가 바뀌어도 그 2초를 유지한다', () => {
+    const h = setupV2();
+    playUntilLevel(h, 5);
+    for (let i = 0; i < 3; i++) makePlate(h);
+    tickTo(h, h.now + 4);
+    expect(h.game.state.customers).toHaveLength(2);
+    makePlate(h); // 5단계 마지막 접시: 손님이 퇴장하며 2초 타이머, 이어서 6단계 시작
+    expect(h.game.state.level).toBe(6);
+    const left = h.log.filter((r) => r.type === 'customer/left').at(-1)?.t ?? NaN;
+    const n = h.of('customer/entered').length;
+    tickTo(h, left + 1.9);
+    expect(h.of('customer/entered')).toHaveLength(n);
+    tickTo(h, left + 2.2);
+    expect(h.of('customer/entered')).toHaveLength(n + 1);
+    const t = enteredTimes(h).at(-1) ?? NaN;
+    expect(t - left).toBeCloseTo(2, 1);
   });
 });
 
