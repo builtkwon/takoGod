@@ -9,10 +9,11 @@
 - 용어: 화면과 이 문서의 "접시"는 완성품을 담는 용기(6알)이자 서빙 단위다. 옛 이름 "후네"는 쓰지 않는다. 코드 식별자는 그대로여서 코드의 fune(FuneItem, funeServing 등) = 화면의 접시다.
 - v0.6.0(콘텐츠 고도화: §주문, §특별 손님, 식품 신고, 인내 1.5배)에서도 저장 형식(sessionStorage·localStorage)은 바뀌지 않는다.
 - 세션 점수 = 받은 리뷰 별점의 평균. sessionStorage 저장(탭 종료 시 초기화).
-- 가게 점수 = 별점과 별개의 상한 없는 점수(§가게 점수). 최고 가게 점수만 localStorage 키 `takoyaki:best`에 영구 저장한다. 값은 JSON `{version: 1, best: number}`이고 손상된 값(파싱 실패, version 불일치, best가 유한한 0 이상의 수가 아님)은 버린다(기록 없음) → [ADR 0004](adr/0004-best-shop-score-storage.md). 최고 기록은 세션이 끝날 때(패배로 결과 화면 도달) max로 갱신한다.
+- 가게 점수 = 별점과 별개의 상한 없는 점수(§가게 점수). 최고 가게 점수만 localStorage 키 `takoyaki:best`에 영구 저장한다. 값은 JSON `{version: 1, best: number}`이고 손상된 값(파싱 실패, version 불일치, best가 안전한 0 이상 정수가 아님)은 버린다(기록 없음) → [ADR 0004](adr/0004-best-shop-score-storage.md). 최고 기록은 세션이 끝날 때(패배로 결과 화면 도달) max로 갱신한다.
 - 결과 화면의 "다시 하기"는 이번 판 기록(리뷰·별점·가게 점수)을 지우고 1단계부터 새 판을 시작한다. 판은 패배할 때까지 끝없이 이어진다(§진행). 최고 기록과 튜토리얼 완료는 유지한다. 본게임 중에도 상단 왼쪽의 "다시 하기" 버튼(§화면 배치)으로 같은 결과를 낼 수 있다(확인 모달을 거친다).
 - 튜토리얼 완료 여부는 기기에 기억한다. localStorage 키 `takoyaki:profile`, 값은 JSON `{version: 1, tutorialCompleted: true}`이고 손상된 값은 버린다 → [ADR 0005](adr/0005-profile-storage.md). 이번 판 점수·리뷰는 아래 sessionStorage 그대로다.
 - sessionStorage 키 `takoyaki:session`, 값은 JSON `{version: 1, tutorialCompleted, finished, reviews: ReviewResult[]}`(contracts `SessionSnapshot`) → [ADR 0002](adr/0002-session-storage.md). `reviews`는 contracts `ReviewResult`(source, stars, comment, personality)를 그대로 직렬화하고, 튜토리얼 리뷰의 personality는 null이다.
+- 보안: 클라이언트 점수·저장값은 이용자 기기에서 조작할 수 있고 지금은 본인에게만 영향을 준다(서버 없음). 온라인 순위표를 만들면 서버 검증이 필수다. 읽을 때는 신뢰 경계로 보고 `reviews`가 500개를 넘거나 `comment`가 200자를 넘으면 손상으로 버린다. 배포는 `public/_headers`의 CSP 등 보안 헤더를 붙인다.
 - 복원: 파싱 실패나 version이 1이 아니면 값을 버리고 새로 시작한다. `finished`가 true(패배로 판이 끝남)면 결과 화면을 다시 보여준다. 본게임 도중 새로고침하면 1단계부터 다시 시작하고 튜토리얼 리뷰만 남긴다.
 - 그래픽: 툰 셰이딩. Three.js, 화면 해상도 렌더(pixelRatio 상한 2), 3단 셀 조명(방향광 1 + 앰비언트), 모델 외곽선(inverted hull), 밝고 채도 높은 평면 색, 로우폴리. 절차 텍스처는 64px 이하만 사용하고 외부 에셋 금지. → [ADR 0003](adr/0003-toon-render-pipeline.md)
 

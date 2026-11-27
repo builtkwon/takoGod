@@ -30,7 +30,7 @@ B를 채택한다. 2026-11-20 사용자가 승인했다.
 
 1. 키는 `takoyaki:best`(localStorage)다.
 2. 값은 JSON `{version: 1, best: number}`이다.
-3. 손상된 값(파싱 실패, version이 1이 아님, best가 유한한 0 이상의 수가 아님)은 버린다. 포트는 null(기록 없음)을 돌려준다.
+3. 손상된 값(파싱 실패, version이 1이 아님, best가 안전한 0 이상 정수가 아님)은 버린다. 포트는 null(기록 없음)을 돌려준다.
 4. 저장은 contracts 포트 `BestScoreStore { load(): number | null; save(best: number): void }`로만 한다. core는 이 타입만 쓰고 브라우저 localStorage 구현은 main 조립 쪽에 둔다.
 5. 갱신 시점은 세션 종료(결과 화면 도달)이고 `max(저장값, 이번 판 가게 점수)`다. 판 시작 때 읽은 값이 `GameStateV2.bestShopScore`이며 진행 중에는 바뀌지 않는다.
 6. 세션 저장(ADR 0002)은 바꾸지 않는다.

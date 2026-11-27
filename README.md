@@ -124,13 +124,17 @@ pnpm tool test.e2e                # E2E(build 후 vite preview 대상)
 
 ## 테스트
 
-세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 28개: 부팅, PWA, 튜토리얼, 속재료 탭 선택·탭 안내, 게임 중 다시 하기, 복원, 손상된 저장값, 최고 기록 표시·손상, 튜토리얼 완료 기억, 타이틀 튜토리얼 버튼, 결과 화면 다시 하기 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
+세 층이다: 단위(Vitest, 모듈의 `__tests__/<대상>.test.ts`), 화면(`pnpm tool render.snapshot`), E2E(Playwright mobile 프로젝트, `e2e/*.spec.ts`, 시나리오 30개: 부팅, PWA, CSP 위반 없음, 튜토리얼, 속재료 탭 선택·탭 안내, 게임 중 다시 하기, 복원, 손상된 저장값, 최고 기록 표시·손상, 튜토리얼 완료 기억, 타이틀 튜토리얼 버튼, 결과 화면 다시 하기 등). 작성 기준은 [testing.md](docs/rules/development/testing.md)에 있다.
 
 ## PWA
 
-- 오프라인 셸: `public/sw.js`가 셸과 빌드 자산을 캐시한다. 내비게이션은 네트워크 우선·오프라인이면 캐시, 새 셸을 받으면 참조하지 않는 옛 해시 자산을 지운다. 서비스 워커는 빌드 결과(PROD)에서만 등록한다.
+- 오프라인 셸: `public/sw.js`가 셸과 빌드 자산을 캐시한다(앱 파일만, 셸은 셸 경로의 HTML만 저장). 내비게이션은 네트워크 우선·오프라인이면 캐시, 새 셸을 받으면 참조하지 않는 옛 해시 자산을 지운다. 서비스 워커는 빌드 결과(PROD)에서만 등록한다.
 - 아이콘: PNG 192·512(any), maskable 512, apple-touch 180, 파비콘은 PNG(icon-192). manifest에는 192·512·maskable을 등록했다(`public/manifest.webmanifest`).
 - iOS Safari에서는 첫 화면 전에 홈 화면 추가 안내를 보여주고 "웹에서 계속하기"로 넘어갈 수 있다.
+
+## 보안
+
+- `public/_headers`가 CSP 등 보안 헤더를 붙인다(Cloudflare Pages). 점수·저장값은 이용자 기기에서 조작할 수 있고 지금은 본인에게만 영향을 준다(서버 없음). 온라인 순위표를 만들면 서버 검증이 필수다.
 
 ## 배포
 
