@@ -436,6 +436,23 @@ test('게임 중 다시 하기: 확인에서 아니오를 누르면 그대로 �
   expect(await marker(page)).toBe('marker');
 });
 
+test('게임 중 다시 하기: 확인 창이 떠 있는 동안 게임 시간이 흐르지 않고, 아니오 뒤 다시 흐른다', async ({ page }) => {
+  await page.clock.install({ time: T0 });
+  await startMainGame(page);
+  await page.clock.pauseAt(new Date(T0.getTime() + 5000));
+  // 게임 시간의 관찰값: 타이밍 바 마커 위치(누적 dt / 주기). tick이 돌 때만 움직인다.
+  const marker = () => page.locator('.ui-bar-marker').evaluate((m) => (m as HTMLElement).style.left);
+  await page.clock.runFor(1234);
+  await page.getByRole('button', { name: '↻ 다시 하기' }).click();
+  await page.clock.runFor(100); // 모달이 열린 프레임이 돌게 한다
+  const before = await marker();
+  await page.clock.runFor(7777); // 모달이 열린 채 수 초
+  expect(await marker()).toBe(before);
+  await page.getByRole('button', { name: '아니오' }).click();
+  await page.clock.runFor(1234);
+  expect(await marker()).not.toBe(before);
+});
+
 test('게임 중 다시 하기: 튜토리얼 중에는 버튼이 없다', async ({ page }) => {
   await start(page);
   await expect(page.locator('.ui-hud2')).toContainText('튜토리얼');

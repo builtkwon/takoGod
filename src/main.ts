@@ -79,7 +79,8 @@ function restart(): void {
 }
 function frame(now: number): void {
   const g = game as GameV2;
-  g.tick(Math.max(0, Math.min(MAX_DT, (now - last) / 1000)));
+  // 확인 창이 떠 있는 동안은 tick을 건너뛴다. last는 계속 갱신해, 풀린 첫 프레임에 큰 dt가 들어가지 않게 한다.
+  if (!ui.isPaused()) g.tick(Math.max(0, Math.min(MAX_DT, (now - last) / 1000)));
   last = now;
   const state = g.state;
   renderer.renderV2(state, now);
