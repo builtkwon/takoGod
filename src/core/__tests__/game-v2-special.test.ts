@@ -209,6 +209,28 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
     expect(types.lastIndexOf('customer/fumed')).toBeLessThan(types.lastIndexOf('plate/scored'));
   });
 
+  it('위반 접시는 별점이 다시해줘 조건 이하여도 다시해줘를 부르지 않는다(난수도 뽑지 않는다). 리뷰는 발급된다', () => {
+    const { h, q, sq } = queued();
+    startAt(h, sq, 13, avoidWasabi);
+    const hold = makePlate(h, wasabiPlate, true);
+    // 모두 0이면 다시해줘(0 < 0.2)를 뽑았을 때 걸린다. 접시 난수는 맛보기 1 + 리뷰 코멘트 1 + 트레이 셔플 5 = 7개다.
+    hold(() => q.push(...Array.from({ length: 8 }, () => 0)));
+    expect(h.of('plate/scored').at(-1)).toMatchObject({ delta: -40, stars: 2 }); // 2.5★ 이하
+    expect(h.of('customer/redo-requested')).toEqual([]);
+    expect(h.of('review/issued').at(-1)?.review.stars).toBe(2);
+    expect(h.of('customer/left').length).toBeGreaterThan(0);
+    expect(q).toEqual([0]); // 다시해줘 난수를 뽑았다면 하나 더 줄었을 것이다
+  });
+
+  it('위반이 없는 접시는 별점이 2.5 이하이면 기존대로 다시해줘를 뽑는다', () => {
+    const { h, q, sq } = queued();
+    startAt(h, sq, 13, avoidWasabi);
+    const hold = makePlate(h, [{ filling: 'none' }, { filling: 'chili' }, ...withIngredient('octopus', 4).slice(0, 4)], true); // 속 없음·함정 → 2.0★
+    hold(() => q.push(0));
+    expect(h.of('customer/allergy')).toEqual([]);
+    expect(h.of('customer/redo-requested')).toHaveLength(1);
+  });
+
   it('이미 화난 손님이면 -40만 적용하고 화난 손님 수를 늘리지 않는다', () => {
     const { h, sq } = queued();
     const c = startAt(h, sq, 13, avoidWasabi);
