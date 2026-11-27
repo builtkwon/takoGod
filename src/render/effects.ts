@@ -1,7 +1,8 @@
 // 연출 이펙트(폭죽·물음표/빠직·화면 흔들림). 판정과 무관한 연출이라 Math.random을 써도 되고, seed를 주면 같은 모양이 나온다(스냅샷용).
 import { BoxGeometry, Color, CylinderGeometry, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, OctahedronGeometry, SphereGeometry, TorusGeometry } from 'three';
 import type { BufferGeometry, Camera, Scene, ShaderMaterial } from 'three';
-import { CUSTOMER_POS } from './layout';
+import { MAX_SEATS, seatPositions, seatScale } from './layout';
+import type { V3 } from './layout';
 import { merge, part } from './models';
 import { addOutline, toon } from './toon';
 
@@ -84,13 +85,13 @@ export interface Effects {
    * slotOf는 손님 id의 현재 슬롯(없으면 -1)이다. 매 프레임 다시 찾아 따라가고, 손님이 사라지면 그 이펙트를 끝낸다.
    * 예외: fumed의 화면 흔들림은 손님과 무관해서 손님이 없어도 0.4초 끝까지 간다(분노 표시만 생략).
    */
-  update(nowMs: number, slotOf: (customerId: string) => number): readonly [number, number];
+  update(nowMs: number, slotOf: (customerId: string) => number, seatCount?: number): readonly [number, number];
 }
 
 export function createEffects(scene: Scene, camera: Camera, outline: ShaderMaterial): Effects {
   const qGeo = questionGeo();
   const aGeo = angerGeo();
-  const slots = CUSTOMER_POS.map((p) => {
+  const slots = Array.from({ length: MAX_SEATS }, () => {
     const mk = (geo: BufferGeometry) => {
       const m = addOutline(new Mesh(geo, toon()), outline);
       m.visible = false;
@@ -102,7 +103,7 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
     fw.visible = false;
     for (let i = 0; i < PARTICLES; i++) fw.setColorAt(i, new Color(PALETTE[i % PALETTE.length]!));
     scene.add(fw);
-    return { p, fw, question: mk(qGeo), anger: mk(aGeo) };
+    return { p: [0, 0, 0] as V3, fw, question: mk(qGeo), anger: mk(aGeo) };
   });
   const active: Active[] = [];
   const dummy = new Object3D();
@@ -124,7 +125,12 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
       if (i >= 0) active.splice(i, 1);
       active.push({ kind, id, start: opts.startMs ?? nowMs, mark: kind === 'fumed' ? 'anger' : mark, vel });
     },
-    update(nowMs, slotOf) {
+    update(nowMs, slotOf, seatCount = 2) {
+      const pos = seatPositions(seatCount);
+      const sc = seatScale(seatCount);
+      slots.forEach((s, i) => {
+        s.p = pos[i] ?? s.p;
+      });
       for (const s of slots) {
         s.fw.visible = false;
         s.question.visible = false;
@@ -151,7 +157,7 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
           s.fw.visible = true;
           const size = 0.075 * (1 - t / dur) + 0.01;
           for (let i = 0; i < PARTICLES; i++) {
-            dummy.position.set(s.p[0] + e.vel[i * 3]! * t, HEAD_Y + e.vel[i * 3 + 1]! * t - 2.2 * t * t, s.p[2] + 0.3 + e.vel[i * 3 + 2]! * t);
+            dummy.position.set(s.p[0] + e.vel[i * 3]! * t, HEAD_Y * sc + e.vel[i * 3 + 1]! * t - 2.2 * t * t, s.p[2] + 0.3 + e.vel[i * 3 + 2]! * t);
             dummy.rotation.set(t * 5 + i, t * 3, 0);
             dummy.scale.setScalar(size);
             dummy.updateMatrix();
@@ -164,8 +170,8 @@ export function createEffects(scene: Scene, camera: Camera, outline: ShaderMater
           // 튀어나오며(오버슈트) 나타나고 끝에서 줄어든다.
           const pop = t < 0.18 ? 1 + Math.sin((t / 0.18) * Math.PI) * 0.25 : 1;
           const fade = t > dur - 0.2 ? Math.max((dur - t) / 0.2, 0) : 1;
-          m.scale.setScalar(1.7 * Math.min(t / 0.12, 1) * pop * fade);
-          m.position.set(s.p[0], HEAD_Y + Math.sin(t * 9) * 0.04, s.p[2] + 0.25);
+          m.scale.setScalar(1.7 * sc * Math.min(t / 0.12, 1) * pop * fade);
+          m.position.set(s.p[0], HEAD_Y * sc + Math.sin(t * 9) * 0.04, s.p[2] + 0.25);
           m.quaternion.copy(camera.quaternion); // 항상 화면을 향한다.
           if (e.kind === 'fumed' && t < DURATION.shake) {
             shake = fumedShake(t);

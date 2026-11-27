@@ -48,6 +48,7 @@ const base2: GameStateV2 = {
   shopScore: 0,
   bestShopScore: null,
   combo: 0,
+  seatCount: 2,
   rush: null,
   fune: [],
   funeServing: false,
@@ -60,6 +61,12 @@ const base2: GameStateV2 = {
   tutorialStage: null,
 };
 const faces = (face: PatienceLevel): GameStateV2 => ({ ...base2, customers: [status('c1', 'salaryman', face), status('c2', 'grandma', face)] });
+/** n명(1~4)이 나란히 선 상태: 자리 수도 n으로 둔다. 얼굴은 번갈아 보여 구분한다. */
+const seats = (n: number): GameStateV2 => ({
+  ...base2,
+  seatCount: n,
+  customers: Array.from({ length: n }, (_, i) => status(`c${i + 1}`, i % 2 === 0 ? 'salaryman' : 'grandma', (['normal', 'annoyed', 'angry'] as const)[i % 3]!)),
+});
 const rim: GameStateV2 = {
   ...base2,
   holes: holes2('cooked', 'done', 'dark', h2(3, 'done', { warn: true }), h2(4, 'dark', { warn: true }), 'cooking'),
@@ -112,6 +119,10 @@ const STATES: Readonly<Record<string, GameStateV2>> = {
   'v2-face-normal': faces('normal'),
   'v2-face-annoyed': faces('annoyed'),
   'v2-face-angry': faces('angry'),
+  'v2-seats-1': seats(1),
+  'v2-seats-2': seats(2),
+  'v2-seats-3': seats(3),
+  'v2-seats-4': seats(4),
   'v2-fx-firework': faces('normal'),
   'v2-fx-confused-q': faces('annoyed'),
   'v2-fx-confused-anger': faces('annoyed'),

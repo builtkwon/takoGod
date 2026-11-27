@@ -16,7 +16,6 @@ import {
 import type { GameStateV2, HoleStateV2, ScenePicker } from '../contracts';
 import {
   BALL_UNIT,
-  CUSTOMER_POS,
   DISC_UNIT,
   DOUGH_BASE,
   DOUGH_LOOKS,
@@ -38,7 +37,7 @@ import {
   buildStatic,
 } from './models';
 import type { BakeStage, CustomerModel } from './models';
-import { CAMERA, TAKO_S } from './layout';
+import { CAMERA, MAX_SEATS, TAKO_S, clampSeats, seatPositions, seatScale } from './layout';
 import { admit, createEffects } from './effects';
 import type { EffectKind, EffectOptions } from './effects';
 import { FACE_TINT, RIM_COLOR, holeTint, rimOf, rimVisible, showsFilling, showsNoFilling } from './holes';
@@ -142,10 +141,9 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   });
 
   // 손님 슬롯마다 모델별 그룹을 미리 만들고 보이기만 바꾼다.
-  const slots = CUSTOMER_POS.map((p) => {
+  const slots = Array.from({ length: MAX_SEATS }, () => {
     const models: Record<CustomerModel, Group> = { salaryman: buildCustomer('salaryman', outline), grandma: buildCustomer('grandma', outline) };
     for (const m of Object.values(models)) {
-      m.position.set(...p);
       m.visible = false;
       scene.add(m);
     }
@@ -203,6 +201,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
 
   const katsuoY = katsuo.map((g) => g.position.y);
   let customerIds: string[] = [];
+  let seats = 2;
   let slotIds: (string | null)[] = slots.map(() => null);
   const pending: { kind: EffectKind; id: string; opts: EffectOptions | undefined }[] = [];
   let drawn = false;
@@ -234,18 +233,24 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
   ro.observe(container);
 
   return {
-    picker: createScenePicker(canvas, () => trayCount, () => camSpec, (id) => slotIds.indexOf(id)),
+    picker: createScenePicker(canvas, () => trayCount, () => camSpec, (id) => slotIds.indexOf(id), () => seats),
     renderV2(state, nowMs = performance.now()) {
       state.holes.forEach((h) => updateHoleV2(h.index, h, state.holding === h.index, nowMs));
       updateTrayFune(
         state.tray,
         state.fune.map((f): BakeStage => (f.dark ? 'dark' : 'normal')),
       );
-      slotIds = assignSlots(slotIds, state.customers.map((c) => c.id));
+      seats = state.seatCount;
+      slotIds = assignSlots(slotIds, state.customers.map((c) => c.id), clampSeats(seats));
+      const seatPos = seatPositions(seats);
+      const sc = seatScale(seats);
       slots.forEach((models, i) => {
         const c = state.customers.find((x) => x.id === slotIds[i]);
         for (const [kind, m] of Object.entries(models)) {
-          m.visible = c !== undefined && MODEL_OF[c.personality] === kind;
+          const at = seatPos[i];
+          if (at !== undefined) m.position.set(...at);
+          m.scale.setScalar(sc);
+          m.visible = at !== undefined && c !== undefined && MODEL_OF[c.personality] === kind;
           if (c !== undefined) faceMat(m).color.setRGB(...FACE_TINT[c.face]);
         }
       });
@@ -260,7 +265,7 @@ export function createRenderer(container: HTMLElement): ToonRenderer {
         // 이벤트 뒤 같은 틱에 손님이 이미 나갔으면 firework·confused는 버린다. fumed는 화면 흔들림이 손님과 무관해 id가 없어도 시작한다.
         if (admit(q.kind, customerIds.includes(q.id))) effects.trigger(q.kind, q.id, nowMs, q.opts);
       }
-      const [dx, dy] = effects.update(nowMs, (id) => slotIds.indexOf(id));
+      const [dx, dy] = effects.update(nowMs, (id) => slotIds.indexOf(id), seats);
       camera.position.set(CAMERA.pos[0] + dx, CAMERA.pos[1] + dy, CAMERA.pos[2]);
       draw();
     },

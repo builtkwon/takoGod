@@ -1,6 +1,6 @@
 // ScenePicker 구현. 투영·광선 판정은 순수 함수라 three 없이 테스트한다.
 import type { PickTarget, ScenePicker } from '../contracts';
-import { BOARD_K, CAMERA, CUSTOMER_POS, FUNE_S, FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
+import { BOARD_K, CAMERA, FUNE_S, FUNE_Z, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z, seatPositions, seatScale } from './layout';
 import type { V3 } from './layout';
 import { fitCamera } from './fit';
 import { makeProjector } from './projector';
@@ -25,7 +25,7 @@ const CUSTOMER_ANCHOR_Y = 2.5;
 /** customerSlot: 손님 id → 모델 자리 인덱스(없으면 -1). */
 export type CustomerSlotOf = (customerId: string) => number;
 
-export function worldAnchor(t: PickTarget, trayCount: number, customerSlot: CustomerSlotOf = () => -1): V3 | null {
+export function worldAnchor(t: PickTarget, trayCount: number, customerSlot: CustomerSlotOf = () => -1, seatCount = 2): V3 | null {
   if (t.kind === 'hole') {
     const p = HOLE_POS[t.index];
     return p === undefined ? null : [p[0], HOLE_Y, p[2]];
@@ -35,8 +35,8 @@ export function worldAnchor(t: PickTarget, trayCount: number, customerSlot: Cust
     return x === undefined || t.slot >= trayCount ? null : [x, TRAY_Y, TRAY_Z];
   }
   if (t.kind === 'customer') {
-    const p = CUSTOMER_POS[customerSlot(t.customerId)];
-    return p === undefined ? null : [p[0], CUSTOMER_ANCHOR_Y, p[2]];
+    const p = seatPositions(seatCount)[customerSlot(t.customerId)];
+    return p === undefined ? null : [p[0], CUSTOMER_ANCHOR_Y * seatScale(seatCount), p[2]];
   }
   return [0, FUNE_Y, FUNE_Z];
 }
@@ -75,8 +75,8 @@ export function pickUv(proj: Projector, u: number, v: number, trayCount: number)
 }
 
 /** 대상의 uv. 없는 대상·카메라 뒤·화면 밖이면 null. */
-export function anchorUv(proj: Projector, target: PickTarget, trayCount: number, customerSlot?: CustomerSlotOf): Uv | null {
-  const w = worldAnchor(target, trayCount, customerSlot);
+export function anchorUv(proj: Projector, target: PickTarget, trayCount: number, customerSlot?: CustomerSlotOf, seatCount?: number): Uv | null {
+  const w = worldAnchor(target, trayCount, customerSlot, seatCount);
   const uv = w === null ? null : proj.project(w);
   return uv !== null && uv.u >= 0 && uv.u <= 1 && uv.v >= 0 && uv.v <= 1 ? uv : null;
 }
@@ -85,7 +85,7 @@ export function anchorUv(proj: Projector, target: PickTarget, trayCount: number,
  * canvas의 현재 CSS 위치·크기로 뷰포트 좌표를 변환한다(렌더 해상도와 무관하게 rect 비율만 쓴다).
  * getTrayCount: 현재 화면에 있는 트레이 칸 수(렌더러가 마지막으로 그린 GameStateV2.tray 길이).
  */
-export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRect'>, getTrayCount: () => number, cam?: CameraSpec | (() => CameraSpec), customerSlot: CustomerSlotOf = () => -1): ScenePicker {
+export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRect'>, getTrayCount: () => number, cam?: CameraSpec | (() => CameraSpec), customerSlot: CustomerSlotOf = () => -1, getSeatCount: () => number = () => 2): ScenePicker {
   // cam을 생략하면 canvas 현재 CSS 크기로 fitCamera를 계산한다(렌더러와 같은 식이라 e2e처럼 boundingBox만 아는 쪽도 맞는다).
   const proj = () => {
     if (cam !== undefined) return makeProjector(typeof cam === 'function' ? cam() : cam);
@@ -103,7 +103,7 @@ export function createScenePicker(canvas: Pick<HTMLElement, 'getBoundingClientRe
     },
     anchor(target) {
       const r = canvas.getBoundingClientRect();
-      const uv = anchorUv(proj(), target, getTrayCount(), customerSlot);
+      const uv = anchorUv(proj(), target, getTrayCount(), customerSlot, getSeatCount());
       return uv === null ? null : { x: r.left + uv.u * r.width, y: r.top + uv.v * r.height };
     },
   };

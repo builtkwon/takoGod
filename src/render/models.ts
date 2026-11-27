@@ -17,7 +17,7 @@ import type { HoleStage, IngredientId, Personality } from '../contracts';
 import { addOutline, toon } from './toon';
 import type { Textures } from './textures';
 
-import { CUSTOMER_POS, FUNE_S, FUNE_Z, HOLE_COUNT, HOLE_POS, PLATE_D, PLATE_TOP, PLATE_W, TAKO_S, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
+import { FUNE_S, FUNE_Z, HOLE_COUNT, HOLE_POS, PLATE_D, PLATE_TOP, PLATE_W, TAKO_S, TRAY_TOP, TRAY_X, TRAY_Z } from './layout';
 import type { V3 } from './layout';
 
 /** 변환 후 플랫 노멀 + 단색 버텍스 컬러를 입힌 파트. */
@@ -43,7 +43,7 @@ export function merge(parts: BufferGeometry[]): BufferGeometry {
 
 // --- 철판 레이아웃 -----------------------------------------------------------
 
-export { CUSTOMER_POS, FUNE_Z, HOLE_COUNT, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z };
+export { FUNE_Z, HOLE_COUNT, HOLE_POS, PLATE_TOP, TRAY_TOP, TRAY_X, TRAY_Z };
 
 /** 카운터는 손님 뒤쪽 끝(z=-3.1)부터 후네 앞까지 늘렸다. */
 const COUNTER_BACK = -3.1;

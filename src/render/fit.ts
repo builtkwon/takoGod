@@ -1,5 +1,5 @@
 // 화면 비율·상단 UI 높이에 맞춰 같은 카메라 방향으로 장면을 채우는 오프축 맞춤. three에 의존하지 않는다(pick과 공유).
-import { CAMERA, CUSTOMER_POS, FUNE_S, FUNE_Z, PLATE_D, PLATE_TOP, PLATE_W } from './layout';
+import { CAMERA, FUNE_S, FUNE_Z, PLATE_D, PLATE_TOP, PLATE_W, MAX_SEATS, seatPositions } from './layout';
 import type { V3 } from './layout';
 import { makeProjector } from './projector';
 import type { CameraSpec } from './projector';
@@ -8,9 +8,9 @@ import { VIEW_ASPECT } from './dims';
 /** 상단 UI(HUD+타이밍 바) 높이(CSS px). ui의 .ui-top 높이와 맞춘다(약 125px). 장면은 이 아래 영역에 채운다. */
 export const TOP_UI_PX = 125;
 
-/** 반드시 보여야 하는 월드 점: 손님 머리 위, 철판 모서리(좌우 여유 포함), 후네 앞. */
+/** 반드시 보여야 하는 월드 점: 손님 머리 위(최대 4명이 선 범위, 단계가 올라도 카메라가 뛰지 않게 항상 포함), 철판 모서리(좌우 여유 포함), 후네 앞. */
 const CONTENT: readonly V3[] = [
-  ...CUSTOMER_POS.flatMap(([x, , z]): V3[] => [[x - 0.7, 2.7, z], [x + 0.7, 2.7, z]]),
+  ...seatPositions(MAX_SEATS).flatMap(([x, , z]): V3[] => [[x - 0.7, 2.7, z], [x + 0.7, 2.7, z]]),
   [-PLATE_W / 2 - 0.3, PLATE_TOP, PLATE_D / 2],
   [PLATE_W / 2 + 0.3, PLATE_TOP, PLATE_D / 2],
   [-PLATE_W / 2 - 0.3, PLATE_TOP, -PLATE_D / 2],
