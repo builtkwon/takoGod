@@ -27,8 +27,7 @@
 
 - 필수: 병합 전에 README.md를 최신화하고, 그 변경을 병합 직전 main 커밋으로 둔다. 바뀐 것이 없으면 병합 커밋 본문에 "README 확인, 변경 없음"을 쓴다.
 - 필수: 병합 뒤 병합한 브랜치를 로컬과 원격 모두에서 삭제한다. 원격 삭제는 push 권한이 있는 PM이 한다.
-- 기본: 작업마다 main에서 새 브랜치를 만든다. 이름은 `feat/<모듈>-<주제>`(예: `feat/ui-drag`)이고, 작업자는 자기 worktree에서 `git switch -c`로 만든다.
-- 예외(1회): 지금 쓰는 feat/core·feat/render·feat/ui는 6단계 병합 뒤 삭제하고, 그 뒤부터 위 규칙을 따른다.
+- 기본: 작업마다 main에서 새 브랜치를 만든다. 이름은 `feature/<작업명>`(예: `feature/ui-drag`)이고, 작업자는 자기 worktree에서 `git switch -c`로 만든다. 개발 세션은 push하지 않고, main 반영·태그·push는 PM이 한다.
 - 병합 단계와 검증은 [merge-checklist 스킬](../../../.claude/skills/merge-checklist/SKILL.md)을 따른다. main 병합은 사용자 승인 대상이다([commits.md](commits.md)).
 
 ## 완료 보고

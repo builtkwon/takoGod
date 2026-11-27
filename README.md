@@ -9,13 +9,13 @@
 - 진행: 튜토리얼 뒤 1단계부터 끝없이 이어진다. 난이도는 20단계까지 오르고 이후 고정이다(현재 수치는 GDD, 곡선은 `src/core/levels.ts`). 화난 손님이 세션 합계 4명이 되면 영업 종료(결과 화면)다.
 - 점수: 별점과 별개로 상한 없는 가게 점수와 콤보가 있고, 최고 기록은 기기에 저장한다. 평균 별점은 우상단 별 칸과 리뷰 카드로 보여 준다.
 - 굽기 조작: 철판은 4×4 16구다. 버터(코드 이름 `margarine`)·반죽은 통에서 끌어 칠하고, 속재료는 끌어 놓거나 트레이 칸을 탭한 뒤 구멍을 탭해 넣는다. 굴리기는 타이밍 바 판정이고, 완성품은 접시(코드 이름 `fune`)에 담아 서빙한다.
-- 콘텐츠: 10단계부터 주문, 식품 신고(지우개가 든 접시), 12단계 러시 아워, 13단계 빼 주세요, 15단계 단체 주문, 17단계 깐깐한 VIP가 나온다. 주문 라벨은 손님 머리 위에 계속 보인다.
-- 기억·재시작: 튜토리얼 완료를 기기에 기억하고 타이틀의 "튜토리얼" 버튼으로 다시 할 수 있다. 결과 화면과 게임 중 HUD("↻ 다시 하기", 확인 후)에서 1단계부터 새 판을 연다.
+- 콘텐츠: 10단계부터 주문, 식품 신고(지우개가 든 접시), 12단계 러시 아워, 13단계 빼 주세요, 15단계 단체 주문, 17단계 깐깐한 VIP가 나온다. 주문 라벨은 손님 머리 위에 계속 보인다. 말풍선은 작게 구이판·재료칸을 피해 놓이고, 빼 주세요를 어긴 접시는 다시 해 달라고 하지 않는다.
+- 기억·재시작: 튜토리얼 완료를 기기에 기억하고 타이틀의 "튜토리얼" 버튼으로 다시 할 수 있다. 결과 화면과 게임 중 HUD("↻ 다시 하기", 확인 후, 확인 창이 떠 있는 동안 게임은 일시정지)에서 1단계부터 새 판을 연다.
 - 앱: 오프라인 셸 PWA이고 iOS 홈 화면 추가 안내가 있다.
 
 ## 개발 운영
 
-- 브랜치: main에는 직접 커밋하지 않는다. 작업은 `feature/*` 브랜치에서 하고(규칙 문서의 이름 예시는 `feat/<모듈>-<주제>`), main 반영·태그·push는 PM이 한다. 배포(main push)는 사용자 승인 대상이다 → [implementation.md](docs/rules/collaboration/implementation.md#병합), [commits.md](docs/rules/collaboration/commits.md).
+- 브랜치: main에는 직접 커밋하지 않는다. 작업은 `feature/<작업명>` 브랜치에서 하고, main 반영·태그·push는 PM이 한다. 배포(main push)는 사용자 승인 대상이다 → [implementation.md](docs/rules/collaboration/implementation.md#병합), [commits.md](docs/rules/collaboration/commits.md).
 - 릴리스: 배포할 묶음마다 릴리스 커밋과 주석 태그를 만든다 → [versioning.md](docs/rules/collaboration/versioning.md#릴리스).
 - 병합 전에 README를 최신화한다. 병합 기록은 `git log`와 CHANGELOG를 본다. 병합 단계는 [merge-checklist 스킬](.claude/skills/merge-checklist/SKILL.md)을 따른다.
 
