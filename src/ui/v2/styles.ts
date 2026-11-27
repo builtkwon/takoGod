@@ -8,6 +8,8 @@ export const BAR_MARGIN = 16;
 export const CSS_V2 = `
 .ui-top{position:absolute;top:0;left:var(--ui-col-l,0px);width:var(--ui-col-w,100%)}
 .ui-bar{position:relative;width:min(${BAR_W}px,calc(100% - ${BAR_MARGIN * 2}px));margin:0 auto;height:44px;background:#1b1b1b;border-bottom:3px solid #000;box-shadow:inset 0 0 0 2px #888;box-sizing:border-box}
+.ui-relief{animation:ui-relief .6s ease-out}
+@keyframes ui-relief{from{opacity:.4;transform:scale(1.15)}to{opacity:1;transform:scale(1)}}
 .ui-bar-zone{position:absolute;top:4px;bottom:4px;border:2px solid #fff;border-radius:4px;box-sizing:border-box;display:flex;justify-content:center;color:#052;font-weight:700;font-size:14px;line-height:14px;background:#2ee04d;border-color:#eaffea;align-items:flex-start;box-shadow:0 0 10px #2ee04d}
 .ui-bar-flash{animation:ui-bar-flash .5s ease-out}
 .ui-bar-marker{position:absolute;top:0;bottom:0;width:8px;margin-left:-4px;background:#ffeb3b;border:2px solid #000;box-sizing:border-box;border-radius:2px;box-shadow:0 0 6px #fff}

@@ -55,7 +55,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   );
   const hud = createHudV2(bus, disposers, opts?.onRestart ? () => restartConfirm.open() : undefined, opts?.onSkipTutorial ? () => skipConfirm.open() : undefined);
   const trayLabels = createTrayLabels(layer, picker, () => column().width);
-  const badges = createCustomerBadges(layer, picker);
+  const badges = createCustomerBadges(layer, picker, () => column().left + column().width, () => column().left);
   const rushBadge = createRushBadge();
   const tutorial = createTutorialView(layer, bus, picker, { margarine: () => buckets.origin('margarine'), batter: () => buckets.origin('batter') }, disposers);
 

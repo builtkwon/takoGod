@@ -41,9 +41,54 @@ const rowW = (i: BadgeItem): number => ('ingredient' in i ? ICON_W : 22) + i.tex
  * 머리가 HUD 뒤에 가려지는 위치(anchor가 minTop보다 위)면 묶음 바로 아래에 붙는다. 좌우는 화면 안으로 가둔다.
  */
 export function badgeRect(at: { readonly x: number; readonly y: number }, items: readonly BadgeItem[], minTop: number, viewportW: number): Rect {
-  const w = Math.min(viewportW - 8, Math.max(GAUGE_W + 2 * PAD, ...items.map(rowW)));
-  const h = items.length * ROW_H + GAUGE_ROW_H + PAD; // 라벨 줄들 + 맨 아래 분노 게이지 줄
+  const w = Math.min(viewportW - 8, naturalSize(items).w);
+  const h = naturalSize(items).h;
   return { x: Math.min(viewportW - w - 4, Math.max(4, at.x - w / 2)), y: Math.max(at.y - h - 4, minTop + 4), w, h };
+}
+
+/** 줄임 없는 라벨 묶음 크기: 라벨 줄들 + 맨 아래 분노 게이지 줄. */
+const naturalSize = (items: readonly BadgeItem[]): { readonly w: number; readonly h: number } => ({
+  w: Math.max(GAUGE_W + 2 * PAD, ...items.map(rowW)),
+  h: items.length * ROW_H + GAUGE_ROW_H + PAD,
+});
+
+/** 손님이 많을수록 라벨을 줄이는 하한(글자 15px → 약 7.5px). 이보다 작아지면 읽을 수 없어 넘치는 쪽은 그대로 둔다. */
+export const MIN_BADGE_SCALE = 0.5;
+
+export interface BadgeEntry {
+  readonly id: string;
+  readonly at: { readonly x: number; readonly y: number };
+  readonly items: readonly BadgeItem[];
+}
+
+export interface BadgePlacement extends Rect {
+  readonly id: string;
+  /** 줄임 배율(1이면 원래 크기). 요소는 naturalW 폭으로 만들고 이 배율로 줄인다. */
+  readonly scale: number;
+  readonly naturalW: number;
+}
+
+/**
+ * 손님 여러 명의 머리 위 라벨 배치(칸 [left,right], viewport 좌표). 한 명이면 badgeRect와 같다.
+ * 둘 이상이면 칸 폭을 사람 수로 나눈 폭에 맞춰 줄이고(MIN_BADGE_SCALE까지) 좌우로 밀어 서로 겹치지 않게 하며 칸 안으로 가둔다.
+ */
+export function layoutBadges(entries: readonly BadgeEntry[], minTop: number, left: number, right: number): BadgePlacement[] {
+  const n = entries.length;
+  const cap = n > 1 ? Math.floor((right - left - 8) / n) - 2 : right - left - 8;
+  const out = entries.map((e) => {
+    const nat = naturalSize(e.items);
+    const scale = Math.min(1, Math.max(MIN_BADGE_SCALE, cap / nat.w));
+    const w = Math.min(nat.w * scale, right - left - 8);
+    const h = nat.h * scale;
+    return { id: e.id, x: Math.min(right - w - 4, Math.max(left + 4, e.at.x - w / 2)), y: Math.max(e.at.y - h - 4, minTop + 4), w, h, scale, naturalW: nat.w };
+  });
+  const order = out.map((_, i) => i).sort((a, b) => out[a]!.x - out[b]!.x);
+  const xs = out.map((o) => o.x);
+  for (let k = 1; k < order.length; k++) xs[order[k]!] = Math.max(xs[order[k]!]!, xs[order[k - 1]!]! + out[order[k - 1]!]!.w + 2);
+  const last = order.at(-1);
+  if (last !== undefined) xs[last] = Math.min(xs[last]!, right - 4 - out[last]!.w);
+  for (let k = order.length - 2; k >= 0; k--) xs[order[k]!] = Math.min(xs[order[k]!]!, xs[order[k + 1]!]! - 2 - out[order[k]!]!.w);
+  return out.map((o, i) => ({ ...o, x: Math.max(left + 4, xs[i]!) }));
 }
 
 export type GaugeTone = 'normal' | 'annoyed' | 'angry';
@@ -87,7 +132,7 @@ export interface CustomerBadges {
 }
 
 /** 손님 머리 위 DOM 라벨. 매 프레임 anchor({kind:'customer'})를 다시 읽어 따라가고, 손님이 없거나 anchor가 null이면 숨긴다. */
-export function createCustomerBadges(layer: HTMLElement, picker: ScenePicker, viewportW: () => number = () => window.innerWidth): CustomerBadges {
+export function createCustomerBadges(layer: HTMLElement, picker: ScenePicker, viewportW: () => number = () => window.innerWidth, colLeft: () => number = () => 0): CustomerBadges {
   interface Node {
     readonly root: HTMLElement;
     readonly rows: HTMLElement;
@@ -119,19 +164,24 @@ export function createCustomerBadges(layer: HTMLElement, picker: ScenePicker, vi
     update(state, minTop = 0) {
       const alive = new Set(state.customers.map((c) => c.id));
       for (const id of [...nodes.keys()]) if (!alive.has(id)) drop(id);
+      const seen: { c: (typeof state.customers)[number]; items: BadgeItem[]; at: { x: number; y: number } }[] = [];
       for (const c of state.customers) {
-        const items = badgeItems(c);
         const at = picker.anchor({ kind: 'customer', customerId: c.id });
         if (at === null) {
           drop(c.id);
           continue;
         }
+        seen.push({ c, items: badgeItems(c), at });
+      }
+      // 자리가 여럿이면 손님끼리 라벨이 겹치지 않게 한꺼번에 배치한다.
+      const place = layoutBadges(seen.map((s) => ({ id: s.c.id, at: s.at, items: s.items })), minTop, colLeft(), viewportW());
+      seen.forEach(({ c, items }, i) => {
         let n = nodes.get(c.id);
         if (!n) {
           n = create();
           nodes.set(c.id, n);
         }
-        const key = items.map((i) => `${i.kind}:${i.text}`).join('|');
+        const key = items.map((it) => `${it.kind}:${it.text}`).join('|');
         if (n.key !== key) {
           n.key = key;
           n.rows.replaceChildren(...items.map(rowEl));
@@ -140,11 +190,12 @@ export function createCustomerBadges(layer: HTMLElement, picker: ScenePicker, vi
         n.fill.style.width = `${g.fillPct}%`;
         n.fill.className = `ui-gauge-fill ui-gauge-${g.tone}`;
         n.emoji.hidden = !g.angered;
-        const r = badgeRect(at, items, minTop, viewportW());
+        const r = place[i]!;
         n.rect = r;
-        n.root.style.transform = `translate(${r.x}px, ${r.y}px)`;
-        n.root.style.width = `${r.w}px`;
-      }
+        n.root.style.transformOrigin = '0 0';
+        n.root.style.transform = `translate(${r.x}px, ${r.y}px) scale(${r.scale})`;
+        n.root.style.width = `${r.naturalW}px`;
+      });
     },
     rects() {
       const base = layer.getBoundingClientRect();

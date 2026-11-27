@@ -19,7 +19,7 @@ export interface HudView {
   readonly score: string;
   readonly reviews: string;
   /** 화난 손님 표시 문구와 0명 여부(0이면 흐리게). */
-  readonly fumed: string;
+  readonly fumed: string; // 현재 가게에 있는 화난 손님 수/한도(누적 아님)
   readonly fumedCount: number;
   /** 튜토리얼에서는 화난 손님 표시를 숨긴다(GDD §진행). */
   readonly fumedHidden: boolean;
@@ -135,6 +135,11 @@ export function createHudV2(bus: EventBus, disposers: (() => void)[], onRestartC
         fumed.classList.remove('ui-shake-s');
         void fumed.offsetWidth; // 애니메이션 재시작
         fumed.classList.add('ui-shake-s');
+      } else if (v.fumedCount < lastFumed) {
+        // 화난 손님이 서빙받아 떠나 줄었다: 흔들지 않고 부드럽게 바뀐다.
+        fumed.classList.remove('ui-relief');
+        void fumed.offsetWidth; // 애니메이션 재시작
+        fumed.classList.add('ui-relief');
       }
       lastFumed = v.fumedCount;
       average.hidden = sessionAverageText(state.sessionAverage) === null;
