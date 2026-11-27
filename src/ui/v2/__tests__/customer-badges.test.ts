@@ -1,7 +1,7 @@
 // 손님 머리 위 아이콘: 표시 조건과 추종·숨김. DOM 라이브러리가 없어 최소 가짜 요소를 쓴다.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CustomerStatus, PickTarget, ScenePicker } from '../../../contracts';
-import { badgeItems, badgeRect, createCustomerBadges } from '../customer-badges';
+import { badgeItems, badgeRect, createCustomerBadges, gaugeView } from '../customer-badges';
 
 const base = (over: Partial<CustomerStatus> = {}): CustomerStatus => ({
   id: 'c1', personality: 'salaryman', dialogueIntervalSec: 8, patience: 0, face: 'normal', awaitingRedo: false, ...over,
@@ -32,6 +32,20 @@ describe('badgeItems(라벨 문자열)', () => {
   });
 });
 
+describe('gaugeView', () => {
+  it('채움 = 1 - patience, 색 = face, 100%면 빈 빨간 막대', () => {
+    expect(gaugeView({ patience: 0, face: 'normal' })).toEqual({ fillPct: 100, tone: 'normal', angered: false });
+    expect(gaugeView({ patience: 0.5, face: 'annoyed' })).toEqual({ fillPct: 50, tone: 'annoyed', angered: false });
+    expect(gaugeView({ patience: 0.8, face: 'angry' }).tone).toBe('angry');
+    expect(gaugeView({ patience: 1, face: 'angry' })).toEqual({ fillPct: 0, tone: 'angry', angered: true });
+  });
+  it('범위 밖·NaN은 0~100으로 자른다', () => {
+    expect(gaugeView({ patience: 2, face: 'angry' }).angered).toBe(true);
+    expect(gaugeView({ patience: -1, face: 'normal' }).fillPct).toBe(100);
+    expect(gaugeView({ patience: Number.NaN, face: 'normal' }).fillPct).toBe(100);
+  });
+});
+
 describe('badgeRect', () => {
   const items = badgeItems(base({ order: { ingredient: 'chili', count: 3 } }));
   it('머리 위 anchor 바로 위, 가운데 정렬', () => {
@@ -57,6 +71,7 @@ class FakeEl {
   className = '';
   textContent = '';
   innerHTML = '';
+  hidden = false;
   parent: FakeEl | null = null;
   children: FakeEl[] = [];
   style: Record<string, string> = {};
@@ -94,13 +109,13 @@ describe('createCustomerBadges', () => {
     const b = createCustomerBadges(layer as unknown as HTMLElement, picker, () => 390);
     return { layer, b, setPresent: (v: boolean) => (present = v) };
   };
-  it('아이콘이 있는 손님만 머리 위에 붙고, 손님이 사라지거나 anchor가 null이면 숨긴다', () => {
+  it('손님마다 머리 위에 붙고(라벨이 없으면 게이지만), 손님이 사라지거나 anchor가 null이면 숨긴다', () => {
     const { layer, b, setPresent } = setup();
     const withOrder = base({ order: { ingredient: 'chili', count: 3 } });
     b.update({ customers: [withOrder, base({ id: 'c2' })] });
-    expect(layer.children).toHaveLength(1);
+    expect(layer.children).toHaveLength(2);
     expect(layer.children[0]!.style.transform).toMatch(/^translate\(/);
-    expect(b.rects()).toHaveLength(1);
+    expect(b.rects()).toHaveLength(2);
     setPresent(false);
     b.update({ customers: [withOrder] });
     expect(layer.children).toHaveLength(0);
@@ -109,6 +124,23 @@ describe('createCustomerBadges', () => {
     expect(layer.children).toHaveLength(1);
     b.update({ customers: [] });
     expect(layer.children).toHaveLength(0);
+  });
+  it('게이지 채움은 남은 인내, 색은 얼굴 단계, 화나면 빈 막대+😠', () => {
+    const { layer, b } = setup();
+    const gauge = (): FakeEl => layer.children[0]!.children[1]!.children[0]!.children[0]!; // root > 게이지 줄 > 트랙 > 채움
+    const emoji = (): FakeEl => layer.children[0]!.children[1]!.children[1]!;
+    b.update({ customers: [base({ patience: 0.25, face: 'normal' })] });
+    expect(gauge().style.width).toBe('75%');
+    expect(gauge().className).toContain('ui-gauge-normal');
+    expect(emoji().hidden).toBe(true);
+    b.update({ customers: [base({ patience: 0.6, face: 'annoyed' })] });
+    expect(gauge().style.width).toBe('40%');
+    expect(gauge().className).toContain('ui-gauge-annoyed');
+    b.update({ customers: [base({ patience: 0.9, face: 'angry' })] });
+    expect(gauge().className).toContain('ui-gauge-angry');
+    b.update({ customers: [base({ patience: 1, face: 'angry' })] });
+    expect(gauge().style.width).toBe('0%');
+    expect(emoji().hidden).toBe(false);
   });
   it('reset은 모두 지운다', () => {
     const { layer, b } = setup();

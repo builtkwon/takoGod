@@ -30,6 +30,8 @@ const ROW_H = 26;
 const PAD = 4;
 const FONT_PX = 15;
 const ICON_W = 26;
+const GAUGE_W = 60;
+const GAUGE_ROW_H = 14;
 
 /** 줄 하나의 대략 폭(아이콘 + 글자). 글자 폭은 한글 기준으로 넉넉히 잡는다. */
 const rowW = (i: BadgeItem): number => ('ingredient' in i ? ICON_W : 22) + i.text.length * (FONT_PX - 1) + 2 * PAD;
@@ -39,9 +41,27 @@ const rowW = (i: BadgeItem): number => ('ingredient' in i ? ICON_W : 22) + i.tex
  * 머리가 HUD 뒤에 가려지는 위치(anchor가 minTop보다 위)면 묶음 바로 아래에 붙는다. 좌우는 화면 안으로 가둔다.
  */
 export function badgeRect(at: { readonly x: number; readonly y: number }, items: readonly BadgeItem[], minTop: number, viewportW: number): Rect {
-  const w = Math.min(viewportW - 8, Math.max(0, ...items.map(rowW)));
-  const h = items.length * ROW_H + PAD;
+  const w = Math.min(viewportW - 8, Math.max(GAUGE_W + 2 * PAD, ...items.map(rowW)));
+  const h = items.length * ROW_H + GAUGE_ROW_H + PAD; // 라벨 줄들 + 맨 아래 분노 게이지 줄
   return { x: Math.min(viewportW - w - 4, Math.max(4, at.x - w / 2)), y: Math.max(at.y - h - 4, minTop + 4), w, h };
+}
+
+export type GaugeTone = 'normal' | 'annoyed' | 'angry';
+
+export interface GaugeView {
+  /** 남은 인내 0..100(%). patience는 경과 비율이라 1 - patience다. */
+  readonly fillPct: number;
+  /** 얼굴 단계와 같은 색(normal 초록, annoyed 주황, angry 빨강). */
+  readonly tone: GaugeTone;
+  /** 인내 100%(화남): 빨간 빈 막대 + 😠. */
+  readonly angered: boolean;
+}
+
+/** 분노 게이지 표시값. 값은 core가 정한 CustomerStatus를 그대로 읽는다. */
+export function gaugeView(c: Pick<CustomerStatus, 'patience' | 'face'>): GaugeView {
+  const p = Number.isFinite(c.patience) ? Math.min(1, Math.max(0, c.patience)) : 0;
+  const angered = p >= 1;
+  return { fillPct: angered ? 0 : (1 - p) * 100, tone: angered ? 'angry' : c.face, angered };
 }
 
 function rowEl(item: BadgeItem): HTMLElement {
@@ -68,10 +88,32 @@ export interface CustomerBadges {
 
 /** 손님 머리 위 DOM 라벨. 매 프레임 anchor({kind:'customer'})를 다시 읽어 따라가고, 손님이 없거나 anchor가 null이면 숨긴다. */
 export function createCustomerBadges(layer: HTMLElement, picker: ScenePicker, viewportW: () => number = () => window.innerWidth): CustomerBadges {
-  const nodes = new Map<string, { readonly root: HTMLElement; key: string; rect: Rect | null }>();
+  interface Node {
+    readonly root: HTMLElement;
+    readonly rows: HTMLElement;
+    readonly fill: HTMLElement;
+    readonly emoji: HTMLElement;
+    key: string;
+    rect: Rect | null;
+  }
+  const nodes = new Map<string, Node>();
   const drop = (id: string): void => {
     nodes.get(id)?.root.remove();
     nodes.delete(id);
+  };
+  const create = (): Node => {
+    const root = el('div', 'ui-badges');
+    const rows = el('div', 'ui-badge-rows');
+    const track = el('div', 'ui-gauge');
+    const fill = el('div', 'ui-gauge-fill ui-gauge-normal');
+    const emoji = el('span', 'ui-gauge-emoji', '😠');
+    emoji.hidden = true;
+    track.append(fill);
+    const gaugeRow = el('div', 'ui-gauge-row');
+    gaugeRow.append(track, emoji);
+    root.append(rows, gaugeRow);
+    layer.append(root);
+    return { root, rows, fill, emoji, key: '', rect: null };
   };
   return {
     update(state, minTop = 0) {
@@ -79,22 +121,25 @@ export function createCustomerBadges(layer: HTMLElement, picker: ScenePicker, vi
       for (const id of [...nodes.keys()]) if (!alive.has(id)) drop(id);
       for (const c of state.customers) {
         const items = badgeItems(c);
-        const at = items.length > 0 ? picker.anchor({ kind: 'customer', customerId: c.id }) : null;
+        const at = picker.anchor({ kind: 'customer', customerId: c.id });
         if (at === null) {
           drop(c.id);
           continue;
         }
         let n = nodes.get(c.id);
         if (!n) {
-          n = { root: el('div', 'ui-badges'), key: '', rect: null };
-          layer.append(n.root);
+          n = create();
           nodes.set(c.id, n);
         }
         const key = items.map((i) => `${i.kind}:${i.text}`).join('|');
         if (n.key !== key) {
           n.key = key;
-          n.root.replaceChildren(...items.map(rowEl));
+          n.rows.replaceChildren(...items.map(rowEl));
         }
+        const g = gaugeView(c);
+        n.fill.style.width = `${g.fillPct}%`;
+        n.fill.className = `ui-gauge-fill ui-gauge-${g.tone}`;
+        n.emoji.hidden = !g.angered;
         const r = badgeRect(at, items, minTop, viewportW());
         n.rect = r;
         n.root.style.transform = `translate(${r.x}px, ${r.y}px)`;

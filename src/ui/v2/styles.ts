@@ -40,6 +40,12 @@ export const CSS_V2 = `
 .ui-ghost{width:44px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 2px #000a)}
 .ui-ghost svg{display:block}
 .ui-badges{position:fixed;left:0;top:0;display:flex;flex-direction:column;gap:2px;box-sizing:border-box;pointer-events:none;z-index:${Z.FLOAT};padding:2px 6px;border-radius:8px;background:#000b}
+.ui-badge-rows{display:flex;flex-direction:column;gap:2px}
+.ui-gauge-row{display:flex;align-items:center;gap:4px;height:12px;margin-top:2px}
+.ui-gauge{width:60px;height:6px;border-radius:3px;background:#3a3a3a;border:1px solid #000;box-sizing:content-box;overflow:hidden}
+.ui-gauge-fill{height:100%;border-radius:3px}
+.ui-gauge-normal{background:#43d95a}.ui-gauge-annoyed{background:#ff9800}.ui-gauge-angry{background:#e53935}
+.ui-gauge-emoji{font-size:12px;line-height:1}
 .ui-badge{display:flex;align-items:center;gap:4px;height:24px;font-size:15px;font-weight:900;color:#fff;white-space:nowrap;text-shadow:0 1px 2px #000}
 .ui-badge-ico{position:relative;display:inline-flex}
 .ui-badge-ico svg{width:24px;height:24px;display:block}
