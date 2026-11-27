@@ -15,7 +15,7 @@ export function createBrowserBestStore(storage?: BestStorageLike): BestScoreStor
         if (raw === null) return null;
         try {
           const v: { version?: unknown; best?: unknown } | null = JSON.parse(raw);
-          if (v !== null && typeof v === 'object' && v.version === 1 && typeof v.best === 'number' && Number.isInteger(v.best) && v.best >= 0) return v.best;
+          if (v !== null && typeof v === 'object' && v.version === 1 && typeof v.best === 'number' && Number.isSafeInteger(v.best) && v.best >= 0) return v.best;
         } catch {
           // 파싱 실패는 아래에서 손상 값으로 처리한다.
         }

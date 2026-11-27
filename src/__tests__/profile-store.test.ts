@@ -28,7 +28,7 @@ describe('ProfileStore', () => {
     expect(load(null).value).toBeNull();
   });
 
-  it.each(['not json', 'null', '{"version":2,"tutorialCompleted":true}', '{"version":1,"tutorialCompleted":false}', '{"version":1}'])(
+  it.each(['not json', 'null', '{"version":2,"tutorialCompleted":true}', '{"version":1,"tutorialCompleted":false}', '{"version":1}', '{"version":1,"tutorialCompleted":1}', '{"version":1,"tutorialCompleted":"true"}'])(
     '손상 값 %s은 null이고 키를 지운다',
     (raw) => {
       const { value, s } = load(raw);

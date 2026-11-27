@@ -60,6 +60,14 @@ describe('SessionStore.load (ADR 0002 §결정 6)', () => {
     expect(load(withReviews([{ ...snap.reviews[0], stars: '5' }]))).toBeNull();
   });
 
+  it('reviews가 500개를 넘거나 comment가 200자를 넘으면 전체를 버린다(경계값은 허용)', () => {
+    const r = snap.reviews[1];
+    expect(load(withReviews(Array.from({ length: 500 }, () => r)))).not.toBeNull();
+    expect(load(withReviews(Array.from({ length: 501 }, () => r)))).toBeNull();
+    expect(load(withReviews([{ ...r, comment: 'a'.repeat(200) }]))).not.toBeNull();
+    expect(load(withReviews([{ ...r, comment: 'a'.repeat(201) }]))).toBeNull();
+  });
+
   it('알 수 없는 source·personality는 전체를 버린다', () => {
     expect(load(withReviews([{ ...snap.reviews[0], source: 'x' }]))).toBeNull();
     expect(load(withReviews([{ ...snap.reviews[1], personality: 'alien' }]))).toBeNull();

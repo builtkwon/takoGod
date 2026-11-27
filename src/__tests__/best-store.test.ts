@@ -36,7 +36,8 @@ describe('BestScoreStore.load', () => {
     ['best 문자열', '{"version":1,"best":"10"}'],
     ['best 음수', '{"version":1,"best":-1}'],
     ['best 소수', '{"version":1,"best":1.5}'],
-    ['best 없음', '{"version":1}'],
+    ['best 안전 정수 초과', '{"version":1,"best":9007199254740993}'],
+    ['best 없음','{"version":1}'],
     ['best null(NaN·Infinity 직렬화)', '{"version":1,"best":null}'],
   ])('손상 값(%s)은 null이고 키를 지운다', (_n, raw) => {
     const { value, s } = load(raw);

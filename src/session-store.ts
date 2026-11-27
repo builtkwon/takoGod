@@ -5,6 +5,10 @@ export const SESSION_KEY = 'takoyaki:session';
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 
+// 신뢰 경계 상한: 조작된 저장값이 메모리·화면을 키우지 못하게 한다. 넘으면 손상으로 보고 전체를 버린다.
+const MAX_REVIEWS = 500;
+const MAX_COMMENT = 200;
+
 const PERSONALITIES: readonly unknown[] = ['salaryman', 'grandma', 'gourmet', 'tourist'];
 
 /** 신뢰 경계: sessionStorage 값은 외부 입력이다. ReviewResult 필드와 타입이 맞는지 본다. */
@@ -18,6 +22,7 @@ function isReview(r: unknown): r is ReviewResult {
     v.stars <= 5 &&
     Number.isInteger(v.stars * 2) && // 0.5 단위. 0~1점은 0~1점 떠남(GDD §점수)
     typeof v.comment === 'string' &&
+    v.comment.length <= MAX_COMMENT &&
     (v.personality === null || PERSONALITIES.includes(v.personality))
   );
 }
@@ -35,6 +40,7 @@ export function createBrowserSessionStore(storage?: StorageLike): SessionStore {
           typeof v.tutorialCompleted === 'boolean' &&
           typeof v.finished === 'boolean' &&
           Array.isArray(v.reviews) &&
+          v.reviews.length <= MAX_REVIEWS &&
           v.reviews.every(isReview);
         return ok ? (v as SessionSnapshot) : null;
       } catch {
