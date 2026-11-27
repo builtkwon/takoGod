@@ -262,14 +262,11 @@ export function tickTo(h: H, abs: number): void {
 export const customerEnteredAt = (h: H, index = 0): number => h.log.filter((r) => r.type === 'customer/entered')[index]?.t ?? NaN;
 
 /**
- * 화난 손님 4명으로 판을 끝낸다(패배). 2단계 이상의 손님이 인내 100%에 닿도록 시간을 흘리고, 손님이 바뀌면 접시를 내 보낸다.
+ * 가게의 손님 4명이 모두 화나 판을 끝낸다(패배). 자리가 4개인 10단계까지 접시를 내고, 서빙 없이 시간을 흘려 모두 인내 100%에 닿게 한다.
  * 접시는 완벽하게 만들므로 가게 점수는 쌓인다.
  */
 export function playToEnd(h: H): void {
-  playUntilLevel(h, 3);
-  for (let i = 0; i < 12 && !h.game.finished; i++) {
-    tickTo(h, h.now + 65);
-    if (!h.game.finished) makePlate(h);
-  }
+  playUntilLevel(h, 10);
+  for (let i = 0; i < 6 && !h.game.finished; i++) tickTo(h, h.now + 100);
   if (!h.game.finished) throw new Error('판이 끝나지 않았다');
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { drawZone, drawZoneAwayFromCenter } from '../cooking-v2';
 import { FUMED_LIMIT, MAX_DIFFICULTY_LEVEL, difficulty } from '../levels';
-import { phaseConfig, targetPlates } from '../phases';
+import { phaseConfig, seatCount, targetPlates } from '../phases';
 import { createRng } from '../rng';
 
 describe('난이도 곡선(GDD §진행 난이도 곡선)', () => {
@@ -57,9 +57,10 @@ describe('단계 표(GDD §진행)', () => {
     [3, [12, 12], 4, true],
     [4, [6, 12], 4, true],
     [5, [6, 6], 4, true],
-    [6, [6, 6], 2, true],
-    [7, [6, 6], 2, true],
-    [99, [6, 6], 2, true],
+    [6, [6, 6, 6], 2, true],
+    [9, [6, 6, 6], 2, true],
+    [10, [6, 6, 6, 6], 2, true],
+    [99, [6, 6, 6, 6], 2, true],
   ])('%i단계: 대화 간격 %j, 전환 접시 %i, 리뷰 집계 %s', (level, intervals, plates, counts) => {
     const c = phaseConfig(level);
     expect(c.level).toBe(level);
@@ -68,6 +69,12 @@ describe('단계 표(GDD §진행)', () => {
     expect(c.isTutorial).toBe(level === 0);
     expect(c.countsReviews).toBe(level === 0 ? true : counts);
     expect(targetPlates(level)).toBe(plates);
+  });
+});
+
+describe('자리 수(동시 손님 상한, GDD §진행)', () => {
+  it.each([[0, 0], [1, 0], [2, 1], [3, 2], [5, 2], [6, 3], [9, 3], [10, 4], [99, 4]])('%i단계 → %i자리', (level, seats) => {
+    expect(seatCount(level)).toBe(seats);
   });
 });
 

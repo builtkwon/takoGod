@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CustomerStatus, IngredientId } from '../../contracts';
 import { difficulty } from '../levels';
-import { targetPlates } from '../phases';
 import { customerEnteredAt, makePlate, playUntilLevel, setupV2, tickTo, type HoleSpec } from './helpers-v2';
 
 /**
@@ -30,15 +29,30 @@ const ING = { wasabi: 0, 'raw-garlic': 0.2, eraser: 0.4, marshmallow: 0.6, chili
 /** 주문 개수 인덱스: 1 → 0, 3 → 0.4, 6 → 0.8(floor(v × 3)). */
 const CNT = { 1: 0, 3: 0.4, 6: 0.8 } as const;
 
+/** 테스트 전용: 게임 내부 상태를 직접 맞춘다(자연스러운 진행으로 만들기 어려운 경계 상황용). */
+interface GameInternals {
+  spawnTimer: number | null;
+  guests: { avoid: string | null }[];
+}
+const internals = (h: ReturnType<typeof queued>['h']): GameInternals => h.game as unknown as GameInternals;
+
 /**
- * level 단계를 시작하면서 첫 손님이 firstValues(성격, 인내, …) 난수로 입장하게 한다.
- * 6단계부터는 한 단계에 접시 2개라 손님이 단계 시작 때만 입장하므로, 앞 단계의 마지막 접시를 서빙하기 전에 입장 난수 큐를 채운다.
+ * level 단계에서 가게를 비우고, 첫 손님이 firstValues(성격, 인내, …) 난수로 입장하게 한다.
+ * 손님은 단계를 넘어 남으므로 가게를 직접 비워(내부 상태) 이번 손님이 가장 먼저 서빙받게 한다.
  */
 function startAt(h: ReturnType<typeof queued>['h'], sq: number[], level: number, firstValues: readonly number[]): CustomerStatus {
-  playUntilLevel(h, level - 1);
-  for (let i = 0; i < targetPlates(level - 1) - 1; i++) makePlate(h);
-  makePlate(h, {}, true)(() => sq.push(...firstValues));
+  playUntilLevel(h, level);
+  clearShop(h);
+  sq.push(...firstValues);
+  tickTo(h, h.now + 0.1);
   return h.game.state.customers[0] as CustomerStatus;
+}
+
+/** 가게의 손님을 모두 내보내고 다음 입장을 바로 예약한다. */
+function clearShop(h: ReturnType<typeof queued>['h']): void {
+  const g = internals(h);
+  g.guests.length = 0;
+  g.spawnTimer = 0;
 }
 
 /** 구멍 0~5의 속재료: n개를 ingredient로, 나머지는 문어. */
@@ -193,7 +207,7 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
     expect(d.avoid).toBe('raw-garlic');
   });
 
-  it('위반: 만족도 -40 하나, 그 재료의 함정 -20은 없고 인내 -20도 없다. 즉시 화나 화난 손님 수 +1', () => {
+  it('위반: 만족도 -40 하나, 그 재료의 함정 -20은 없고 인내 -20도 없다. 즉시 화나지만 서빙 뒤 떠나 화난 손님 수에 남지 않는다', () => {
     const { h, sq } = queued();
     const c = startAt(h, sq, 13, avoidWasabi);
     const fumedBefore = h.game.state.fumedCount;
@@ -201,7 +215,8 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
     expect(h.of('customer/allergy').at(-1)).toMatchObject({ customerId: c.id, ingredient: 'wasabi' });
     expect(h.of('plate/scored').at(-1)).toMatchObject({ delta: -40, stars: 2 });
     expect(h.of('customer/fumed').filter((e) => e.customerId === c.id)).toHaveLength(1);
-    expect(h.game.state.fumedCount).toBe(fumedBefore + 1);
+    expect(h.game.state.fumedCount).toBe(fumedBefore);
+    expect(h.game.state.customers.some((x) => x.id === c.id)).toBe(false);
     const faces = h.of('customer/patience-changed').filter((e) => e.customerId === c.id).map((e) => e.face);
     expect(faces).toEqual(['annoyed', 'angry']);
     const types = h.log.map((r) => r.type);
@@ -231,15 +246,13 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
     expect(h.of('customer/redo-requested')).toHaveLength(1);
   });
 
-  it('이미 화난 손님이면 -40만 적용하고 화난 손님 수를 늘리지 않는다', () => {
+  it('이미 화난 손님이면 -40만 적용하고 화난 연출 이벤트를 다시 내지 않는다', () => {
     const { h, sq } = queued();
     const c = startAt(h, sq, 13, avoidWasabi);
     const t = customerEnteredAt(h, h.of('customer/entered').length - 1);
     tickTo(h, t + 50); // 인내(약 42초)가 다 차서 화남(-20, 화난 손님 수 +1)
     expect(h.game.state.customers.find((x) => x.id === c.id)?.patience).toBe(1);
-    const fumed = h.game.state.fumedCount;
     makePlate(h, wasabiPlate);
-    expect(h.game.state.fumedCount).toBe(fumed);
     expect(h.of('customer/fumed').filter((e) => e.customerId === c.id)).toHaveLength(1);
     expect(h.of('customer/allergy').at(-1)).toMatchObject({ customerId: c.id });
   });
@@ -252,29 +265,40 @@ describe('빼 주세요(GDD §특별 손님, 13단계~)', () => {
     expect(h.of('plate/scored').at(-1)).toMatchObject({ delta: 20 });
   });
 
-  it('위반으로 화난 손님이 4명이 되면 접시의 점수·리뷰·퇴장을 처리한 직후 판이 끝난다', () => {
+  it('다른 손님 3명이 화나 있어도 위반 손님은 서빙 뒤 떠나므로 판이 끝나지 않는다', () => {
     const { h, sq } = queued();
     playUntilLevel(h, 13);
-    tickTo(h, h.now + 130); // 13단계 두 손님이 화남: 2명
-    expect(h.game.state.fumedCount).toBe(2);
-    makePlate(h);
-    // 14단계 시작: 손님1은 빼 주세요 와사비에 인내가 크고, 손님2(3초 뒤)는 평범하고 인내가 작다.
-    makePlate(h, {}, true)(() => sq.push(0, 0.99, 0.99, 0, ING.wasabi));
-    sq.push(0, 0, 0.99, 0.99);
-    h.tick(3.1);
-    expect(h.game.state.level).toBe(14);
-    expect(h.game.state.customers.map((x) => x.avoid)).toEqual(['wasabi', null]);
-    tickTo(h, h.now + 70); // 손님2가 화남 → 3명
+    clearShop(h);
+    // 손님1: 빼 주세요 와사비, 인내 큼. 손님2~4: 평범하고 인내 최소.
+    sq.push(0, 0.99, 0.99, 0, ING.wasabi, ...[0, 0, 0.99, 0.99, 0, 0, 0.99, 0.99, 0, 0, 0.99, 0.99]);
+    tickTo(h, h.now + 10);
+    expect(h.game.state.customers.map((x) => x.avoid)).toEqual(['wasabi', null, null, null]);
+    for (let i = 0; i < 2000 && h.game.state.fumedCount < 3; i++) h.tick(0.1);
     expect(h.game.state.fumedCount).toBe(3);
     expect(h.game.finished).toBe(false);
-    makePlate(h, wasabiPlate); // 손님1에게 위반 → 4명
+    makePlate(h, wasabiPlate); // 손님1에게 위반 → 화나지만 떠난다
+    expect(h.of('customer/allergy')).toHaveLength(1);
+    expect(h.game.finished).toBe(false);
+    expect(h.of('session/game-over')).toEqual([]);
+    expect(h.game.state.fumedCount).toBe(3);
+  });
+
+  it('단체 손님이 첫 접시 위반으로 화난 채 남아 가게 4명이 모두 화나면 접시 처리 직후 판이 끝난다', () => {
+    const { h, sq } = queued();
+    playUntilLevel(h, 15);
+    clearShop(h);
+    sq.push(0, 0.99, 0.99, 0, ING.wasabi, 0, ...[0, 0, 0.99, 0.99, 0.99, 0, 0, 0.99, 0.99, 0.99, 0, 0, 0.99, 0.99, 0.99]);
+    tickTo(h, h.now + 10);
+    expect(h.game.state.customers[0]?.group).not.toBeNull();
+    for (let i = 0; i < 2000 && h.game.state.fumedCount < 3; i++) h.tick(0.1);
+    expect(h.game.state.fumedCount).toBe(3);
+    makePlate(h, wasabiPlate); // 단체 손님 첫 접시: 위반으로 화난 채 남는다
     expect(h.game.finished).toBe(true);
-    expect(h.game.state.fumedCount).toBe(4);
+    expect(h.of('session/game-over')).toEqual([{ reason: 'fumed', fumedCount: 4 }]);
     const types = h.log.map((r) => r.type);
     const over = types.indexOf('session/game-over');
-    expect(over).toBeGreaterThan(types.lastIndexOf('customer/left'));
-    expect(types.lastIndexOf('review/issued')).toBeLessThan(over);
-    expect(types.filter((t) => t === 'session/game-over')).toHaveLength(1);
+    expect(over).toBeGreaterThan(types.lastIndexOf('plate/scored'));
+    expect(types.slice(over + 1).includes('customer/entered')).toBe(false);
   });
 });
 
@@ -308,32 +332,22 @@ describe('러시 아워(GDD §특별 손님, 12단계~)', () => {
     expect(h.of('rush/ended')).toEqual([{}]);
   });
 
-  it('러시 중 단계가 시작되면 손님2는 절반인 1.5초 뒤 입장하고 그 손님들의 인내는 ×1.5다', () => {
+  it('러시 중에는 입장 대기가 절반(3초 → 1.5초)이고 그 사이 입장한 손님의 인내는 ×1.5다', () => {
     const { h } = queued();
     playUntilLevel(h, 12);
-    const seen: { level: number; t: number; rush: number | null }[] = [];
-    h.bus.on('phase/changed', (e) => seen.push({ level: e.level, t: h.now, rush: h.game.state.rush?.remainingSec ?? null }));
-    for (let i = 0; i < 20; i++) {
-      makePlate(h);
-      if (seen.some((x) => x.rush !== null && x.rush > 5)) break;
-    }
-    const hit = seen.find((x) => x.rush !== null && x.rush > 5);
-    expect(hit).toBeDefined();
-    h.tick(1.6);
-    const entered = h.of('customer/entered');
-    const phaseAt = hit?.t ?? 0;
-    const times = h.log.filter((r) => r.type === 'customer/entered' && r.t >= phaseAt).map((r) => r.t - phaseAt);
-    expect(entered.length).toBeGreaterThan(1);
-    expect(times.length).toBeGreaterThanOrEqual(2);
-    expect(times[1]).toBeLessThanOrEqual(1.7); // 일반 3초가 러시에는 1.5초
-    // 그 손님들의 인내는 ×1.5: 레벨 범위에서 난수 0.99를 뽑은 값의 1.5배
-    const d = difficulty(hit?.level ?? 12);
+    startRush(h);
+    const level = h.game.state.level;
+    clearShop(h);
+    const from = h.log.length;
+    tickTo(h, h.now + 4);
+    const times = h.log.slice(from).filter((r) => r.type === 'customer/entered').map((r) => r.t);
+    expect(times.length).toBeGreaterThanOrEqual(3);
+    expect((times[1] ?? 0) - (times[0] ?? 0)).toBeLessThanOrEqual(1.6); // 일반 3초가 러시에는 1.5초
+    // 인내는 레벨 범위에서 난수 0.99를 뽑은 값의 1.5배(대기열 큐는 비어 0.99).
+    const d = difficulty(level);
     const total = (d.patienceMinSec + 0.99 * (d.patienceMaxSec - d.patienceMinSec)) * 1.5;
-    const t0 = h.now;
-    tickTo(h, t0 + 5);
     const first = h.game.state.customers[0];
-    const elapsed = 5 + (h.now - t0 - 5) + (t0 - (phaseAt + 0)); // 첫 손님 입장(단계 시작)부터 지금까지
-    expect(first?.patience).toBeCloseTo(elapsed / total, 2);
+    expect(first?.patience).toBeCloseTo((h.now - (times[0] ?? 0)) / total, 2);
   });
 
   it('러시가 진행 중이면 다시 시작하지 않는다(rush/started 한 번)', () => {
@@ -411,14 +425,15 @@ describe('단체 주문(GDD §특별 손님, 15단계~)', () => {
     expect(h.of('customer/walked-out')).toEqual([]);
   });
 
-  it('남은 목표가 접시 1개뿐이면 단체로 뽑았어도 일반 손님으로 입장한다(단체 난수는 쓴다)', () => {
-    const { h, q } = queued();
+  it('남은 접시 목표와 무관하게 단체 손님이 입장한다(입장은 빈 자리 기준)', () => {
+    const { h, sq } = queued();
     playUntilLevel(h, 15);
-    makePlate(h); // 첫 손님 서빙: 서빙한 접시 1, 남은 목표 1
-    h.of('customer/left');
-    // 15단계 두 손님이 이미 있으므로 새 입장은 일어나지 않는다. 입장 규칙은 단위로 확인한다.
-    expect(q).toEqual([]);
-    expect(h.game.state.customers.length).toBeLessThanOrEqual(1);
+    makePlate(h); // 서빙한 접시 1, 남은 목표 1
+    expect(h.game.state.level).toBe(15);
+    clearShop(h);
+    sq.push(...groupValues);
+    tickTo(h, h.now + 0.1);
+    expect(h.game.state.customers[0]?.group).toEqual({ platesNeeded: 2, platesReceived: 0 });
   });
 
   it('주문이 있으면 단체 난수를 뽑지 않는다', () => {
@@ -456,71 +471,5 @@ describe('깐깐한 VIP(GDD §특별 손님, 17단계~)', () => {
     startAt(g.h, g.sq, 17, vipValues);
     makePlate(g.h, { miss1: true });
     expect(g.h.of('score/plate').at(-1)).toMatchObject({ multiplier: 1, combo: 0 });
-  });
-});
-
-/** 테스트 전용: 게임 내부 상태를 직접 맞춘다(자연스러운 진행으로 만들기 어려운 경계 상황용). */
-interface GameInternals {
-  fumedCount: number;
-  spawnTimers: (number | null)[];
-  guests: { avoid: string | null }[];
-  fune: unknown[];
-  funeHits: number[];
-  funeWait: number;
-}
-const internals = (h: ReturnType<typeof queued>['h']): GameInternals => h.game as unknown as GameInternals;
-
-describe('패배 경계(독립 리뷰 지적)', () => {
-  const wasabiPlate: HoleSpec[] = [{ filling: 'wasabi' }, ...withIngredient('octopus', 5).slice(0, 5)];
-
-  it('빼 주세요 위반의 4번째 화남이 단계의 마지막 접시에서 나와도 다음 단계를 시작하지 않고 접시 처리 직후 끝난다', () => {
-    const { h } = queued();
-    playUntilLevel(h, 13);
-    makePlate(h); // 13단계 첫 접시(서빙한 접시 1)
-    expect(h.game.state.level).toBe(13);
-    // 화난 손님 3명으로 맞추고 남은 손님을 와사비 금지 손님으로 만든다.
-    internals(h).fumedCount = 3;
-    const last = internals(h).guests[0];
-    expect(last).toBeDefined();
-    if (last) last.avoid = 'wasabi';
-    const phases = h.of('phase/changed').length;
-    const entered = h.of('customer/entered').length;
-    makePlate(h, wasabiPlate); // 13단계의 마지막 접시 → 위반으로 4번째 화남
-    expect(h.game.finished).toBe(true);
-    expect(h.game.state.fumedCount).toBe(4);
-    expect(h.game.state.level).toBe(13);
-    expect(h.of('phase/changed')).toHaveLength(phases);
-    expect(h.of('customer/entered')).toHaveLength(entered);
-    const types = h.log.map((r) => r.type);
-    const over = types.indexOf('session/game-over');
-    expect(over).toBeGreaterThan(types.lastIndexOf('review/issued'));
-    expect(over).toBeGreaterThan(types.lastIndexOf('customer/left'));
-    expect(types.slice(over + 1).includes('customer/entered')).toBe(false);
-  });
-
-  it('같은 tick에 두 슬롯이 입장할 때 첫 손님이 받은 접시로 패배하면 다음 슬롯은 입장하지 않는다', () => {
-    const { h, sq } = queued();
-    playUntilLevel(h, 4);
-    const g = internals(h);
-    // 손님을 비우고 두 슬롯의 입장을 같은 tick으로 맞춘다. 가득 찬 접시(와사비)가 입장하는 첫 손님에게 바로 서빙된다.
-    g.guests.length = 0;
-    g.spawnTimers = [0.05, 0.05];
-    g.fumedCount = 3;
-    g.fune = Array.from({ length: 6 }, (_, i) => ({ rolledPerfectly: true, filling: i === 0 ? 'wasabi' : 'octopus', noFilling: false, dark: false }));
-    g.funeHits = [2, 2, 2, 2, 2, 2];
-    g.funeWait = 0;
-    sq.push(0, 0.99, 0.99, 0, ING.wasabi); // 첫 손님: 빼 주세요 와사비(13단계 전이라 난수는 쓰이지 않는다)
-    const entered = h.of('customer/entered').length;
-    // 4단계에는 빼 주세요가 없으므로 입장 손님에게 직접 금지 재료를 건다.
-    h.bus.on('customer/entered', () => {
-      const first = g.guests[0];
-      if (first) first.avoid = 'wasabi';
-    });
-    h.tick(0.1);
-    expect(h.game.finished).toBe(true);
-    expect(h.of('customer/entered')).toHaveLength(entered + 1);
-    expect(h.of('session/game-over')).toHaveLength(1);
-    const types = h.log.map((r) => r.type);
-    expect(types.slice(types.indexOf('session/game-over') + 1).includes('customer/entered')).toBe(false);
   });
 });
