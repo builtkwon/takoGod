@@ -10,6 +10,7 @@ import { showResult, showTitle } from '../screens';
 import { CSS } from '../styles';
 import type { UiHandle } from '../handle';
 import { createBuckets } from './buckets';
+import { bucketLayout } from './bucket-layout';
 import { createController } from './controller';
 import { createEffects } from './effects';
 import { bindFeedback } from './feedback';
@@ -130,6 +131,16 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     layer.style.setProperty('--ui-warning-top', `${s.warning}px`);
     layer.style.setProperty('--ui-reveal-top', `${labelsBottom > 0 ? Math.max(s.reveal, labelsBottom + 6) : s.reveal}px`);
   };
+  /** 통(버터·반죽)을 구이판 기준으로 놓는다(구멍을 덮지 않게). */
+  const placeBuckets = (state: GameStateV2): void => {
+    const base = layer.getBoundingClientRect();
+    const ts = state.tray.flatMap((_, slot) => {
+      const p = picker.anchor({ kind: 'tray', slot });
+      return p ? [{ x: p.x - base.left, y: p.y - base.top }] : [];
+    });
+    const tray = ts.length ? { minX: Math.min(...ts.map((p) => p.x)), maxX: Math.max(...ts.map((p) => p.x)), y: ts[0]!.y } : null;
+    buckets.place(bucketLayout({ col: column(), layerH: base.height, grill: grillRect(), tray }));
+  };
   let colKey = '';
   const syncColumn = (): void => {
     const c = column();
@@ -142,6 +153,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
   const frame = (): void => {
     syncColumn();
     const state = getState();
+    placeBuckets(state);
     bar.update(state);
     hud.update(state);
     rushBadge.update(state);

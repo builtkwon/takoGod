@@ -37,9 +37,9 @@ export const CSS_V2 = `
 .ui-faces{display:flex;gap:6px;margin-top:4px;min-height:22px}
 .ui-face{padding:2px 8px;border-radius:10px;background:#3a8a3a}
 .ui-face-annoyed{background:#e68a00}.ui-face-angry{background:#d32f2f}
-.ui-bucket{position:absolute;top:42%;width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-size:13px;font-weight:700;touch-action:none}
-.ui-bucket-margarine{left:6px;background:#f2d56b;color:#442}
-.ui-bucket-batter{right:6px;background:#e9dfc0;color:#442}
+.ui-bucket{position:absolute;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-size:13px;font-weight:700;touch-action:none}
+.ui-bucket-margarine{background:#f2d56b;color:#442}
+.ui-bucket-batter{background:#e9dfc0;color:#442}
 .ui-ghost,.ui-mark{position:fixed;left:0;top:0;pointer-events:none;z-index:${Z.FLOAT}}
 .ui-ghost{width:44px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 2px #000a)}
 .ui-ghost svg{display:block}
