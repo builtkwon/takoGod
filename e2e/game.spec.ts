@@ -482,3 +482,29 @@ test('튜토리얼 속재료 탭 안내: 탭 링이 뜨고, 문어 칸 탭 → �
   await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('답 버튼: 2단계 손님이 말을 걸면 화면 아래 고정 영역(.ui-answers)에 뜨고, 누르면 줄이 사라진다', async ({ page }) => {
+  await start(page);
+  await playTutorial(page);
+  await expect(page.getByRole('heading', { name: '튜토리얼 완료!' })).toBeVisible();
+  await page.getByRole('button', { name: '확인' }).click();
+  await expect(page.locator('.ui-hud-phase')).toHaveText('1단계');
+  // 1단계: 접시 1개를 완성하면 2단계다(GDD §진행). 속재료·굴리기 품질은 단계 전환과 무관하다.
+  const picker = await scenePicker(page);
+  await dragAll(page, picker, () => center(page, '.ui-bucket-margarine'));
+  await dragAll(page, picker, () => center(page, '.ui-bucket-batter'));
+  await page.clock.runFor(3500);
+  await dragAll(page, picker, async () => at(picker, { kind: 'tray', slot: 0 }));
+  await tapAll(page, picker);
+  await tapAll(page, picker);
+  await funeAll(page, picker);
+  await page.clock.runFor(1200);
+  await expect(page.locator('.ui-hud-phase')).toHaveText('2단계');
+  await page.clock.runFor(13000); // 손님 입장 뒤 첫 대화(간격 12s)
+  const row = page.locator('.ui-answers .ui-answer-row');
+  await expect(row).toHaveCount(1);
+  const b = (await row.boundingBox())!;
+  expect(b.y).toBeGreaterThan(page.viewportSize()!.height / 2); // 화면 아래쪽
+  await row.locator('.ui-answer').first().click();
+  await expect(row).toHaveCount(0);
+});
