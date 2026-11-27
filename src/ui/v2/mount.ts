@@ -18,6 +18,7 @@ import { CSS_V2 } from './styles';
 import { createTimingBar } from './timing-bar';
 import { createRushBadge } from './rush-badge';
 import { createCustomerBadges } from './customer-badges';
+import { hudText } from '../../data';
 import { createRestartConfirm } from './restart';
 import { createTrayLabels } from './tray-labels';
 import { trackNewBest } from './new-best';
@@ -26,7 +27,7 @@ import { createTutorialView } from './tutorial-view';
 /** 트레이 칸 주변 반경(CSS px). 말풍선이 트레이를 가리지 않게 하는 영역 계산에 쓴다. */
 const TRAY_R = 36;
 
-export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => GameStateV2, picker: ScenePicker, opts?: { readonly versionLabel?: string; readonly onRestart?: () => void }): UiHandle {
+export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => GameStateV2, picker: ScenePicker, opts?: { readonly versionLabel?: string; readonly onRestart?: () => void; readonly onSkipTutorial?: () => void }): UiHandle {
   const layer = el('div', 'ui-layer');
   const style = el('style', '', CSS + CSS_V2);
   const disposers: (() => void)[] = [];
@@ -41,7 +42,15 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     reset();
     opts?.onRestart?.();
   });
-  const hud = createHudV2(bus, disposers, opts?.onRestart ? () => restartConfirm.open() : undefined);
+  const skipConfirm = createRestartConfirm(
+    layer,
+    () => {
+      reset();
+      opts?.onSkipTutorial?.();
+    },
+    { title: hudText.skipConfirm },
+  );
+  const hud = createHudV2(bus, disposers, opts?.onRestart ? () => restartConfirm.open() : undefined, opts?.onSkipTutorial ? () => skipConfirm.open() : undefined);
   const trayLabels = createTrayLabels(layer, picker);
   const badges = createCustomerBadges(layer, picker);
   const rushBadge = createRushBadge();
@@ -140,6 +149,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
     rushBadge.reset();
     controller.clearSelection();
     restartConfirm.close();
+    skipConfirm.close();
     newBest.reset();
   };
 
@@ -159,7 +169,7 @@ export function mountUiV2(root: HTMLElement, bus: EventBus, getState: () => Game
         reset(); // 이전 판 대화·연출 UI, 탭 선택, "최고 기록!" 표시가 새 판에 남지 않게
         return choice;
       }),
-    isPaused: () => restartConfirm.isOpen(),
+    isPaused: () => restartConfirm.isOpen() || skipConfirm.isOpen(),
     destroy() {
       cancelAnimationFrame(raf);
       root.removeEventListener('pointerdown', onDown);

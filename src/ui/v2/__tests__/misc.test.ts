@@ -151,6 +151,10 @@ describe('hudView 단계·화난 손님', () => {
     expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).restartVisible).toBe(false);
     expect(hudView(stateOf([], { phase: 'main', level: 3 })).restartVisible).toBe(true);
   });
+  it('건너뛰기 버튼은 튜토리얼에서만 보이고 본게임에서는 다시 하기가 보인다', () => {
+    expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).skipVisible).toBe(true);
+    expect(hudView(stateOf([], { phase: 'main', level: 3 })).skipVisible).toBe(false);
+  });
   it('튜토리얼에서는 화난 손님 표시를 숨기고 본게임에서는 보인다', () => {
     expect(hudView(stateOf([], { phase: 'tutorial', level: 0 })).fumedHidden).toBe(true);
     expect(hudView(stateOf([], { phase: 'main', level: 1 })).fumedHidden).toBe(false);

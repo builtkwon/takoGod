@@ -51,6 +51,15 @@ describe('showTitle 선택', () => {
     b.buttons[0]!.handlers[0]!();
     await expect(b.p).resolves.toBe('start');
   });
+  it('tutorialButton이 false(기록 없음)면 시작 아래에 튜토리얼 건너뛰기, 누르면 skip', async () => {
+    const a = run({ tutorialButton: false });
+    expect(a.buttons.map((b) => b.textContent)).toEqual(['시작', '튜토리얼 건너뛰기']);
+    a.buttons[1]!.handlers[0]!();
+    await expect(a.p).resolves.toBe('skip');
+    const b = run({ tutorialButton: false });
+    b.buttons[0]!.handlers[0]!();
+    await expect(b.p).resolves.toBe('start');
+  });
 });
 
 describe('showResult 다시 하기', () => {

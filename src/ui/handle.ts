@@ -1,11 +1,11 @@
 import type { ReviewResult } from '../contracts';
 
-export type TitleChoice = 'start' | 'tutorial';
+export type TitleChoice = 'start' | 'tutorial' | 'skip';
 
 export interface UiHandle {
   /**
    * 타이틀 화면을 띄우고 버튼 선택을 돌려준다. '시작'은 'start', tutorialButton이 true일 때만 있는 '튜토리얼'은 'tutorial'.
-   * 생략·false면 버튼은 '시작' 하나다.
+   * 생략하면 버튼은 '시작' 하나다. 명시적으로 false(기록 없음)이면 '시작' 아래에 '튜토리얼 건너뛰기'(= 'skip')가 붙는다.
    */
   title(opts?: { readonly tutorialButton?: boolean }): Promise<TitleChoice>;
   /** 결과 화면. '다시 하기'를 누르면 화면을 닫고 'again'으로 resolve한다(반환을 무시해도 된다). */

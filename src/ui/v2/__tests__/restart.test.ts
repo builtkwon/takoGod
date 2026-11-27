@@ -21,11 +21,11 @@ class FakeEl {
 
 afterEach(() => vi.unstubAllGlobals());
 
-function setup() {
+function setup(title?: string) {
   vi.stubGlobal('document', { createElement: () => new FakeEl() });
   const layer = new FakeEl();
   const onYes = vi.fn();
-  const c = createRestartConfirm(layer as unknown as HTMLElement, onYes);
+  const c = createRestartConfirm(layer as unknown as HTMLElement, onYes, title ? { title } : undefined);
   c.open();
   const modal = layer.children[0]!;
   const button = (label: string): FakeEl => modal.children.find((x) => x.textContent === label)!;
@@ -38,6 +38,12 @@ describe('다시 하기 확인 모달', () => {
     expect(modal.children[0]!.textContent).toBe('처음부터 다시 할까요?');
     expect(button('예')).toBeDefined();
     expect(button('아니오')).toBeDefined();
+  });
+  it('문구를 바꿔 건너뛰기 확인으로 쓴다', () => {
+    const { modal, onYes, button } = setup('튜토리얼을 건너뛸까요?');
+    expect(modal.children[0]!.textContent).toBe('튜토리얼을 건너뛸까요?');
+    button('예').handlers[0]!();
+    expect(onYes).toHaveBeenCalledTimes(1);
   });
   it('예 → 모달을 닫고 onYes 1회', () => {
     const { modal, onYes, button } = setup();
